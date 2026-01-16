@@ -1,37 +1,44 @@
-index.html
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realtime Chat</title>
+    <title>Group Chat</title>
     <style>
         body { background-color: #7494c0; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .login-box { background: white; padding: 30px; border-radius: 10px; text-align: center; }
+        .login-box { background: white; padding: 25px; border-radius: 10px; text-align: center; width: 80%; max-width: 300px; }
+        .login-box input { width: 90%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; }
         #chat-container { display: none; flex-direction: column; height: 100vh; }
+        #chat-header { background: #557094; color: white; padding: 10px; text-align: center; font-weight: bold; }
         #chat-screen { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
         .message-box { margin-bottom: 15px; display: flex; flex-direction: column; max-width: 80%; }
         .left { align-self: flex-start; }
         .right { align-self: flex-end; }
-        .user-name { font-size: 12px; color: #fff; margin-bottom: 4px; }
-        .balloon { padding: 10px 15px; border-radius: 18px; background: white; line-height: 1.4; word-wrap: break-word; }
+        .user-name { font-size: 11px; color: #fff; margin-bottom: 2px; }
+        .balloon { padding: 8px 15px; border-radius: 18px; background: white; line-height: 1.4; word-wrap: break-word; }
         .right .balloon { background-color: #8de055; }
         .input-area { background: #fff; padding: 10px; display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
-        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; }
+        #input-message { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
     <div class="login-box">
-        <h2>チャットを始める</h2>
-        <input type="text" id="user-id" placeholder="あなたの名前を入力">
-        <button onclick="enterChat()">入室する</button>
+        <h3>グループチャット</h3>
+        <input type="text" id="group-id" placeholder="グループ名">
+        <input type="password" id="group-pass" placeholder="グループパスワード">
+        <hr>
+        <input type="text" id="user-id" placeholder="あなたの名前">
+        <button onclick="enterGroup()">入室する</button>
+        <p style="font-size: 10px; color: #666; margin-top: 10px;">※同じグループ名とパスワードを<br>入力した人同士で話せます</p>
     </div>
 </div>
 
 <div id="chat-container">
+    <div id="chat-header">グループ: <span id="display-group-name"></span></div>
     <div id="chat-screen"></div>
     <div class="input-area">
         <input type="text" id="input-message" placeholder="メッセージを入力...">
@@ -43,7 +50,6 @@ index.html
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // あなたのFirebaseの設定（スクリーンショットの内容を反映しました）
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
         authDomain: "my-chat-1d626.firebaseapp.com",
@@ -55,50 +61,50 @@ index.html
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const chatRef = ref(db, "chat");
-
+    let chatRef;
     let myName = "";
 
-    // 名前を入力して入室
-    window.enterChat = function() {
-        const nameInput = document.getElementById('user-id');
-        if (nameInput.value.trim() !== "") {
-            myName = nameInput.value;
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('chat-container').style.display = 'flex';
+    window.enterGroup = function() {
+        const group = document.getElementById('group-id').value.trim();
+        const pass = document.getElementById('group-pass').value.trim();
+        const user = document.getElementById('user-id').value.trim();
+
+        if (group === "" || pass === "" || user === "") {
+            alert("全部入力してね！");
+            return;
         }
+
+        myName = user;
+        // グループ名とパスワードを組み合わせた場所に保存する
+        const roomPath = "rooms/" + group + "_" + pass;
+        chatRef = ref(db, roomPath);
+
+        document.getElementById('display-group-name').innerText = group;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('chat-container').style.display = 'flex';
+
+        // 入室後にそのグループのメッセージを読み込む
+        onChildAdded(chatRef, (data) => {
+            const msg = data.val();
+            const chatScreen = document.getElementById('chat-screen');
+            const side = msg.name === myName ? "right" : "left";
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message-box', side);
+            msgDiv.innerHTML = `<div class="user-name">${msg.name}</div><div class="balloon">${msg.text}</div>`;
+            chatScreen.appendChild(msgDiv);
+            chatScreen.scrollTop = chatScreen.scrollHeight;
+        });
     };
 
-    // 送信ボタンを押した時
     document.getElementById('send-btn').addEventListener('click', () => {
         const input = document.getElementById('input-message');
         const text = input.value.trim();
-        if (text !== "") {
-            push(chatRef, {
-                name: myName,
-                text: text,
-                time: serverTimestamp()
-            });
+        if (text !== "" && chatRef) {
+            push(chatRef, { name: myName, text: text, time: serverTimestamp() });
             input.value = "";
         }
     });
-
-    // 新しいメッセージが届いたら画面に表示
-    onChildAdded(chatRef, (data) => {
-        const msg = data.val();
-        const chatScreen = document.getElementById('chat-screen');
-        const side = msg.name === myName ? "right" : "left";
-        
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('message-box', side);
-        msgDiv.innerHTML = `
-            <div class="user-name">${msg.name}:</div>
-            <div class="balloon">${msg.text}</div>
-        `;
-        chatScreen.appendChild(msgDiv);
-        chatScreen.scrollTop = chatScreen.scrollHeight;
-    });
 </script>
 </body>
-
 </html>
