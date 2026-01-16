@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Realtime Group Video Chat</title>
+    <title>Group Video Chat v2.0</title>
     <script src="https://cdn.jsdelivr.net/npm/@skyway-sdk/room/dist/skyway_room.js"></script>
     <style>
+        /* --- 既存のスタイル --- */
         body { background-color: #7494c0; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #version-tag { position: fixed; bottom: 5px; right: 10px; color: rgba(255,255,255,0.5); font-size: 10px; z-index: 1000; }
+        /* --- 以下、前回のスタイルを継続 --- */
         #home-screen { padding: 20px; text-align: center; color: white; }
-        .group-card { background: white; color: #333; padding: 15px; border-radius: 10px; margin: 10px auto; width: 80%; max-width: 300px; display: flex; justify-content: space-between; }
+        .group-card { background: white; color: #333; padding: 15px; border-radius: 10px; margin: 10px auto; width: 80%; max-width: 300px; display: flex; justify-content: space-between; cursor: pointer;}
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; }
         .login-box { background: white; padding: 25px; border-radius: 10px; text-align: center; }
         #chat-container { display: none; flex-direction: column; height: 100vh; }
         #chat-header { background: #557094; color: white; padding: 10px; display: flex; justify-content: space-between; }
-        #video-area { display: none; background: #000; height: 180px; position: relative; gap: 2px; padding: 2px; }
+        #video-area { display: none; background: #000; height: 180px; gap: 2px; padding: 2px; }
         video { flex: 1; height: 100%; background: #222; border-radius: 5px; object-fit: cover; }
-        #chat-screen { flex: 1; overflow-y: auto; padding: 20px; }
+        #chat-screen { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
         .balloon { padding: 8px 15px; border-radius: 18px; background: white; margin-bottom: 10px; max-width: 80%; color: #333; }
         .right { align-self: flex-end; background-color: #8de055; }
         .input-area { background: #fff; padding: 10px; display: flex; gap: 5px; }
@@ -23,10 +26,12 @@
 </head>
 <body>
 
+<div id="version-tag">Ver 2.0.0 (Video Call Build)</div>
+
 <div id="home-screen">
     <h2>マイグループ</h2>
     <div id="group-list"></div>
-    <button onclick="showLogin()" style="padding:10px 20px;">＋ 新規グループ</button>
+    <button onclick="showLogin()" style="padding:10px 20px; background:#28a745; color:white; border:none; border-radius:5px;">＋ 新規グループ</button>
 </div>
 
 <div id="login-screen">
@@ -40,113 +45,24 @@
 
 <div id="chat-container">
     <div id="chat-header">
-        <button onclick="location.reload()">🏠</button>
+        <button onclick="location.reload()" style="background:none; border:none; color:white; font-size:20px;">🏠</button>
         <span id="display-group-name"></span>
-        <button id="call-btn" style="background:#28a745; color:white;">📞通話開始</button>
+        <button id="call-btn" style="background:#28a745; color:white; border:none; border-radius:15px; padding:5px 15px;">📞通話開始</button>
     </div>
     <div id="video-area">
         <video id="local-video" autoplay playsinline muted></video>
         <div id="remote-videos" style="display:contents;"></div>
     </div>
-    <div id="chat-screen" style="display:flex; flex-direction:column;"></div>
+    <div id="chat-screen"></div>
     <div class="input-area">
-        <input type="text" id="input-message" style="flex:1;">
-        <button id="send-btn">送信</button>
+        <input type="text" id="input-message" style="flex:1; border-radius:20px; padding:10px; border:1px solid #ccc;">
+        <button id="send-btn" style="background:#007bff; color:white; border:none; border-radius:20px; padding:10px 20px;">送信</button>
     </div>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
-        authDomain: "my-chat-1d626.firebaseapp.com",
-        projectId: "my-chat-1d626",
-        storageBucket: "my-chat-1d626.firebasestorage.app",
-        messagingSenderId: "769979957640",
-        appId: "1:769979957640:web:777fb6120b5b223e127a3d"
-    };
-
-    // --- ここにあなたのAPIキーを貼り付け ---
-    const skywayKey = "d692a6e7-021b-4698-9dd4-d7fdeefc6f5e"; 
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = SkyWay;
-    let myName, chatRef, currentRoom;
-
-    window.onload = () => {
-        const list = document.getElementById('group-list');
-        const groups = JSON.parse(localStorage.getItem('myGroups') || "[]");
-        groups.forEach(g => {
-            const div = document.createElement('div');
-            div.className = 'group-card';
-            div.innerHTML = `<span onclick="startChat('${g.id}','${g.pass}','本人')">${g.id}</span>`;
-            list.appendChild(div);
-        });
-    };
-
-    window.showLogin = () => document.getElementById('login-screen').style.display = 'flex';
-    window.enterGroup = (save) => {
-        const id = document.getElementById('group-id').value;
-        const pass = document.getElementById('group-pass').value;
-        const user = document.getElementById('user-id').value;
-        if(save) {
-            let gs = JSON.parse(localStorage.getItem('myGroups') || "[]");
-            gs.push({id, pass});
-            localStorage.setItem('myGroups', JSON.stringify(gs));
-        }
-        startChat(id, pass, user);
-    };
-
-    async function startChat(id, pass, user) {
-        myName = user;
-        chatRef = ref(db, `rooms/${id}_${pass}/messages`);
-        document.getElementById('display-group-name').innerText = id;
-        document.getElementById('home-screen').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('chat-container').style.display = 'flex';
-
-        onChildAdded(chatRef, (d) => {
-            const m = d.val();
-            const div = document.createElement('div');
-            div.className = `balloon ${m.name === myName ? 'right' : ''}`;
-            div.innerText = `${m.name}: ${m.text}`;
-            document.getElementById('chat-screen').appendChild(div);
-        });
-
-        // 通話ボタンの処理
-        document.getElementById('call-btn').onclick = async () => {
-            document.getElementById('video-area').style.display = 'flex';
-            const context = await SkyWayContext.Create(skywayKey);
-            const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: id + pass });
-            const member = await room.join();
-            
-            const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraVideoStreams();
-            document.getElementById('local-video').srcObject = video.track;
-            await member.publish(audio);
-            await member.publish(video);
-
-            room.onStreamPublished.add(async (e) => {
-                if (e.publication.publisher.id === member.id) return;
-                const { stream } = await member.subscribe(e.publication.id);
-                if (stream.contentType === 'video') {
-                    const remoteV = document.createElement('video');
-                    remoteV.autoplay = true;
-                    remoteV.playsinline = true;
-                    remoteV.srcObject = stream.track;
-                    document.getElementById('remote-videos').appendChild(remoteV);
-                }
-            });
-        };
-    }
-
-    document.getElementById('send-btn').onclick = () => {
-        const i = document.getElementById('input-message');
-        if(i.value) push(chatRef, { name: myName, text: i.value });
-        i.value = "";
-    };
+    /* ここに前回のFirebase + SkyWayのJavaScriptをそのまま貼り付けてください */
+    /* skywayKeyの部分にあなたのキー「d692a6e7-021b-4698-9dd4-d7fdeefc6f5e」を入れるのを忘れずに！ */
 </script>
 </body>
 </html>
