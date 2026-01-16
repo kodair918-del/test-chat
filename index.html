@@ -3,40 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2ch風掲示板 (Auth版)</title>
+    <title>2ch風掲示板 (Ver 3.0.1)</title>
     <style>
         /* 2ちゃんねる風のデザイン */
         body { background-color: #efefef; color: #000; font-family: "MS PGothic", "IPAMonaPGothic", sans-serif; margin: 0; padding: 10px; }
-        #auth-screen { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border: 2px solid #ccc; }
+        #auth-screen { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border: 2px solid #ccc; box-shadow: 2px 2px 0 #888; }
         #main-screen { display: none; }
         .thread-title { color: #ff0000; font-size: 1.5em; font-weight: bold; margin-bottom: 20px; }
-        .post { margin-bottom: 20px; border-top: 1px solid #ccc; padding-top: 5px; }
+        .post { margin-bottom: 20px; border-top: 1px dotted #ccc; padding-top: 10px; }
         .post-header { color: #228b22; font-weight: bold; }
         .post-info { font-size: 0.9em; color: #666; }
-        .post-body { margin: 5px 0 10px 20px; line-height: 1.5; white-space: pre-wrap; }
-        .input-area { background: #ddd; padding: 15px; border: 1px solid #888; position: sticky; bottom: 0; }
-        input, textarea { width: 95%; margin-bottom: 10px; }
-        button { cursor: pointer; }
+        .post-body { margin: 5px 0 10px 20px; line-height: 1.5; white-space: pre-wrap; font-size: 16px; }
+        .input-area { background: #ddd; padding: 15px; border: 1px solid #888; position: sticky; bottom: 0; margin-top: 20px; }
+        input[type="text"], input[type="email"], input[type="password"], textarea { width: 95%; margin-bottom: 10px; padding: 5px; }
+        button { cursor: pointer; padding: 5px 15px; }
         #version-tag { position: fixed; top: 5px; right: 5px; font-size: 10px; color: #999; }
+        #auth-msg { color: red; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div id="version-tag">Ver 3.0.0 (BBS & Email Auth)</div>
+<div id="version-tag">Ver 3.0.1 (Auth Fix)</div>
 
 <div id="auth-screen">
-    <h3>掲示板 ログイン</h3>
-    <input type="email" id="auth-email" placeholder="メールアドレス"><br>
-    <input type="password" id="auth-pass" placeholder="パスワード"><br>
-    <button onclick="handleSignUp()" style="background:#f0f0f0;">新規登録</button>
-    <button onclick="handleLogin()" style="background:#ccc;">ログイン</button>
-    <p id="auth-msg" style="color:red; font-size:12px;"></p>
+    <h3 style="margin-top:0;">掲示板 ログイン</h3>
+    <p style="font-size:12px;">※初めての方は好きなメアドとパスワード（6文字以上）を入力して「新規登録」を押してください。</p>
+    メール：<br><input type="email" id="auth-email" placeholder="test@example.com"><br>
+    パス：<br><input type="password" id="auth-pass" placeholder="6文字以上"><br>
+    <button onclick="handleSignUp()">新規登録</button>
+    <button onclick="handleLogin()">ログイン</button>
+    <div id="auth-msg"></div>
 </div>
 
 <div id="main-screen">
-    <div style="display:flex; justify-content:space-between;">
-        <span id="user-info">ログイン中</span>
-        <button onclick="handleLogout()">ログアウト</button>
+    <div style="display:flex; justify-content:space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
+        <span id="user-info" style="font-size:12px;">未ログイン</span>
+        <button onclick="handleLogout()" style="font-size:10px;">ログアウト</button>
     </div>
     <div class="thread-title">【2ch風】カスタム掲示板スレ</div>
     
@@ -46,8 +48,8 @@
     <div class="input-area">
         名前：<input type="text" id="post-name" value="名無しさん" style="width:150px;"><br>
         本文：<br>
-        <textarea id="post-body" rows="4"></textarea><br>
-        <button id="send-btn" style="padding:10px 30px;">書き込む</button>
+        <textarea id="post-body" rows="4" placeholder="ここに書き込みたい内容を入力"></textarea><br>
+        <button id="send-btn" style="background:#f0f0f0; border:1px solid #888; padding:8px 30px;">書き込む</button>
     </div>
 </div>
 
@@ -56,6 +58,7 @@
     import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+    // あなたの専用設定
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
         authDomain: "my-chat-1d626.firebaseapp.com",
@@ -68,14 +71,17 @@
     const auth = getAuth(app);
     const postsRef = ref(db, "bbs_posts");
 
-    // --- 認証処理 ---
+    // 登録処理
     window.handleSignUp = () => {
         const email = document.getElementById('auth-email').value;
         const pass = document.getElementById('auth-pass').value;
+        if(!email || !pass) return alert("入力してね");
         createUserWithEmailAndPassword(auth, email, pass)
+            .then(() => alert("登録完了！"))
             .catch(err => document.getElementById('auth-msg').innerText = "登録失敗: " + err.message);
     };
 
+    // ログイン処理
     window.handleLogin = () => {
         const email = document.getElementById('auth-email').value;
         const pass = document.getElementById('auth-pass').value;
@@ -83,21 +89,22 @@
             .catch(err => document.getElementById('auth-msg').innerText = "ログイン失敗: " + err.message);
     };
 
+    // ログアウト
     window.handleLogout = () => signOut(auth);
 
-    // ログイン状態の監視
+    // ログイン状態の管理
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-screen').style.display = 'block';
-            document.getElementById('user-info').innerText = user.email + " さん";
+            document.getElementById('user-info').innerText = "ID:" + user.email;
         } else {
             document.getElementById('auth-screen').style.display = 'block';
             document.getElementById('main-screen').style.display = 'none';
         }
     });
 
-    // --- 投稿表示処理 ---
+    // 掲示板の表示
     let postCount = 0;
     onChildAdded(postsRef, (snapshot) => {
         postCount++;
@@ -108,7 +115,7 @@
         postDiv.className = 'post';
         postDiv.innerHTML = `
             <div class="post-info">
-                ${postCount} ：<span class="post-header">${data.name}</span> ：${date} ID:???
+                ${postCount} ：<span class="post-header">${data.name}</span> ：${date}
             </div>
             <div class="post-body">${data.body}</div>
         `;
@@ -116,11 +123,11 @@
         window.scrollTo(0, document.body.scrollHeight);
     });
 
-    // --- 書き込み処理 ---
+    // 書き込みボタン
     document.getElementById('send-btn').onclick = () => {
         const name = document.getElementById('post-name').value;
         const body = document.getElementById('post-body').value;
-        if(!body) return alert("本文を入れてください");
+        if(!body) return alert("本文を書いてね");
 
         push(postsRef, {
             name: name,
