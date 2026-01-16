@@ -3,83 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Video Chat v2.0.5</title>
-    <script src="https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/dist/skyway_room.js"></script>
+    <title>2ch風掲示板 (Auth版)</title>
     <style>
-        body { background-color: #7494c0; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        #version-tag { position: fixed; bottom: 5px; right: 10px; color: rgba(255,255,255,0.7); font-size: 10px; z-index: 1000; cursor: pointer; text-decoration: underline; }
-        #home-screen { padding: 20px; text-align: center; color: white; flex: 1; overflow-y: auto; }
-        .group-card { background: white; color: #333; padding: 15px; border-radius: 10px; margin: 10px auto; width: 80%; max-width: 300px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .box { background: white; padding: 25px; border-radius: 10px; text-align: center; width: 85%; max-width: 320px; }
-        input { width: 90%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
-        #chat-container { display: none; flex-direction: column; height: 100vh; }
-        #chat-header { background: #557094; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
-        #video-area { display: none; background: #000; height: 180px; gap: 2px; padding: 2px; }
-        video { flex: 1; height: 100%; background: #222; border-radius: 5px; object-fit: cover; }
-        #chat-screen { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; background: #f0f2f5; }
-        .balloon { padding: 10px 15px; border-radius: 18px; background: white; margin-bottom: 10px; max-width: 75%; color: #333; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .right { align-self: flex-end; background-color: #8de055; }
-        .input-area { background: #fff; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; }
-        button { padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        .btn-green { background: #28a745; color: white; }
-        .btn-blue { background: #007bff; color: white; }
+        /* 2ちゃんねる風のデザイン */
+        body { background-color: #efefef; color: #000; font-family: "MS PGothic", "IPAMonaPGothic", sans-serif; margin: 0; padding: 10px; }
+        #auth-screen { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border: 2px solid #ccc; }
+        #main-screen { display: none; }
+        .thread-title { color: #ff0000; font-size: 1.5em; font-weight: bold; margin-bottom: 20px; }
+        .post { margin-bottom: 20px; border-top: 1px solid #ccc; padding-top: 5px; }
+        .post-header { color: #228b22; font-weight: bold; }
+        .post-info { font-size: 0.9em; color: #666; }
+        .post-body { margin: 5px 0 10px 20px; line-height: 1.5; white-space: pre-wrap; }
+        .input-area { background: #ddd; padding: 15px; border: 1px solid #888; position: sticky; bottom: 0; }
+        input, textarea { width: 95%; margin-bottom: 10px; }
+        button { cursor: pointer; }
+        #version-tag { position: fixed; top: 5px; right: 5px; font-size: 10px; color: #999; }
     </style>
 </head>
 <body>
 
-<div id="version-tag" onclick="showAdmin()">Ver 2.0.5 (Settings Mode)</div>
+<div id="version-tag">Ver 3.0.0 (BBS & Email Auth)</div>
 
-<div id="home-screen">
-    <h2 style="margin-top:40px;">マイグループ</h2>
-    <div id="group-list"></div>
-    <button class="btn-green" onclick="showLogin()" style="margin-top:20px; font-size:18px;">＋ 新規グループ</button>
+<div id="auth-screen">
+    <h3>掲示板 ログイン</h3>
+    <input type="email" id="auth-email" placeholder="メールアドレス"><br>
+    <input type="password" id="auth-pass" placeholder="パスワード"><br>
+    <button onclick="handleSignUp()" style="background:#f0f0f0;">新規登録</button>
+    <button onclick="handleLogin()" style="background:#ccc;">ログイン</button>
+    <p id="auth-msg" style="color:red; font-size:12px;"></p>
 </div>
 
-<div id="admin-screen" class="modal">
-    <div class="box">
-        <h3>SkyWay設定</h3>
-        <p style="font-size:12px; color:#666;">APIキーとシークレットを入力してください</p>
-        <input type="text" id="admin-key" placeholder="APIキー">
-        <input type="text" id="admin-secret" placeholder="シークレットキー">
-        <button class="btn-blue" onclick="saveAdmin()">設定を保存</button>
-        <button onclick="document.getElementById('admin-screen').style.display='none'">閉じる</button>
+<div id="main-screen">
+    <div style="display:flex; justify-content:space-between;">
+        <span id="user-info">ログイン中</span>
+        <button onclick="handleLogout()">ログアウト</button>
     </div>
-</div>
-
-<div id="login-screen" class="modal">
-    <div class="box">
-        <h3>グループ入室</h3>
-        <input type="text" id="group-id" placeholder="グループ名">
-        <input type="text" id="group-pass" placeholder="パスワード">
-        <input type="text" id="user-id" placeholder="あなたの名前">
-        <div style="margin-top:15px;">
-            <button class="btn-blue" onclick="window.enterGroup(true)">保存して入室</button>
-            <button onclick="document.getElementById('login-screen').style.display='none'">戻る</button>
+    <div class="thread-title">【2ch風】カスタム掲示板スレ</div>
+    
+    <div id="post-list">
         </div>
-    </div>
-</div>
 
-<div id="chat-container">
-    <div id="chat-header">
-        <button onclick="location.reload()" style="background:none; color:white; font-size:24px;">🏠</button>
-        <span id="display-group-name"></span>
-        <button id="call-btn" class="btn-green">📞通話</button>
-    </div>
-    <div id="video-area">
-        <video id="local-video" autoplay playsinline muted></video>
-        <div id="remote-videos" style="display:contents;"></div>
-    </div>
-    <div id="chat-screen"></div>
     <div class="input-area">
-        <input type="text" id="input-message" placeholder="メッセージ...">
-        <button id="send-btn" class="btn-blue">送信</button>
+        名前：<input type="text" id="post-name" value="名無しさん" style="width:150px;"><br>
+        本文：<br>
+        <textarea id="post-body" rows="4"></textarea><br>
+        <button id="send-btn" style="padding:10px 30px;">書き込む</button>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
@@ -90,102 +65,69 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    let myName, chatRef;
+    const auth = getAuth(app);
+    const postsRef = ref(db, "bbs_posts");
 
-    // 管理設定の表示・保存
-    window.showAdmin = () => {
-        document.getElementById('admin-key').value = localStorage.getItem('skywayKey') || "";
-        document.getElementById('admin-secret').value = localStorage.getItem('skywaySecret') || "";
-        document.getElementById('admin-screen').style.display = 'flex';
-    };
-    window.saveAdmin = () => {
-        localStorage.setItem('skywayKey', document.getElementById('admin-key').value);
-        localStorage.setItem('skywaySecret', document.getElementById('admin-secret').value);
-        alert("設定を保存しました。再読み込みします。");
-        location.reload();
+    // --- 認証処理 ---
+    window.handleSignUp = () => {
+        const email = document.getElementById('auth-email').value;
+        const pass = document.getElementById('auth-pass').value;
+        createUserWithEmailAndPassword(auth, email, pass)
+            .catch(err => document.getElementById('auth-msg').innerText = "登録失敗: " + err.message);
     };
 
-    window.onload = () => {
-        const list = document.getElementById('group-list');
-        const groups = JSON.parse(localStorage.getItem('myGroups') || "[]");
-        list.innerHTML = "";
-        groups.forEach(g => {
-            const div = document.createElement('div');
-            div.className = 'group-card';
-            div.innerHTML = `<strong>${g.id}</strong><button class="btn-blue" style="border-radius:5px; padding:5px 15px;">入室</button>`;
-            div.onclick = () => {
-                const user = prompt("名前を入力してください");
-                if(user) startChat(g.id, g.pass, user);
-            };
-            list.appendChild(div);
-        });
+    window.handleLogin = () => {
+        const email = document.getElementById('auth-email').value;
+        const pass = document.getElementById('auth-pass').value;
+        signInWithEmailAndPassword(auth, email, pass)
+            .catch(err => document.getElementById('auth-msg').innerText = "ログイン失敗: " + err.message);
     };
 
-    window.showLogin = () => document.getElementById('login-screen').style.display = 'flex';
+    window.handleLogout = () => signOut(auth);
 
-    window.enterGroup = (save) => {
-        const id = document.getElementById('group-id').value;
-        const pass = document.getElementById('group-pass').value;
-        const user = document.getElementById('user-id').value;
-        if(!id || !pass || !user) return alert("全部入力してください");
-        if(save) {
-            let gs = JSON.parse(localStorage.getItem('myGroups') || "[]");
-            if(!gs.find(g => g.id === id)) { gs.push({id, pass}); localStorage.setItem('myGroups', JSON.stringify(gs)); }
+    // ログイン状態の監視
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'block';
+            document.getElementById('user-info').innerText = user.email + " さん";
+        } else {
+            document.getElementById('auth-screen').style.display = 'block';
+            document.getElementById('main-screen').style.display = 'none';
         }
-        startChat(id, pass, user);
-    };
+    });
 
-    async function startChat(id, pass, user) {
-        myName = user;
-        chatRef = ref(db, `rooms/${id}_${pass}/messages`);
-        document.getElementById('display-group-name').innerText = id;
-        document.getElementById('home-screen').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('chat-container').style.display = 'flex';
+    // --- 投稿表示処理 ---
+    let postCount = 0;
+    onChildAdded(postsRef, (snapshot) => {
+        postCount++;
+        const data = snapshot.val();
+        const date = data.time ? new Date(data.time).toLocaleString() : "不明";
+        
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+        postDiv.innerHTML = `
+            <div class="post-info">
+                ${postCount} ：<span class="post-header">${data.name}</span> ：${date} ID:???
+            </div>
+            <div class="post-body">${data.body}</div>
+        `;
+        document.getElementById('post-list').appendChild(postDiv);
+        window.scrollTo(0, document.body.scrollHeight);
+    });
 
-        onChildAdded(chatRef, (d) => {
-            const m = d.val();
-            const div = document.createElement('div');
-            div.className = `balloon ${m.name === myName ? 'right' : ''}`;
-            div.innerText = `${m.name}: ${m.text}`;
-            document.getElementById('chat-screen').appendChild(div);
-            document.getElementById('chat-screen').scrollTop = document.getElementById('chat-screen').scrollHeight;
-        });
-
-        document.getElementById('call-btn').onclick = async () => {
-            const key = localStorage.getItem('skywayKey');
-            const secret = localStorage.getItem('skywaySecret');
-            if(!key || !secret) return alert("右下のVerをタップしてキーを設定してください");
-            
-            document.getElementById('video-area').style.display = 'flex';
-            try {
-                const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory, nowInSec, uuidV4 } = SkyWay;
-                const context = await SkyWayContext.Create(key, {
-                    auth: { jti: uuidV4(), iat: nowInSec(), exp: nowInSec() + 3600, 
-                            scope: { app: { id: key, turn: true, actions: ["read", "write"] } } },
-                    secret: secret
-                });
-                const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: id + pass });
-                const member = await room.join();
-                const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraVideoStreams();
-                document.getElementById('local-video').srcObject = video.track;
-                await member.publish(audio); await member.publish(video);
-
-                room.onStreamPublished.add(async (e) => {
-                    if (e.publication.publisher.id === member.id) return;
-                    const { stream } = await member.subscribe(e.publication.id);
-                    if (stream.contentType === 'video') {
-                        const v = document.createElement('video'); v.autoplay = true; v.playsinline = true;
-                        v.srcObject = stream.track; document.getElementById('remote-videos').appendChild(v);
-                    }
-                });
-            } catch (e) { alert("通話エラー: " + e.message); }
-        };
-    }
-
+    // --- 書き込み処理 ---
     document.getElementById('send-btn').onclick = () => {
-        const i = document.getElementById('input-message');
-        if(i.value && chatRef) { push(chatRef, { name: myName, text: i.value, time: serverTimestamp() }); i.value = ""; }
+        const name = document.getElementById('post-name').value;
+        const body = document.getElementById('post-body').value;
+        if(!body) return alert("本文を入れてください");
+
+        push(postsRef, {
+            name: name,
+            body: body,
+            time: serverTimestamp()
+        });
+        document.getElementById('post-body').value = "";
     };
 </script>
 </body>
