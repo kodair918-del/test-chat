@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
+    <title>Realtime Chat</title>
     <style>
         body { background-color: #7494c0; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
@@ -14,7 +14,7 @@
         .left { align-self: flex-start; }
         .right { align-self: flex-end; }
         .user-name { font-size: 12px; color: #fff; margin-bottom: 4px; }
-        .balloon { padding: 10px 15px; border-radius: 18px; background: white; line-height: 1.4; }
+        .balloon { padding: 10px 15px; border-radius: 18px; background: white; line-height: 1.4; word-wrap: break-word; }
         .right .balloon { background-color: #8de055; }
         .input-area { background: #fff; padding: 10px; display: flex; gap: 10px; }
         input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
@@ -32,41 +32,72 @@
 </div>
 
 <div id="chat-container">
-    <div id="chat-screen">
-        <div class="message-box left">
-            <div class="user-name">Asann:</div>
-            <div class="balloon">〇〇おいしいよね～</div>
-        </div>
-    </div>
+    <div id="chat-screen"></div>
     <div class="input-area">
         <input type="text" id="input-message" placeholder="メッセージを入力...">
-        <button onclick="sendMessage()">送信</button>
+        <button id="send-btn">送信</button>
     </div>
 </div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // あなたのFirebaseの設定（スクリーンショットの内容を反映しました）
+    const firebaseConfig = {
+        apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
+        authDomain: "my-chat-1d626.firebaseapp.com",
+        projectId: "my-chat-1d626",
+        storageBucket: "my-chat-1d626.firebasestorage.app",
+        messagingSenderId: "769979957640",
+        appId: "1:769979957640:web:777fb6120b5b223e127a3d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const chatRef = ref(db, "chat");
+
     let myName = "";
-    function enterChat() {
+
+    // 名前を入力して入室
+    window.enterChat = function() {
         const nameInput = document.getElementById('user-id');
         if (nameInput.value.trim() !== "") {
             myName = nameInput.value;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('chat-container').style.display = 'flex';
         }
-    }
-    function sendMessage() {
+    };
+
+    // 送信ボタンを押した時
+    document.getElementById('send-btn').addEventListener('click', () => {
         const input = document.getElementById('input-message');
         const text = input.value.trim();
         if (text !== "") {
-            const chatScreen = document.getElementById('chat-screen');
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message-box', 'right');
-            msgDiv.innerHTML = `<div class="balloon">${text}</div>`;
-            chatScreen.appendChild(msgDiv);
+            push(chatRef, {
+                name: myName,
+                text: text,
+                time: serverTimestamp()
+            });
             input.value = "";
-            chatScreen.scrollTop = chatScreen.scrollHeight;
         }
-    }
+    });
+
+    // 新しいメッセージが届いたら画面に表示
+    onChildAdded(chatRef, (data) => {
+        const msg = data.val();
+        const chatScreen = document.getElementById('chat-screen');
+        const side = msg.name === myName ? "right" : "left";
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.classList.add('message-box', side);
+        msgDiv.innerHTML = `
+            <div class="user-name">${msg.name}:</div>
+            <div class="balloon">${msg.text}</div>
+        `;
+        chatScreen.appendChild(msgDiv);
+        chatScreen.scrollTop = chatScreen.scrollHeight;
+    });
 </script>
 </body>
 </html>
