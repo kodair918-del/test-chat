@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Video Chat v2.0.2</title>
-    <script src="https://cdn.jsdelivr.net/npm/@skyway-sdk/room/dist/skyway_room.js"></script>
+    <title>Group Video Chat v2.0.3</title>
+    <script src="https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/dist/skyway_room.js"></script>
     
     <style>
         body { background-color: #7494c0; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -26,7 +26,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 2.0.2 (Library Fix)</div>
+<div id="version-tag">Ver 2.0.3 (Final Fix)</div>
 
 <div id="home-screen">
     <h2>マイグループ</h2>
@@ -41,7 +41,7 @@
         <input type="text" id="group-pass" placeholder="パスワード">
         <input type="text" id="user-id" placeholder="あなたの名前">
         <div style="margin-top:15px;">
-            <button onclick="enterGroup(true)" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px;">保存して入室</button>
+            <button onclick="window.enterGroup(true)" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px;">保存して入室</button>
             <button onclick="document.getElementById('login-screen').style.display='none'" style="padding:10px 20px; background:#666; color:white; border:none; border-radius:5px; margin-left:5px;">戻る</button>
         </div>
     </div>
@@ -86,6 +86,7 @@
     window.onload = () => {
         const list = document.getElementById('group-list');
         const groups = JSON.parse(localStorage.getItem('myGroups') || "[]");
+        list.innerHTML = "";
         groups.forEach(g => {
             const div = document.createElement('div');
             div.className = 'group-card';
@@ -98,7 +99,6 @@
         });
     };
 
-    // enterGroupをグローバルに公開
     window.enterGroup = (save) => {
         const id = document.getElementById('group-id').value;
         const pass = document.getElementById('group-pass').value;
@@ -133,13 +133,9 @@
         });
 
         document.getElementById('call-btn').onclick = async () => {
+            if (typeof SkyWay === 'undefined') return alert("通信準備中...5秒待ってからもう一度押してね");
             document.getElementById('video-area').style.display = 'flex';
             try {
-                // SkyWayのライブラリが読み込めているか最終確認
-                if (typeof SkyWay === 'undefined') {
-                    alert("通信ライブラリが読み込めていません。再読み込みしてね。");
-                    return;
-                }
                 const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = SkyWay;
                 const context = await SkyWayContext.Create(skywayKey);
                 const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: id + pass });
@@ -155,15 +151,14 @@
                     const { stream } = await member.subscribe(e.publication.id);
                     if (stream.contentType === 'video') {
                         const remoteV = document.createElement('video');
-                        remoteV.autoplay = true;
-                        remoteV.playsinline = true;
+                        remoteV.autoplay = true; remoteV.playsinline = true;
                         remoteV.srcObject = stream.track;
                         document.getElementById('remote-videos').appendChild(remoteV);
                     }
                 });
             } catch (err) {
                 console.error(err);
-                alert("通話の準備に失敗しました。カメラの許可を確認してね！");
+                alert("通話に失敗しました。カメラの許可を確認してね！");
             }
         };
     }
