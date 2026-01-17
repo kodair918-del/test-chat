@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 18.1</title>
+    <title>Chat-K | Ver 18.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -97,8 +97,7 @@
 
     let myId = localStorage.getItem('chat_uid') || ('u_' + Math.random().toString(36).substr(2, 9));
     let myName = localStorage.getItem('chat_name');
-    let currentGid = "";
-    let currentHostId = ""; // ホスト判定用
+    let currentGid = localStorage.getItem('last_gid') || ""; // 最後にいたグループを記憶
 
     async function hash(pw) {
         const msgUint8 = new TextEncoder().encode(pw);
@@ -117,32 +116,39 @@
         document.getElementById('main-modal').classList.add('active');
         document.querySelectorAll('#main-modal > div > div').forEach(el => el.style.display = 'none');
         document.getElementById('step-' + s).style.display = 'block';
-        if(s === 'home') { document.getElementById('display-name').innerText = myName; refreshHistory(); }
+        if(s === 'home') { 
+            document.getElementById('display-name').innerText = myName; 
+            refreshHistory();
+            document.getElementById('head-title').innerText = "Chat-K";
+        }
     }
 
-    window.triggerOpenSettings = () => {
+    // 設定ボタンを押した時の処理
+    window.triggerOpenSettings = async () => {
         document.getElementById('set-modal').classList.add('active');
-        // 設定を開いた瞬間にホストかチェック
-        if (currentGid && myId === currentHostId) {
+        if (!currentGid) return;
+        
+        // Firebaseから今のグループの最新情報を取ってホストか確認
+        const snap = await get(ref(db, `v6_groups/${currentGid}`));
+        if (snap.exists() && snap.val().host === myId) {
             document.getElementById('host-panel').style.display = 'block';
-            renderQR(); 
+            renderAdminTools(snap.val());
         } else {
             document.getElementById('host-panel').style.display = 'none';
         }
     };
 
-    function renderQR() {
-        get(ref(db, `v6_groups/${currentGid}`)).then(snap => {
-            const data = snap.val();
-            const qrBox = document.getElementById('qrcode-container');
-            qrBox.innerHTML = "";
-            new QRCode(qrBox, { text: `chatk://join?id=${currentGid}&pw=${data.pw}`, width: 160, height: 160 });
-        });
+    function renderAdminTools(data) {
+        const qrBox = document.getElementById('qrcode-container');
+        qrBox.innerHTML = "";
+        new QRCode(qrBox, { text: `chatk://join?id=${currentGid}&pw=${data.pw}`, width: 160, height: 160 });
+        renderRequestList(data.requests);
     }
 
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
-        const pwHash = await hash(document.getElementById('group-pw-input').value);
+        const pwInput = document.getElementById('group-pw-input').value;
+        const pwHash = await hash(pwInput);
         if(!gid) return;
 
         const snap = await get(ref(db, `v6_groups/${gid}`));
@@ -162,14 +168,13 @@
 
     async function enterChat(gid) {
         currentGid = gid;
+        localStorage.setItem('last_gid', gid); // 現在のグループを記憶
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
         saveToHistory(gid);
 
         onValue(ref(db, `v6_groups/${gid}`), (snap) => {
             const data = snap.val(); if(!data) return;
-            currentHostId = data.host; // ホストIDを保存
-
             const area = document.getElementById('chat-area'); area.innerHTML = "";
             if(data.messages) Object.values(data.messages).forEach(d => {
                 const wrap = document.createElement('div');
@@ -178,7 +183,6 @@
                 area.appendChild(wrap);
             });
             area.scrollTop = area.scrollHeight;
-            if(myId === currentHostId) renderRequestList(data.requests);
         });
     }
 
