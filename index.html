@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 18.0</title>
+    <title>Chat-K | Ver 18.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -76,12 +76,14 @@
 
 <div id="set-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
+    
     <div id="host-panel" class="card" style="display:none; border: 3px solid #FF3B30;">
         <h3 style="color:#FF3B30; margin-top:0;">👑 管理者パネル</h3>
-        <p style="font-size:12px;">招待用QRコード:</p>
-        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:10px; border-radius:10px; margin-bottom:15px;"></div>
+        <p style="font-size:12px; margin-bottom:5px;">招待用QRコード:</p>
+        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px; min-height:160px;"></div>
         <div id="request-list-area"></div>
     </div>
+
     <button class="btn-main" style="background:#FF3B30; margin-top:20px;" onclick="if(confirm('全てのデータを消去しますか？')){localStorage.clear(); location.reload();}">初期化・ログアウト</button>
 </div>
 
@@ -96,8 +98,8 @@
     let myId = localStorage.getItem('chat_uid') || ('u_' + Math.random().toString(36).substr(2, 9));
     let myName = localStorage.getItem('chat_name');
     let currentGid = "";
+    let currentHostId = ""; // ホスト判定用
 
-    // ハッシュ化関数 (SHA-256)
     async function hash(pw) {
         const msgUint8 = new TextEncoder().encode(pw);
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -118,12 +120,32 @@
         if(s === 'home') { document.getElementById('display-name').innerText = myName; refreshHistory(); }
     }
 
+    window.triggerOpenSettings = () => {
+        document.getElementById('set-modal').classList.add('active');
+        // 設定を開いた瞬間にホストかチェック
+        if (currentGid && myId === currentHostId) {
+            document.getElementById('host-panel').style.display = 'block';
+            renderQR(); 
+        } else {
+            document.getElementById('host-panel').style.display = 'none';
+        }
+    };
+
+    function renderQR() {
+        get(ref(db, `v6_groups/${currentGid}`)).then(snap => {
+            const data = snap.val();
+            const qrBox = document.getElementById('qrcode-container');
+            qrBox.innerHTML = "";
+            new QRCode(qrBox, { text: `chatk://join?id=${currentGid}&pw=${data.pw}`, width: 160, height: 160 });
+        });
+    }
+
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
         const pwHash = await hash(document.getElementById('group-pw-input').value);
         if(!gid) return;
 
-        const snap = await get(ref(db, `v6_groups/${gid}`)); // セキュリティ向上のためパスを変更
+        const snap = await get(ref(db, `v6_groups/${gid}`));
         if(window.currentMode === 'create') {
             await set(ref(db, `v6_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true } });
             enterChat(gid);
@@ -146,16 +168,7 @@
 
         onValue(ref(db, `v6_groups/${gid}`), (snap) => {
             const data = snap.val(); if(!data) return;
-            const isHost = (data.host === myId);
-            
-            // 管理者パネルの制御
-            document.getElementById('host-panel').style.display = isHost ? 'block' : 'none';
-            if(isHost) {
-                const qrBox = document.getElementById('qrcode-container');
-                qrBox.innerHTML = "";
-                new QRCode(qrBox, { text: `chatk://join?id=${gid}&pw=${data.pw}`, width: 160, height: 160 });
-                renderRequestList(data.requests);
-            }
+            currentHostId = data.host; // ホストIDを保存
 
             const area = document.getElementById('chat-area'); area.innerHTML = "";
             if(data.messages) Object.values(data.messages).forEach(d => {
@@ -165,6 +178,7 @@
                 area.appendChild(wrap);
             });
             area.scrollTop = area.scrollHeight;
+            if(myId === currentHostId) renderRequestList(data.requests);
         });
     }
 
@@ -172,8 +186,8 @@
         const area = document.getElementById('request-list-area');
         area.innerHTML = "<h4>入室申請</h4>";
         if(reqs) Object.entries(reqs).forEach(([uid, val]) => {
-            const d = document.createElement('div'); d.className = "card"; d.style="border:1px solid #ddd;";
-            d.innerHTML = `<span><b>${val.name}</b></span><button class="btn-main" style="height:35px; margin-top:10px;" onclick="window.approveUser('${uid}')">承認</button>`;
+            const d = document.createElement('div'); d.className = "card"; d.style="border:1px solid #ddd; margin-bottom:10px;";
+            d.innerHTML = `<span><b>${val.name}</b></span><button class="btn-main" style="height:35px; margin-top:10px; background:#34C759;" onclick="window.approveUser('${uid}')">承認</button>`;
             area.appendChild(d);
         });
     }
@@ -183,13 +197,13 @@
         await remove(ref(db, `v6_groups/${currentGid}/requests/${uid}`));
     };
 
-    // --- その他基本機能 ---
     window.triggerSendMessage = () => {
         const inp = document.getElementById('msg-input');
         if(!inp.value.trim() || !currentGid) return;
         push(ref(db, `v6_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: inp.value });
         inp.value = "";
     };
+
     window.startScanner = async () => {
         window.triggerShowGroupForm('join');
         document.getElementById('scanner-container').style.display = 'block';
@@ -199,15 +213,16 @@
         await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
             const url = new URL(text.replace('chatk://join', 'https://a.b'));
             document.getElementById('group-id-input').value = url.searchParams.get('id');
-            document.getElementById('group-pw-input').value = ""; // スキャン時はPW入力を待つ
             scanner.stop(); document.getElementById('scanner-container').style.display = 'none';
         });
     };
+
     function saveToHistory(gid) {
         let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
         if(!h.includes(gid)) h.push(gid);
         localStorage.setItem('chat_history', JSON.stringify(h));
     }
+
     function refreshHistory() {
         const list = document.getElementById('history-list'); list.innerHTML = "";
         JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(gid => {
@@ -217,7 +232,7 @@
             list.appendChild(d);
         });
     }
-    window.triggerOpenSettings = () => document.getElementById('set-modal').classList.add('active');
+
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; document.getElementById('group-id-input').style.display = 'block'; document.getElementById('target-info-blind').style.display = 'none'; };
     
