@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chat-K Secure OTP</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>Chat-K Ver 4.5.0</title>
     <style>
         :root { --line-green: #06C755; --bg-blue: #7494C0; --header-dark: #35495e; }
         * { box-sizing: border-box; }
@@ -14,31 +13,29 @@
         .footer { background: #fff; padding: 8px 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; }
         #msg-input { flex: 1; border: none; background: #f0f2f5; padding: 10px 15px; border-radius: 20px; font-size: 16px; outline: none; }
         
-        /* モーダル・ホーム */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8f9fa; z-index: 1000; padding: 25px; display: block; overflow-y: auto; text-align: center; }
+        .btn-main { width: 100%; padding: 15px; background: var(--line-green); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; }
+        .btn-sub { width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 8px; margin-top: 10px; cursor: pointer; }
         .input-group { text-align: left; margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
         .input-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        
-        .btn-main { width: 100%; padding: 15px; background: var(--line-green); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; }
-        .btn-sub { width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 8px; margin-top: 10px; }
-        
-        /* 履歴リスト */
-        .history-item { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
-        
+
+        .history-item { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; }
         .bubble-wrapper.me { align-self: flex-end; align-items: flex-end; }
         .bubble-wrapper.other { align-self: flex-start; align-items: flex-start; }
         .bubble { padding: 8px 12px; border-radius: 18px; font-size: 15px; background: white; border-top-left-radius: 2px; }
         .me .bubble { background: var(--line-green); color: white; border-top-left-radius: 18px; border-top-right-radius: 2px; }
+
+        .version-tag { font-size: 10px; color: #999; margin-top: 20px; padding-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="goHome()" style="background:none; border:none; color:white; font-size:24px;">🏠</button>
+    <button onclick="location.reload()" style="background:none; border:none; color:white; font-size:24px;">🏠</button>
     <div id="display-group-name">Chat-K</div>
-    <div onclick="openConfig()" style="cursor:pointer; font-size: 24px;">⚙️</div>
+    <div style="width:24px;"></div>
 </header>
 
 <div id="chat-area"></div>
@@ -50,46 +47,45 @@
 
 <div id="main-modal" class="modal">
     <h2 style="color:var(--line-green);">Chat-K</h2>
-    
-    <div id="step-email">
-        <p>まずはGmailアドレスを入力してください</p>
-        <div class="input-group"><input type="email" id="reg-email" placeholder="example@gmail.com"></div>
-        <button class="btn-main" onclick="sendOTP()">10桁の認証コードを送信</button>
-    </div>
 
-    <div id="step-otp" style="display:none;">
-        <p>メールに届いた10桁の数字を入力してください</p>
-        <div class="input-group"><input type="text" id="reg-otp" placeholder="0000000000"></div>
-        <button class="btn-main" onclick="verifyOTP()">認証する</button>
-    </div>
-
-    <div id="step-name" style="display:none;">
-        <p>あなたのお名前（表示名）を登録します</p>
-        <div class="input-group"><input type="text" id="reg-name" placeholder="お名前"></div>
-        <button class="btn-main" onclick="saveAccount()">アカウント作成完了</button>
+    <div id="step-register">
+        <p>アカウント登録 / ログイン</p>
+        <div class="input-group">
+            <label>Gmailアドレス (IDとして使用)</label>
+            <input type="email" id="reg-email" placeholder="example@gmail.com">
+        </div>
+        <div class="input-group">
+            <label>表示名 (新規登録時のみ)</label>
+            <input type="text" id="reg-name" placeholder="お名前">
+        </div>
+        <button class="btn-main" onclick="handleAuth()">ログイン / 登録</button>
+        <p style="font-size:11px; color:#999; margin-top:10px;">※既に登録済みのメアドの場合、名前は以前のものが優先されます</p>
     </div>
 
     <div id="step-home" style="display:none;">
-        <p id="welcome-msg"></p>
-        <div id="history-area">
-            <h4>参加中のグループ (履歴)</h4>
+        <p id="welcome-msg" style="font-weight:bold;"></p>
+        <div id="history-section">
+            <h4 style="text-align:left;">参加中のグループ</h4>
             <div id="history-list"></div>
         </div>
         <hr>
-        <button class="btn-main" onclick="showGroupForm('create')">新しいグループを作る</button>
-        <button class="btn-sub" onclick="showGroupForm('join')">既存のグループに入る</button>
+        <button class="btn-main" onclick="toggleForm('create')">新しいグループを作る</button>
+        <button class="btn-sub" onclick="toggleForm('join')">既存のグループに入る</button>
         
-        <div id="group-form" style="display:none; margin-top:20px;">
+        <div id="group-form" style="display:none; margin-top:20px; background:#eee; padding:15px; border-radius:10px;">
             <div class="input-group"><label>グループ名</label><input type="text" id="group-id"></div>
             <div class="input-group"><label>パスワード</label><input type="password" id="group-pw"></div>
-            <button class="btn-main" onclick="executeAction()">実行</button>
+            <button class="btn-main" onclick="handleGroupAction()">決定</button>
         </div>
+        <button class="btn-danger" onclick="logout()" style="background:#ff4b4b; color:white; border:none; padding:10px; border-radius:5px; margin-top:30px; font-size:12px; width:100%;">ログアウト</button>
     </div>
+
+    <div class="version-tag">Version 4.5.0 (Secure Auth)</div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, serverTimestamp, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, get, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
@@ -101,116 +97,123 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    
     let myName = localStorage.getItem('chat_name');
     let myEmail = localStorage.getItem('chat_email');
     let currentGid = "";
-    let tempOTP = "";
 
     window.onload = () => {
-        if (myEmail && myName) showStep('home');
-        else showStep('email');
+        if (myName && myEmail) showStep('home');
+        else showStep('register');
     };
 
-    // --- 認証フロー ---
-    window.sendOTP = () => {
-        const email = document.getElementById('reg-email').value;
+    // --- アカウント一意制約の処理 ---
+    window.handleAuth = async () => {
+        const email = document.getElementById('reg-email').value.trim().replace(/\./g, '_'); // Firebaseキー対策
+        const name = document.getElementById('reg-name').value.trim();
         if(!email.includes('@')) return alert("正しいメールアドレスを入力してください");
-        tempOTP = Math.floor(Math.random() * 9000000000) + 1000000000;
-        alert("【シミュレーション】\n" + email + " 宛に認証コードを送りました。\nコード: " + tempOTP);
-        showStep('otp');
-    };
 
-    window.verifyOTP = () => {
-        if(document.getElementById('reg-otp').value == tempOTP) showStep('name');
-        else alert("コードが一致しません");
-    };
+        const userRef = ref(db, `users/${email}`);
+        const snap = await get(userRef);
 
-    window.saveAccount = () => {
-        const n = document.getElementById('reg-name').value;
-        if(!n) return alert("名前を入力してください");
-        localStorage.setItem('chat_email', document.getElementById('reg-email').value);
-        localStorage.setItem('chat_name', n);
-        myName = n;
+        if(snap.exists()){
+            // 既存ユーザー：保存されていた名前をロード
+            myName = snap.val().name;
+            myEmail = document.getElementById('reg-email').value.trim();
+            alert("おかえりなさい、" + myName + "さん！");
+        } else {
+            // 新規ユーザー
+            if(!name) return alert("新規登録には名前が必要です");
+            myName = name;
+            myEmail = document.getElementById('reg-email').value.trim();
+            await set(userRef, { name: myName, created: serverTimestamp() });
+        }
+
+        localStorage.setItem('chat_name', myName);
+        localStorage.setItem('chat_email', myEmail);
         showStep('home');
     };
 
-    // --- グループ・履歴フロー ---
     function showStep(s) {
-        ['email','otp','name', 'home'].forEach(x => document.getElementById('step-'+x).style.display = 'none');
+        document.getElementById('step-register').style.display = 'none';
+        document.getElementById('step-home').style.display = 'none';
         document.getElementById('step-'+s).style.display = 'block';
         if(s === 'home') refreshHistory();
     }
 
     function refreshHistory() {
-        document.getElementById('welcome-msg').innerText = "こんにちは、" + myName + " さん";
+        document.getElementById('welcome-msg').innerText = "ログイン中: " + myName;
         const list = document.getElementById('history-list');
         list.innerHTML = "";
         const history = JSON.parse(localStorage.getItem('chat_history') || "[]");
         history.forEach(gid => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `<span><b>${gid}</b></span> <button onclick="quickJoin('${gid}')">入室</button>`;
-            list.appendChild(item);
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `<span><b>${gid}</b></span> <button onclick="enterChat('${gid}')" style="background:var(--line-green);color:white;border:none;padding:5px 15px;border-radius:5px;">入室</button>`;
+            list.appendChild(div);
         });
     }
 
-    window.showGroupForm = (m) => {
-        window.groupMode = m;
+    window.toggleForm = (mode) => {
+        window.currentMode = mode;
         document.getElementById('group-form').style.display = 'block';
     };
 
-    window.executeAction = async () => {
+    window.handleGroupAction = async () => {
         const gid = document.getElementById('group-id').value.trim();
         const pw = btoa(document.getElementById('group-pw').value);
-        if(!gid || !pw) return;
+        if(!gid || !pw) return alert("入力が不足しています");
 
-        const groupRef = ref(db, `v3_groups/${gid}`);
+        const groupRef = ref(db, `v5_groups/${gid}`);
         const snap = await get(groupRef);
 
-        if(window.groupMode === 'create') {
-            if(snap.exists()) return alert("既に存在します");
-            await set(groupRef, { pw: pw, host: myEmail });
-            addToHistory(gid);
-            startChat(gid);
+        if(window.currentMode === 'create') {
+            if(snap.exists()) return alert("そのグループ名は既に存在します");
+            await set(groupRef, { host: myEmail, pw: pw, created: serverTimestamp() });
+            saveHistory(gid);
+            enterChat(gid);
         } else {
-            if(!snap.exists() || snap.val().pw !== pw) return alert("認証失敗");
-            addToHistory(gid);
-            startChat(gid);
+            if(!snap.exists() || snap.val().pw !== pw) return alert("グループ名またはパスワードが違います");
+            saveHistory(gid);
+            enterChat(gid);
         }
     };
 
-    function addToHistory(gid) {
+    function saveHistory(gid) {
         let history = JSON.parse(localStorage.getItem('chat_history') || "[]");
         if(!history.includes(gid)) history.push(gid);
         localStorage.setItem('chat_history', JSON.stringify(history));
     }
 
-    window.quickJoin = (gid) => startChat(gid);
-
-    // --- チャット本体 ---
-    function startChat(gid) {
+    window.enterChat = (gid) => {
         currentGid = gid;
         document.getElementById('main-modal').style.display = 'none';
         document.getElementById('display-group-name').innerText = gid;
         document.getElementById('chat-area').innerHTML = "";
-        onChildAdded(ref(db, `v3_groups/${gid}/messages`), (snap) => {
+
+        onChildAdded(ref(db, `v5_groups/${gid}/messages`), (snap) => {
             const d = snap.val();
             const wrap = document.createElement('div');
-            wrap.className = `bubble-wrapper ${d.name === myName ? 'me' : 'other'}`;
-            wrap.innerHTML = `<div style="font-size:10px;padding:0 5px;">${d.name}</div><div class="bubble">${d.text}</div>`;
+            wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
+            wrap.innerHTML = `<div style="font-size:10px;margin:0 5px;">${d.name}</div><div class="bubble">${d.text}</div>`;
             document.getElementById('chat-area').appendChild(wrap);
             document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
         });
-    }
+    };
 
     window.sendMessage = () => {
         const inp = document.getElementById('msg-input');
-        if(!inp.value.trim()) return;
-        push(ref(db, `v3_groups/${currentGid}/messages`), { name: myName, text: inp.value });
+        if(!inp.value.trim() || !currentGid) return;
+        push(ref(db, `v5_groups/${currentGid}/messages`), {
+            name: myName,
+            sender: myEmail,
+            text: inp.value,
+            time: serverTimestamp()
+        });
         inp.value = "";
     };
 
-    window.goHome = () => location.reload();
+    window.logout = () => { if(confirm("ログアウトしますか？")) { localStorage.clear(); location.reload(); } };
 </script>
 </body>
 </html>
