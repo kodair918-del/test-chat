@@ -3,97 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K</title>
+    <title>Chat-K | Science Edition</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         :root { --line-green: #06C755; --bg-blue: #7494C0; --header-dark: #35495e; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; width: 100%; background: var(--bg-blue); font-family: sans-serif; }
         body { display: flex; flex-direction: column; }
-        header { background: var(--header-dark); color: white; display: flex; justify-content: space-between; align-items: center; height: 50px; padding: 0 10px; padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 100; }
-        header button { background: none; border: none; color: white; font-size: 20px; cursor: pointer; width: 40px; }
-        header .title { flex: 1; text-align: center; font-weight: bold; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; }
-        .footer { background: #ffffff; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 8px; border-top: 1px solid #ddd; flex-shrink: 0; }
+        header { background: var(--header-dark); color: white; display: flex; align-items: center; height: 50px; padding: 0 10px; padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 100; }
+        header .title { flex: 1; text-align: center; font-weight: bold; font-size: 16px; }
+        #chat-area { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 14px; }
+        .footer { background: #ffffff; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 8px; border-top: 1px solid #ddd; }
         #msg-input { flex: 1; border: none; background: #f0f2f5; padding: 10px 15px; border-radius: 20px; font-size: 16px; outline: none; max-height: 100px; resize: none; }
+        
+        /* システムメッセージ */
+        .system-msg { align-self: center; background: rgba(0,0,0,0.15); color: white; font-size: 11px; padding: 4px 12px; border-radius: 12px; margin: 5px 0; }
+        
+        /* 吹き出し */
         .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; }
-        .bubble { padding: 8px 14px; border-radius: 18px; font-size: 15px; background: white; white-space: pre-wrap; word-break: break-all; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .sender-name { font-size: 11px; color: #555; margin-bottom: 3px; margin-left: 5px; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); line-height: 1.5; }
+        .sender-name { font-size: 11px; color: #555; margin-bottom: 3px; margin-left: 5px; font-weight: bold; }
         .me { align-self: flex-end; } .me .bubble { background: var(--line-green); color: white; border-top-right-radius: 2px; }
         .other { align-self: flex-start; } .other .bubble { border-top-left-radius: 2px; }
-        #settings-panel { position: fixed; top: 0; right: -100%; width: 100%; max-width: 400px; height: 100%; background: white; z-index: 2000; transition: 0.3s; padding: 20px; overflow-y: auto; }
-        #settings-panel.open { right: 0; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8f9fa; z-index: 1000; padding: 20px; display: block; overflow-y: auto; }
-        .btn-main { width: 100%; padding: 15px; background: var(--line-green); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .input-box { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 16px; outline: none; }
+        
+        /* AI解説用 */
+        .ai-bubble { align-self: flex-start; max-width: 90%; margin: 10px 0; border: 1.5px dashed var(--line-green); padding: 12px; border-radius: 15px; background: rgba(255,255,255,0.9); font-size: 13px; color: #333; }
+        .ai-badge { background: var(--line-green); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-bottom: 5px; display: inline-block; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8f9fa; z-index: 1000; padding: 20px; overflow-y: auto; }
+        .btn-main { width: 100%; padding: 15px; background: var(--line-green); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="location.reload()">🏠</button>
-    <div class="title" id="display-group-name">Chat-K</div>
-    <button id="gear-btn" onclick="openSettings()" style="display:none;">⚙️</button>
+    <button onclick="location.reload()" style="background:none; border:none; color:white; font-size:20px;">🏠</button>
+    <div class="title" id="display-group-name">理系チャット</div>
+    <button onclick="openSettings()" id="gear-btn" style="display:none; background:none; border:none; color:white; font-size:20px;">⚙️</button>
 </header>
 
 <div id="chat-area"></div>
 
 <div class="footer">
-    <textarea id="msg-input" rows="1" placeholder="メッセージを入力" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&window.innerWidth>=768){event.preventDefault();sendMessage();}"></textarea>
-    <button onclick="sendMessage()" style="background:var(--line-green); color:white; border:none; width:40px; height:40px; border-radius:50%; flex-shrink:0;">➤</button>
+    <textarea id="msg-input" rows="1" placeholder="数式は$で囲んで入力" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button onclick="sendMessage()" style="background:var(--line-green); color:white; border:none; width:40px; height:40px; border-radius:50%;">➤</button>
 </div>
 
 <div id="main-modal" class="modal">
-    <h2 style="color:var(--line-green); text-align:center; margin-top:40px;">Chat-K</h2>
-    
+    <h2 style="text-align:center; color:var(--line-green);">Chat-K Expert</h2>
     <div id="step-register">
-        <p style="text-align:center; color:#666; font-size:14px; margin-bottom:20px;">メールアドレスで利用開始</p>
-        <input type="email" id="reg-email" class="input-box" placeholder="example@gmail.com">
-        
-        <div id="name-input-area" style="display:none;">
-            <p style="text-align:center; color:#666; font-size:14px;">初めての方はお名前を入力</p>
-            <input type="text" id="reg-name" class="input-box" placeholder="あなたのお名前">
-        </div>
-        
-        <button class="btn-main" id="auth-btn" onclick="checkEmail()">次へ</button>
+        <input type="email" id="reg-email" style="width:100%; padding:15px; border-radius:12px; margin-bottom:10px;" placeholder="メールアドレス">
+        <div id="name-input-area" style="display:none;"><input type="text" id="reg-name" style="width:100%; padding:15px; border-radius:12px; margin-bottom:10px;" placeholder="お名前（専門など）"></div>
+        <button class="btn-main" onclick="checkEmail()">次へ</button>
     </div>
-
     <div id="step-home" style="display:none; text-align:center;">
-        <div style="background:white; padding:15px; border-radius:15px; margin-bottom:15px; border:1px solid #ddd;">
-            <p id="welcome-msg" style="font-weight:bold; margin:0;"></p>
-            <input type="text" id="edit-my-name" class="input-box" style="margin:10px 0; padding:10px; text-align:center;">
-            <button onclick="updateProfileName()" style="font-size:12px; border:none; background:none; color:var(--line-green); font-weight:bold;">お名前を更新</button>
-        </div>
-        <button class="btn-main" onclick="startScanner()" style="background:#4285F4; margin-bottom:15px;">📷 QRスキャンで参加</button>
+        <p id="welcome-msg" style="font-weight:bold;"></p>
         <div id="history-list"></div>
-        <button onclick="window.currentMode='join'; document.getElementById('group-form').style.display='block'" style="width:100%; background:#eee; border:none; padding:15px; border-radius:12px; margin-top:10px; font-weight:bold;">手動でグループに参加</button>
-        <button onclick="window.currentMode='create'; document.getElementById('group-form').style.display='block'" style="width:100%; background:none; border:1px solid #ccc; padding:10px; border-radius:12px; margin-top:10px; color:#666;">新しいグループを作る</button>
-        
-        <div id="group-form" style="display:none; margin-top:10px; padding:15px; background:#fff; border-radius:12px; border:1px solid #ddd;">
-            <input type="text" id="group-id" placeholder="グループ名" class="input-box" style="margin-bottom:10px;">
-            <input type="password" id="group-pw" placeholder="パスワード" class="input-box" style="margin-bottom:10px;">
-            <button class="btn-main" onclick="handleGroupAction()">決定</button>
-        </div>
-        <button onclick="localStorage.clear(); location.reload();" style="color:red; border:none; background:none; margin-top:40px; font-size:12px;">ログアウト</button>
+        <button onclick="window.currentMode='create'; document.getElementById('group-form').style.display='block'" class="btn-main" style="margin-top:10px;">新規グループ作成</button>
+        <div id="group-form" style="display:none; margin-top:10px;"><input type="text" id="group-id" placeholder="グループ名"><input type="password" id="group-pw" placeholder="PW"><button onclick="handleGroupAction()">作成/参加</button></div>
     </div>
-</div>
-
-<div id="settings-panel">
-    <div style="display:flex; justify-content:space-between; align-items:center;"><h3>設定</h3><button onclick="closeSettings()" style="font-size:30px; border:none; background:none;">&times;</button></div>
-    <div id="host-only-info" style="display:none; background:#fff9c4; padding:15px; border-radius:10px; margin-bottom:15px;">
-        <p style="margin:0; font-size:12px;"><b>🔑 ホスト権限: PW変更</b></p>
-        <input type="text" id="edit-group-pw" class="input-box" style="padding:10px; margin:5px 0;">
-        <button onclick="updateGroupPw()" style="width:100%;">パスワードを保存</button>
-    </div>
-    <div id="member-list"></div>
-    <div id="qr-code" style="display:flex; justify-content:center; margin:20px 0;"></div>
-    <button onclick="leaveGroup()" style="width:100%; padding:12px; background:#ff4b4b; color:white; border:none; border-radius:8px;">履歴から削除</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, get, set, off, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, get, set, off, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
@@ -106,141 +82,128 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     let myName = localStorage.getItem('chat_name'), myEmail = localStorage.getItem('chat_email'), currentGid = "";
-    let members = {};
 
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            document.body.style.height = window.visualViewport.height + 'px';
-            if(currentGid) document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
-        });
-    }
+    // 数式描画設定
+    const mathOptions = { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] };
 
     window.onload = () => { (myName && myEmail) ? showStep('home') : showStep('register'); };
 
-    // --- ログイン・新規登録ロジックの修正 ---
-    window.checkEmail = async () => {
-        const email = document.getElementById('reg-email').value.trim().toLowerCase();
-        if(!email || !email.includes('@')) return alert("正しいメールアドレスを入力してください");
-
-        const userRef = ref(db, `users/${email.replace(/\./g, '_')}`);
-        const snap = await get(userRef);
-
-        if(snap.exists()){
-            // 登録済み：そのままログイン
-            const userData = snap.val();
-            myName = userData.name;
-            myEmail = email;
-            localStorage.setItem('chat_name', myName);
-            localStorage.setItem('chat_email', myEmail);
-            if(userData.history) localStorage.setItem('chat_history', JSON.stringify(userData.history));
-            showStep('home');
-        } else {
-            // 未登録：名前入力欄を出す
-            document.getElementById('name-input-area').style.display = 'block';
-            document.getElementById('auth-btn').innerText = "登録を完了する";
-            document.getElementById('auth-btn').onclick = () => finalizeRegistration(email);
-        }
-    };
-
-    async function finalizeRegistration(email) {
-        const name = document.getElementById('reg-name').value.trim();
-        if(!name) return alert("お名前を入力してください");
-
-        const userRef = ref(db, `users/${email.replace(/\./g, '_')}`);
-        await set(userRef, { name: name, history: [] });
-        
-        myName = name;
-        myEmail = email;
-        localStorage.setItem('chat_name', name);
-        localStorage.setItem('chat_email', email);
-        showStep('home');
-    }
-
-    // --- チャット・設定・その他 (Ver 4.6.2準拠) ---
     window.sendMessage = () => {
         const inp = document.getElementById('msg-input');
-        if(!inp.value.trim() || !currentGid) return;
-        push(ref(db, `v5_groups/${currentGid}/messages`), { name: myName, sender: myEmail, text: inp.value });
-        inp.value = ""; inp.style.height = 'auto'; inp.focus();
+        if(!inp.value.trim()) return;
+        push(ref(db, `v5_groups/${currentGid}/messages`), { 
+            name: myName, 
+            sender: myEmail, 
+            text: inp.value, 
+            type: 'text',
+            time: serverTimestamp() 
+        });
+        inp.value = ""; inp.style.height = 'auto';
     };
 
-    window.enterChat = (gid) => {
-        currentGid = gid; members = {};
+    window.enterChat = async (gid) => {
+        currentGid = gid;
         document.getElementById('main-modal').style.display = 'none';
         document.getElementById('gear-btn').style.display = 'block';
         document.getElementById('display-group-name').innerText = gid;
-        document.getElementById('chat-area').innerHTML = "";
+        const chatArea = document.getElementById('chat-area');
+        chatArea.innerHTML = "";
+
+        // 入室通知を送信
+        push(ref(db, `v5_groups/${gid}/messages`), { text: `${myName}さんが参加しました`, type: 'system' });
+
         const chatRef = ref(db, `v5_groups/${gid}/messages`);
         off(chatRef);
         onChildAdded(chatRef, (snap) => {
             const d = snap.val();
-            members[d.sender] = d.name;
             const wrap = document.createElement('div');
-            wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
-            wrap.innerHTML = `<div class="sender-name">${d.name}</div><div class="bubble">${d.text}</div>`;
-            document.getElementById('chat-area').appendChild(wrap);
-            document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+            
+            if(d.type === 'system') {
+                wrap.className = 'system-msg';
+                wrap.innerText = d.text;
+            } else {
+                wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
+                wrap.innerHTML = `<div class="sender-name">${d.name}</div><div class="bubble">${d.text}</div>`;
+                // 数式があれば即座に変換
+                renderMathInElement(wrap, mathOptions);
+            }
+            
+            chatArea.appendChild(wrap);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            // AI解説トリガー（自分以外のメッセージの時のみ反応）
+            if(d.sender !== myEmail && d.type === 'text') checkExpertTerms(d.text);
         });
     };
 
-    window.openSettings = async () => {
-        const snap = await get(ref(db, `v5_groups/${currentGid}`));
-        const data = snap.val();
-        if(data.host === myEmail) {
-            document.getElementById('host-only-info').style.display = 'block';
-            document.getElementById('edit-group-pw').value = atob(data.pw);
+    // --- AI解説ロジック（簡易版エミュレーション） ---
+    // 実際にはGemini APIと連携させますが、ここでは理系用語に反応する仕組みを実装
+    async function checkExpertTerms(text) {
+        const terms = {
+            "シュレディンガー": "【解説】量子力学における基礎方程式を導いた物理学者。猫の思考実験でも有名です。",
+            "エントロピー": "【解説】系の乱雑さを表す物理量。熱力学第二法則により、孤立系では増大し続けます。",
+            "フーリエ変換": "【解説】信号や関数を周波数成分に分解する数学的手法。$f(\xi) = \int_{-\infty}^{\infty} f(x) e^{-2\pi i x \xi} dx$ で定義されます。",
+            "相対性理論": "【解説】アインシュタインによる理論。時間と空間が観測者の速度によって変化することを記述します。"
+        };
+
+        for (let key in terms) {
+            if (text.includes(key)) {
+                setTimeout(() => {
+                    const aiWrap = document.createElement('div');
+                    aiWrap.className = 'ai-bubble';
+                    aiWrap.innerHTML = `<span class="ai-badge">Gemini Advisor</span><br>${terms[key]}`;
+                    renderMathInElement(aiWrap, mathOptions);
+                    document.getElementById('chat-area').appendChild(aiWrap);
+                    document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+                }, 1500);
+                break;
+            }
         }
-        document.getElementById('qr-code').innerHTML = "";
-        new QRCode(document.getElementById('qr-code'), { text: `${window.location.origin}${window.location.pathname}?join=${currentGid}`, width: 140, height: 140 });
-        document.getElementById('settings-panel').classList.add('open');
-    };
-
-    window.updateProfileName = async () => {
-        const newName = document.getElementById('edit-my-name').value.trim();
-        if(!newName) return;
-        await update(ref(db, `users/${myEmail.replace(/\./g, '_')}`), { name: newName });
-        localStorage.setItem('chat_name', newName); myName = newName;
-        alert("名前を更新しました"); refreshHistory();
-    };
-
-    window.handleGroupAction = async () => {
-        const gid = document.getElementById('group-id').value.trim(), pw = btoa(document.getElementById('group-pw').value);
-        if(!gid || !document.getElementById('group-pw').value) return alert("入力してください");
-        const snap = await get(ref(db, `v5_groups/${gid}`));
-        if(window.currentMode === 'create') {
-            if(snap.exists()) return alert("既に存在するグループ名です");
-            await set(ref(db, `v5_groups/${gid}`), { host: myEmail, pw: pw });
-        } else { if(!snap.exists() || snap.val().pw !== pw) return alert("グループ名またはパスワードが違います"); }
-        saveGroupLocal(gid, pw); enterChat(gid);
-    };
-
-    function saveGroupLocal(gid, pw) {
-        let h = JSON.parse(localStorage.getItem('chat_history') || "[]"); if(!h.includes(gid)) h.push(gid);
-        localStorage.setItem('chat_history', JSON.stringify(h));
-        update(ref(db, `users/${myEmail.replace(/\./g, '_')}`), { history: h });
     }
 
-    function showStep(s) {
-        document.getElementById('step-register').style.display = 'none';
-        document.getElementById('step-home').style.display = 'none';
+    // --- 認証系 (Ver 4.6.3継承) ---
+    window.checkEmail = async () => {
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
+        const snap = await get(ref(db, `users/${email.replace(/\./g, '_')}`));
+        if(snap.exists()){
+            myName = snap.val().name; myEmail = email;
+            localStorage.setItem('chat_name', myName); localStorage.setItem('chat_email', myEmail);
+            showStep('home');
+        } else {
+            document.getElementById('name-input-area').style.display = 'block';
+            document.getElementById('auth-btn').onclick = () => finalizeReg(email);
+        }
+    };
+    async function finalizeReg(email) {
+        const name = document.getElementById('reg-name').value.trim();
+        await set(ref(db, `users/${email.replace(/\./g, '_')}`), { name: name });
+        myName = name; myEmail = email;
+        localStorage.setItem('chat_name', name); localStorage.setItem('chat_email', email);
+        showStep('home');
+    }
+    window.handleGroupAction = async () => {
+        const gid = document.getElementById('group-id').value.trim(), pw = btoa(document.getElementById('group-pw').value);
+        await set(ref(db, `v5_groups/${gid}`), { host: myEmail, pw: pw });
+        let h = JSON.parse(localStorage.getItem('chat_history') || "[]"); h.push(gid);
+        localStorage.setItem('chat_history', JSON.stringify(h));
+        enterChat(gid);
+    };
+    function showStep(s) { 
+        document.getElementById('step-register').style.display = 'none'; 
+        document.getElementById('step-home').style.display = 'none'; 
         document.getElementById('step-'+s).style.display = 'block';
         if(s === 'home') refreshHistory();
     }
-
     function refreshHistory() {
         const list = document.getElementById('history-list'); list.innerHTML = "";
         JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(gid => {
             const div = document.createElement('div');
-            div.style = "background:white; padding:12px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #ddd;";
-            div.innerHTML = `<span><b>${gid}</b></span><button onclick="enterChat('${gid}')" style="background:var(--line-green);color:white;border:none;padding:8px 15px;border-radius:10px;">入室</button>`;
+            div.style = "background:white; padding:10px; border-radius:10px; margin-bottom:5px; display:flex; justify-content:space-between;";
+            div.innerHTML = `<span>${gid}</span><button onclick="enterChat('${gid}')">入室</button>`;
             list.appendChild(div);
         });
-        document.getElementById('welcome-msg').innerText = myName;
-        document.getElementById('edit-my-name').value = myName;
+        document.getElementById('welcome-msg').innerText = "Hello, " + myName;
     }
-    
-    window.closeSettings = () => document.getElementById('settings-panel').classList.remove('open');
-    window.leaveGroup = () => { if(confirm("履歴から削除しますか？")) { let h = JSON.parse(localStorage.getItem('chat_history') || "[]").filter(g => g !== currentGid); localStorage.setItem('chat_history', JSON.stringify(h)); location.reload(); }};
 </script>
 </body>
 </html>
