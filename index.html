@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 15.1 Fix</title>
+    <title>Chat-K | Ver 16.0</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
@@ -17,26 +17,26 @@
             --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF;
             --header-bg: rgba(28, 28, 30, 0.8); --bubble-me: #0A84FF; --bubble-other: #3A3A3C;
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); display: flex; flex-direction: column; font-family: -apple-system, sans-serif; transition: 0.3s; overflow: hidden; }
+        * { box-sizing: border-box; }
+        body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; }
 
-        header { 
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            background: var(--header-bg); height: 60px; display: flex; align-items: center; 
-            padding: 0 15px; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); flex-shrink: 0;
-            padding-top: env(safe-area-inset-top);
-        }
-        header button { background: none; border: none; cursor: pointer; font-size: 24px; padding: 5px; display: flex; align-items: center; color: inherit; }
+        header { backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: 0 15px; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+        header button { background: none; border: none; cursor: pointer; font-size: 24px; color: inherit; }
         header .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
         #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 12px; }
+        
+        /* LINE風参加通知 */
+        .system-msg { align-self: center; background: rgba(0,0,0,0.1); color: white; font-size: 11px; padding: 4px 12px; border-radius: 12px; margin: 10px 0; }
+        body.dark-mode .system-msg { background: rgba(255,255,255,0.1); }
+
         .bubble-wrapper { display: flex; flex-direction: column; max-width: 80%; }
         .sender-info { display: flex; align-items: center; gap: 4px; font-size: 11px; margin: 2px 5px; opacity: 0.7; }
         .bubble { padding: 10px 16px; border-radius: 20px; font-size: 16px; line-height: 1.4; white-space: pre-wrap; word-break: break-all; }
         .me { align-self: flex-end; } .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other { align-self: flex-start; } .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
 
-        .footer { background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px 30px; display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); }
+        .footer { background: var(--header-bg); padding: 10px 15px 30px; display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); }
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; min-height: 40px; max-height: 150px; resize: none; }
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: 20px; display: none; overflow-y: auto; }
@@ -44,15 +44,16 @@
         .card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .btn-main { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
         .input-box { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 10px; font-size: 16px; }
-        
-        .msg-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 0.5px solid rgba(0,0,0,0.1); font-size: 13px; }
+
+        /* パスワード強調表示 */
+        .pw-display { font-size: 24px; font-weight: bold; color: #FF3B30; text-align: center; background: #FFF; border: 2px dashed #FF3B30; padding: 10px; border-radius: 8px; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <header>
     <button onclick="location.reload()">🏠</button>
-    <div class="title" id="head-title">Chat-K Expert</div>
+    <div class="title" id="head-title">Chat-K</div>
     <button onclick="window.triggerOpenSettings()">⚙️</button>
 </header>
 
@@ -60,7 +61,7 @@
 
 <div class="footer">
     <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
-    <button onclick="window.triggerSendMessage()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:18px;">↑</button>
+    <button onclick="window.triggerSendMessage()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%;">↑</button>
 </div>
 
 <div id="main-modal" class="modal active">
@@ -95,15 +96,18 @@
     <div class="card">
         <div style="display:flex; justify-content:space-between; padding:10px 0;"><span>ダークモード</span><input type="checkbox" id="dark-toggle" onchange="toggleDark()"></div>
     </div>
-    <div id="host-settings" class="card" style="display:none; border: 2px solid #FF3B30;">
+    <div id="host-settings" class="card" style="display:none; border: 3px solid #FF3B30;">
         <h3 style="color:#FF3B30; margin-top:0;">👑 Admin Panel</h3>
-        <input type="text" id="edit-group-id" class="input-box" placeholder="新しいプロジェクト名">
-        <input type="password" id="edit-group-pw" class="input-box" placeholder="新しいパスワード">
-        <button class="btn-main" onclick="updateProjectInfo()">保存して適用</button>
-        <h4 style="margin: 20px 0 10px;">メッセージ管理</h4>
-        <div id="msg-delete-list" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.05); border-radius: 8px;"></div>
-        <button class="btn-main" style="background:#FF9500; margin-top:10px;" onclick="clearAllMessages()">全消去</button>
-        <button class="btn-main" style="background:#FF3B30; margin-top:5px;" onclick="deleteProject()">削除</button>
+        <label style="font-size:12px;">現在のプロジェクトパスワード:</label>
+        <div id="current-pw-display" class="pw-display">----</div>
+        
+        <hr>
+        <h4 style="margin: 15px 0 5px;">「名前」を指定してメッセージ削除</h4>
+        <input type="text" id="target-name-input" class="input-box" placeholder="削除したい人の名前を入力">
+        <button class="btn-main" style="background:#FF9500;" onclick="deleteMessagesByName()">この人のコメントをすべて消去</button>
+        
+        <hr>
+        <button class="btn-main" style="background:#FF3B30; margin-top:10px;" onclick="clearAllMessages()">全メッセージを消去</button>
     </div>
     <button class="btn-main" style="background:#8E8E93; margin-top:20px;" onclick="localStorage.clear(); location.reload();">ログアウト</button>
 </div>
@@ -124,25 +128,18 @@
     const db = getDatabase(app);
     let myName = localStorage.getItem('chat_name'), myEmail = localStorage.getItem('chat_email'), currentGid = "";
 
-    // ログイン処理を安定化
     window.triggerCheckEmail = async () => {
-        const emailInput = document.getElementById('reg-email');
-        if (!emailInput) return;
-        const email = emailInput.value.trim().toLowerCase();
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
         if(!email.includes('@')) return alert("Invalid Email");
-        
-        try {
-            const snap = await get(ref(db, `users/${email.replace(/\./g, '_')}`));
-            if(snap.exists()){
-                myName = snap.val().name; myEmail = email;
-                localStorage.setItem('chat_name', myName); 
-                localStorage.setItem('chat_email', myEmail);
-                showStep('home');
-            } else {
-                document.getElementById('name-input-area').style.display = 'block';
-                document.getElementById('auth-btn').onclick = () => finalizeReg(email);
-            }
-        } catch(e) { console.error(e); alert("通信エラーが発生しました"); }
+        const snap = await get(ref(db, `users/${email.replace(/\./g, '_')}`));
+        if(snap.exists()){
+            myName = snap.val().name; myEmail = email;
+            localStorage.setItem('chat_name', myName); localStorage.setItem('chat_email', myEmail);
+            showStep('home');
+        } else {
+            document.getElementById('name-input-area').style.display = 'block';
+            document.getElementById('auth-btn').onclick = () => finalizeReg(email);
+        }
     };
 
     async function finalizeReg(email) {
@@ -156,7 +153,8 @@
 
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
-        const pw = btoa(document.getElementById('group-pw-input').value);
+        const rawPw = document.getElementById('group-pw-input').value;
+        const pw = btoa(rawPw);
         if(!gid) return;
         const snap = await get(ref(db, `v5_groups/${gid}`));
         if(window.currentMode === 'create') {
@@ -165,9 +163,6 @@
         } else {
             if(!snap.exists() || snap.val().pw !== pw) return alert("Wrong ID/PW");
         }
-        let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
-        if(!h.includes(gid)) h.push(gid);
-        localStorage.setItem('chat_history', JSON.stringify(h));
         enterChat(gid);
     };
 
@@ -175,87 +170,88 @@
         currentGid = gid;
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
-        const chatArea = document.getElementById('chat-area');
         
+        // 参加通知を送信
+        push(ref(db, `v5_groups/${gid}/messages`), { type: 'system', text: `${myName}が参加しました` });
+
         onValue(ref(db, `v5_groups/${gid}`), (snap) => {
             const data = snap.val();
             if(!data) return;
             const isHost = data.host === myEmail;
-            document.getElementById('host-settings').style.display = isHost ? 'block' : 'none';
             
-            chatArea.innerHTML = "";
-            const delList = document.getElementById('msg-delete-list');
-            delList.innerHTML = "";
+            if(isHost) {
+                document.getElementById('host-settings').style.display = 'block';
+                document.getElementById('current-pw-display').innerText = atob(data.pw);
+            }
 
+            const chatArea = document.getElementById('chat-area');
+            chatArea.innerHTML = "";
             if(data.messages) {
-                Object.entries(data.messages).forEach(([mId, d]) => {
-                    const wrap = document.createElement('div');
-                    wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
-                    wrap.innerHTML = `
-                        <div class="sender-info">${d.name} ${d.sender === data.host ? '👑' : ''}</div>
-                        <div class="bubble">${d.text}</div>
-                    `;
-                    chatArea.appendChild(wrap);
-                    if(isHost) {
-                        const item = document.createElement('div');
-                        item.className = 'msg-item';
-                        item.innerHTML = `<span>${d.text.slice(0,10)}...</span><button onclick="deleteMessage('${mId}')" style="color:red; border:none; background:none;">削除</button>`;
-                        delList.appendChild(item);
+                Object.values(data.messages).forEach(d => {
+                    if(d.type === 'system') {
+                        const div = document.createElement('div');
+                        div.className = 'system-msg';
+                        div.innerText = d.text;
+                        chatArea.appendChild(div);
+                    } else {
+                        const wrap = document.createElement('div');
+                        wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
+                        wrap.innerHTML = `
+                            <div class="sender-info">${d.name} ${d.sender === data.host ? '👑' : ''}</div>
+                            <div class="bubble">${d.text}</div>
+                        `;
+                        chatArea.appendChild(wrap);
                     }
                 });
             }
-            renderMathInElement(chatArea, { delimiters: [{left: "$", right: "$", display: false}] });
             chatArea.scrollTop = chatArea.scrollHeight;
         });
     }
 
-    // 基本機能
-    window.triggerOpenSettings = () => document.getElementById('set-modal').classList.add('active');
-    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+    // 名前を指定して削除する機能
+    window.deleteMessagesByName = async () => {
+        const targetName = document.getElementById('target-name-input').value.trim();
+        if(!targetName) return alert("名前を入力してください");
+        if(!confirm(`${targetName}さんのメッセージをすべて削除しますか？`)) return;
+
+        const snap = await get(ref(db, `v5_groups/${currentGid}/messages`));
+        if(snap.exists()){
+            const msgs = snap.val();
+            Object.keys(msgs).forEach(key => {
+                if(msgs[key].name === targetName) {
+                    remove(ref(db, `v5_groups/${currentGid}/messages/${key}`));
+                }
+            });
+            alert(`${targetName}さんのメッセージを削除しました`);
+        }
+    };
+
+    window.clearAllMessages = () => {
+        if(confirm("全メッセージを消去しますか？")) {
+            remove(ref(db, `v5_groups/${currentGid}/messages`));
+        }
+    };
+
     window.triggerSendMessage = () => {
         const inp = document.getElementById('msg-input');
         if(!inp.value.trim() || !currentGid) return;
         push(ref(db, `v5_groups/${currentGid}/messages`), { 
             name: myName, sender: myEmail, text: inp.value, time: serverTimestamp() 
         });
-        inp.value = ""; inp.style.height = '40px';
+        inp.value = "";
     };
 
-    function showStep(s) {
-        document.getElementById('step-register').style.display = 'none';
-        document.getElementById('step-home').style.display = 'block';
-        refreshHistory();
-    }
-    function refreshHistory() {
-        const list = document.getElementById('history-list'); list.innerHTML = "";
-        document.getElementById('welcome-msg').innerText = "Researcher: " + (myName || "Unknown");
-        JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(gid => {
-            const d = document.createElement('div');
-            d.className = "card"; d.style = "display:flex; justify-content:space-between; align-items:center; cursor:pointer;";
-            d.innerHTML = `<span><b>${gid}</b></span><button class="btn-main" style="width:auto; padding:8px 15px; margin:0;">入室</button>`;
-            d.onclick = () => enterChat(gid);
-            list.appendChild(d);
-        });
-    }
-
+    window.triggerOpenSettings = () => document.getElementById('set-modal').classList.add('active');
+    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+    window.toggleDark = () => document.body.classList.toggle('dark-mode');
+    window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
+    function showStep(s) { document.getElementById('step-register').style.display = 'none'; document.getElementById('step-home').style.display = 'block'; }
+    
     document.getElementById('msg-input').onkeydown = (e) => {
         if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.triggerSendMessage(); }
     };
 
-    window.toggleDark = () => {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('chat_dark', document.body.classList.contains('dark-mode'));
-    };
-
-    window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
-
-    window.onload = () => {
-        if(localStorage.getItem('chat_dark') === 'true') {
-            document.body.classList.add('dark-mode');
-            document.getElementById('dark-toggle').checked = true;
-        }
-        if(myName && myEmail) showStep('home');
-    };
+    window.onload = () => { if(myName && myEmail) showStep('home'); };
 </script>
 </body>
 </html>
