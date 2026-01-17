@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Next Gen</title>
+    <title>Chat-K | Dark Edition</title>
     <style>
         :root {
-            --accent: #007AFF; /* iOS Blue */
-            --bg: #F2F2F7;
-            --card-bg: rgba(255, 255, 255, 0.8);
-            --text: #000000;
-            --header-bg: rgba(255, 255, 255, 0.7);
+            --bg: #000000;
+            --card-bg: #1c1c1e;
+            --header-bg: rgba(0, 0, 0, 0.75);
+            --text: #ffffff;
+            --accent: #0A84FF;
+            --secondary-text: #8E8E93;
+            --bubble-me: #30D158;
+            --bubble-other: #2c2c2e;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             margin: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            font-family: -apple-system, sans-serif; 
             height: 100vh; 
             background: var(--bg); 
             display: flex; 
@@ -26,7 +29,6 @@
             color: var(--text);
         }
 
-        /* ガラス質感のヘッダー */
         header { 
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -36,7 +38,7 @@
             align-items: center; 
             padding: 0 20px; 
             z-index: 2000; 
-            border-bottom: 0.5px solid rgba(0,0,0,0.1);
+            border-bottom: 0.5px solid #333;
             flex-shrink: 0;
             padding-top: env(safe-area-inset-top);
         }
@@ -45,79 +47,56 @@
         header button { 
             background: none; border: none; color: var(--accent); 
             font-size: 24px; cursor: pointer; width: 44px; height: 44px;
-            display: flex; align-items: center; justify-content: center;
         }
 
-        /* コンテンツエリア */
-        .page { display: none; height: 100%; width: 100%; overflow-y: auto; padding-bottom: 100px; }
-        .page.active { display: block; animation: fadeIn 0.3s ease-out; }
+        .page { display: none; height: 100%; width: 100%; animation: fadeIn 0.2s ease-out; }
+        .page.active { display: block; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* モダンなカード */
         .card { 
             background: var(--card-bg); 
-            backdrop-filter: blur(10px);
-            border-radius: 20px; 
+            border-radius: 16px; 
             padding: 24px; 
             margin: 16px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            border: 0.5px solid rgba(255,255,255,0.5);
         }
 
         .btn { 
-            width: 100%; padding: 16px; border: none; border-radius: 14px; 
+            width: 100%; padding: 16px; border: none; border-radius: 12px; 
             font-weight: 600; cursor: pointer; font-size: 16px; margin-top: 12px;
-            transition: all 0.2s;
         }
         .btn-primary { background: var(--accent); color: white; }
-        .btn-primary:active { opacity: 0.8; transform: scale(0.98); }
-        .btn-secondary { background: rgba(0,0,0,0.05); color: var(--accent); }
+        .btn-secondary { background: #2c2c2e; color: white; }
 
-        /* チャットエリア */
-        #chat-page.active { display: flex; flex-direction: column; background: #fff; padding: 0; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        /* チャット画面 */
+        #chat-page.active { display: flex; flex-direction: column; }
+        #chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         
         .bubble { 
-            padding: 12px 16px; border-radius: 20px; 
-            background: #E9E9EB; max-width: 75%; 
+            padding: 10px 16px; border-radius: 20px; 
+            background: var(--bubble-other); max-width: 80%; 
             font-size: 16px; line-height: 1.4;
         }
         .bubble.me { 
-            align-self: flex-end; background: var(--accent); color: white; 
-            border-bottom-right-radius: 4px;
+            align-self: flex-end; background: var(--bubble-me); color: white; 
         }
 
-        /* 進化した数学ツールバー */
-        .math-bar { 
-            background: rgba(255,255,255,0.9); border-top: 0.5px solid #ddd;
-            display: flex; overflow-x: auto; padding: 8px; gap: 8px;
-        }
-        .math-bar::-webkit-scrollbar { display: none; }
-        .m-btn { 
-            background: #fff; border: 0.5px solid #ccc; border-radius: 8px;
-            padding: 8px 15px; min-width: 45px; font-size: 18px; font-family: serif;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        /* 入力エリア */
         .footer { 
-            background: #fff; padding: 10px 16px 30px; 
-            display: flex; gap: 10px; border-top: 0.5px solid #ddd; align-items: center;
+            background: var(--bg); padding: 10px 16px 30px; 
+            display: flex; gap: 10px; border-top: 0.5px solid #333; align-items: center;
         }
         textarea { 
-            flex: 1; border: none; background: #F2F2F7; padding: 12px 18px; 
-            border-radius: 22px; outline: none; font-size: 16px; height: 44px; resize: none;
+            flex: 1; border: none; background: #1c1c1e; padding: 12px 18px; 
+            border-radius: 22px; outline: none; font-size: 16px; height: 44px; resize: none; color: white;
         }
 
-        /* ハーフモーダル */
+        /* モーダル */
         .modal { 
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 90%; 
-            background: #fff; z-index: 3000; transition: 0.4s cubic-bezier(0.25, 0.1, 0.25, 1); 
-            border-radius: 30px 30px 0 0; padding: 30px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 80%; 
+            background: #1c1c1e; z-index: 3000; transition: 0.3s cubic-bezier(0, 0, 0.2, 1); 
+            border-radius: 20px 20px 0 0; padding: 30px;
         }
         .modal.open { bottom: 0; }
-        .modal-handle { width: 40px; height: 5px; background: #ddd; border-radius: 10px; margin: -15px auto 20px; }
     </style>
 </head>
 <body>
@@ -130,65 +109,49 @@
 
 <div id="login-page" class="page active">
     <div style="text-align:center; padding:100px 30px;">
-        <div style="font-size:60px; margin-bottom:20px;">🧪</div>
-        <h1 style="margin:0; font-size:34px; letter-spacing:-1px;">Chat-K</h1>
-        <p style="color:#8E8E93; margin-top:10px;">The Future of Science Chat</p>
-        <div style="margin-top:40px;">
-            <input type="email" id="u-email" placeholder="Email Address" style="width:100%; padding:18px; border-radius:16px; border:1px solid #ddd; font-size:16px; background:#fff;">
-            <button class="btn btn-primary" onclick="doLogin()">Get Started</button>
-        </div>
+        <h1 style="font-size:40px; margin-bottom:10px;">Chat-K</h1>
+        <p style="color:var(--secondary-text); margin-bottom:40px;">名前を入力してスタート</p>
+        <input type="text" id="u-name-input" placeholder="あなたの名前" style="width:100%; padding:18px; border-radius:14px; border:1px solid #333; font-size:18px; background:#1c1c1e; color:white; outline:none;">
+        <button class="btn btn-primary" onclick="doLogin()">チャットを始める</button>
     </div>
 </div>
 
 <div id="dash-page" class="page">
     <div class="card">
-        <div style="font-size:13px; color:var(--accent); font-weight:700; margin-bottom:5px;">LOGGED IN AS</div>
-        <div id="u-display" style="font-size:24px; font-weight:700;">Guest User</div>
-        <button class="btn btn-primary" style="margin-top:20px;" onclick="nav('chat')">🧪 Start Research Chat</button>
+        <div style="font-size:12px; color:var(--accent); font-weight:bold; margin-bottom:4px;">USER</div>
+        <div id="u-display" style="font-size:28px; font-weight:bold;">Name</div>
+        <button class="btn btn-primary" style="margin-top:24px;" onclick="nav('chat')">チャットルームに入る</button>
     </div>
     
     <div class="card">
-        <h3 style="margin:0 0 15px;">Projects</h3>
-        <button class="btn btn-secondary" onclick="createGroup()">＋ Create New Group</button>
+        <button class="btn btn-secondary" onclick="createGroup()">新規グループ作成</button>
     </div>
 </div>
 
 <div id="chat-page" class="page">
     <div id="chat-area"></div>
-    <div class="math-bar">
-        <button class="m-btn" onclick="ins('²')">x²</button>
-        <button class="m-btn" onclick="ins('√')">√</button>
-        <button class="m-btn" onclick="ins('π')">π</button>
-        <button class="m-btn" onclick="ins('θ')">θ</button>
-        <button class="m-btn" onclick="ins('±')">±</button>
-        <button class="m-btn" onclick="ins('÷')">÷</button>
-        <button class="m-btn" onclick="ins('∞')">∞</button>
-        <button class="m-btn" onclick="ins('∫')">∫</button>
-        <button class="m-btn" onclick="ins('λ')">λ</button>
-    </div>
     <div class="footer">
-        <textarea id="msg-input" placeholder="Aa"></textarea>
-        <button onclick="sendMsg()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:18px;">↑</button>
+        <textarea id="msg-input" placeholder="メッセージ"></textarea>
+        <button onclick="sendMsg()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:20px;">↑</button>
     </div>
 </div>
 
 <div id="set-modal" class="modal">
-    <div class="modal-handle"></div>
-    <button onclick="closeModal('set-modal')" style="float:right; border:none; background:none; color:var(--accent); font-size:16px; font-weight:600;">Done</button>
-    <h2 style="margin-top:0;">Settings</h2>
+    <h2 style="margin-top:0;">設定</h2>
     <div style="margin-top:30px;">
-        <label style="font-size:13px; color:#8E8E93; margin-left:10px;">DISPLAY NAME</label>
-        <input type="text" id="set-name" style="width:100%; padding:16px; border-radius:14px; border:1px solid #ddd; margin:8px 0 20px; font-size:16px;">
-        <button class="btn btn-primary" onclick="saveSet()">Update Profile</button>
-        <button class="btn" style="color:#FF3B30; background:none; margin-top:20px;" onclick="logout()">Sign Out</button>
+        <label style="font-size:12px; color:var(--secondary-text);">名前の変更</label>
+        <input type="text" id="set-name" style="width:100%; padding:16px; border-radius:12px; border:1px solid #333; margin:8px 0 20px; font-size:16px; background:#2c2c2e; color:white;">
+        <button class="btn btn-primary" onclick="saveSet()">保存する</button>
+        <button class="btn" style="color:#FF453A; background:none; margin-top:20px;" onclick="logout()">ログアウト</button>
     </div>
+    <button class="btn btn-secondary" style="margin-top:20px;" onclick="closeModal('set-modal')">閉じる</button>
 </div>
 
 <script>
     function nav(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id + '-page').classList.add('active');
-        document.getElementById('head-title').innerText = id === 'dash' ? 'Home' : 'Research';
+        document.getElementById('head-title').innerText = id === 'dash' ? 'ホーム' : 'チャット';
         if(id === 'chat') {
             const area = document.getElementById('chat-area');
             area.scrollTop = area.scrollHeight;
@@ -198,24 +161,15 @@
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-    function ins(val) {
-        const inp = document.getElementById('msg-input');
-        const start = inp.selectionStart;
-        inp.value = inp.value.substring(0, start) + val + inp.value.substring(inp.selectionEnd);
-        inp.focus();
-        inp.setSelectionRange(start + val.length, start + val.length);
-    }
-
     function doLogin() {
-        const email = document.getElementById('u-email').value;
-        if(!email) return;
-        localStorage.setItem('ck_v7_user', email);
-        updateUI(email);
+        const name = document.getElementById('u-name-input').value.trim();
+        if(!name) return;
+        localStorage.setItem('ck_name', name);
+        updateUI(name);
         nav('dash');
     }
 
-    function updateUI(email) {
-        const name = email.split('@')[0];
+    function updateUI(name) {
         document.getElementById('u-display').innerText = name;
         document.getElementById('set-name').value = name;
     }
@@ -232,23 +186,26 @@
     }
 
     function createGroup() {
-        const g = prompt("Project Name:");
-        if(g) alert("Project '" + g + "' created!");
+        const g = prompt("グループ名:");
+        if(g) alert("「" + g + "」を作成しました");
     }
 
     function saveSet() {
-        const n = document.getElementById('set-name').value;
-        document.getElementById('u-display').innerText = n;
-        closeModal('set-modal');
+        const n = document.getElementById('set-name').value.trim();
+        if(n) {
+            localStorage.setItem('ck_name', n);
+            document.getElementById('u-display').innerText = n;
+            closeModal('set-modal');
+        }
     }
 
     function logout() {
-        localStorage.removeItem('ck_v7_user');
+        localStorage.removeItem('ck_name');
         location.reload();
     }
 
     window.onload = () => {
-        const saved = localStorage.getItem('ck_v7_user');
+        const saved = localStorage.getItem('ck_name');
         if(saved) {
             updateUI(saved);
             nav('dash');
