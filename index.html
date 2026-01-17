@@ -3,35 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Expert Ver 10</title>
+    <title>Chat-K | Expert Ver 12</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
     
     <style>
         :root {
-            --accent: #007AFF;
-            --bg: #F2F2F7;
-            --card-bg: #FFFFFF;
-            --text: #000000;
-            --header-bg: rgba(255, 255, 255, 0.8);
-            --bubble-me: #007AFF;
-            --bubble-other: #E9E9EB;
-            --font-main: -apple-system, sans-serif;
+            --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
+            --header-bg: rgba(255, 255, 255, 0.8); --bubble-me: #007AFF; --bubble-other: #E9E9EB;
         }
-
         body.dark-mode {
-            --bg: #1C1C1E;
-            --card-bg: #2C2C2E;
-            --text: #FFFFFF;
-            --header-bg: rgba(28, 28, 30, 0.8);
-            --bubble-me: #0A84FF;
-            --bubble-other: #3A3A3C;
+            --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF;
+            --header-bg: rgba(28, 28, 30, 0.8); --bubble-me: #0A84FF; --bubble-other: #3A3A3C;
         }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: var(--font-main); }
-        
-        body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); display: flex; flex-direction: column; font-family: -apple-system, sans-serif; transition: 0.3s; overflow: hidden; }
 
         header { 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -40,12 +27,14 @@
             padding-top: env(safe-area-inset-top);
         }
         header button { background: none; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center; }
-        header .icon { width: 28px; height: 28px; filter: grayscale(1) invert(var(--dark-inv, 0)); }
+        header img { width: 28px; height: 28px; filter: grayscale(1) invert(var(--dark-inv, 0)); }
         body.dark-mode { --dark-inv: 1; }
         header .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
         #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 12px; }
         .bubble-wrapper { display: flex; flex-direction: column; max-width: 80%; }
+        .sender-info { display: flex; align-items: center; gap: 4px; font-size: 11px; margin: 2px 5px; opacity: 0.7; }
+        .crown-icon { width: 14px; height: 14px; vertical-align: middle; }
         .bubble { padding: 10px 16px; border-radius: 20px; font-size: 16px; line-height: 1.4; }
         .me { align-self: flex-end; } .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other { align-self: flex-start; } .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
@@ -53,99 +42,80 @@
         .footer { background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px 30px; display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); }
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; height: 40px; resize: none; }
 
-        /* モーダル・設定 */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: 20px; display: none; overflow-y: auto; }
-        .modal.active { display: block; animation: fadeIn 0.2s; }
-        .card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid rgba(0,0,0,0.05); }
-        .setting-row:last-child { border: none; }
-        
-        .btn-main { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; }
+        .modal.active { display: block; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .btn-main { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; }
         .input-box { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 10px; font-size: 16px; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
-<body class="light-mode">
+<body>
 
 <header>
-    <button onclick="location.reload()">
-        <img src="ダウンロード (1).png" class="icon" alt="Home">
-    </button>
+    <button onclick="location.reload()"><img src="ダウンロード (1).png" alt="Home"></button>
     <div class="title" id="head-title">Chat-K Expert</div>
-    <button onclick="openModal('set-modal')">
-        <img src="ダウンロード.png" class="icon" alt="Settings">
-    </button>
+    <button onclick="openModal('set-modal')"><img src="ダウンロード.png" alt="Settings"></button>
 </header>
 
 <div id="chat-area"></div>
 
 <div class="footer">
-    <textarea id="msg-input" rows="1" placeholder="$\alpha$ 数式入力..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-    <button onclick="window.triggerSendMessage()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:18px;">➤</button>
+    <textarea id="msg-input" rows="1" placeholder="メッセージ..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button onclick="window.triggerSendMessage()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:18px;">↑</button>
 </div>
 
 <div id="main-modal" class="modal active">
-    <h1 style="text-align:center; margin-top:40px;">🧪 Chat-K</h1>
-    
-    <div id="step-register">
-        <input type="email" id="reg-email" class="input-box" placeholder="メールアドレス">
-        <div id="name-input-area" style="display:none;">
-            <input type="text" id="reg-name" class="input-box" placeholder="名前 (Researcher Name)">
+    <div style="text-align:center; padding-top:40px;">
+        <h1 style="font-size:32px;">🧪 Chat-K</h1>
+        <div id="step-register">
+            <input type="email" id="reg-email" class="input-box" placeholder="Email">
+            <div id="name-input-area" style="display:none;">
+                <input type="text" id="reg-name" class="input-box" placeholder="Name">
+            </div>
+            <button class="btn-main" id="auth-btn" onclick="window.triggerCheckEmail()">はじめる</button>
         </div>
-        <button class="btn-main" id="auth-btn" onclick="window.triggerCheckEmail()">はじめる</button>
-    </div>
-
-    <div id="step-home" style="display:none;">
-        <div class="card">
-            <b id="welcome-msg"></b>
-        </div>
-        <div id="history-list"></div>
-        <button onclick="window.triggerShowGroupForm('create')" class="btn-main">新規プロジェクト作成</button>
-        <button onclick="window.triggerShowGroupForm('join')" class="btn-main" style="background:#8E8E93; margin-top:10px;">既存IDに参加</button>
-        
-        <div id="group-form" style="display:none; margin-top:15px;" class="card">
-            <input type="text" id="group-id" placeholder="プロジェクト名" class="input-box">
-            <input type="password" id="group-pw" placeholder="パスワード" class="input-box">
-            <button class="btn-main" onclick="window.triggerHandleGroupAction()">決定</button>
+        <div id="step-home" style="display:none; text-align:left;">
+            <div class="card"><b id="welcome-msg"></b></div>
+            <div id="history-list"></div>
+            <button onclick="window.triggerShowGroupForm('create')" class="btn-main">新規作成</button>
+            <button onclick="window.triggerShowGroupForm('join')" class="btn-main" style="background:#8E8E93; margin-top:10px;">IDで参加</button>
+            <div id="group-form" style="display:none; margin-top:15px;" class="card">
+                <input type="text" id="group-id-input" placeholder="Project ID" class="input-box">
+                <input type="password" id="group-pw-input" placeholder="Password" class="input-box">
+                <button class="btn-main" onclick="window.triggerHandleGroupAction()">決定</button>
+            </div>
         </div>
     </div>
 </div>
 
 <div id="set-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2>設定</h2>
+        <h2>Settings</h2>
         <button onclick="closeModal('set-modal')" style="font-size:24px;">×</button>
     </div>
-
     <div class="card">
-        <div class="setting-row">
-            <span>ダークモード</span>
-            <input type="checkbox" id="dark-toggle" onchange="toggleDark()">
-        </div>
-        <div class="setting-row">
-            <span>フォントサイズ</span>
+        <div style="display:flex; justify-content:space-between; padding:10px 0;"><span>ダークモード</span><input type="checkbox" id="dark-toggle" onchange="toggleDark()"></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 0;"><span>文字サイズ</span>
             <select id="font-size-select" onchange="changeFontSize()">
-                <option value="14px">小</option>
-                <option value="16px" selected>標準</option>
-                <option value="18px">大</option>
-                <option value="22px">特大</option>
+                <option value="14px">小</option><option value="16px" selected>中</option><option value="18px">大</option>
             </select>
         </div>
     </div>
-
-    <div id="host-settings" class="card" style="display:none;">
-        <h3 style="margin-top:0;">ホスト限定設定</h3>
-        <p style="font-size:12px; color:#8E8E93;">現在のプロジェクト: <span id="current-project-name"></span></p>
-        <button class="btn-main" style="background:#FF3B30;" onclick="deleteProject()">プロジェクトを閉鎖</button>
+    
+    <div id="host-settings" class="card" style="display:none; border: 2px solid var(--accent);">
+        <h3 style="color:var(--accent); margin-top:0;">👑 Host Controls</h3>
+        <p style="font-size:12px; opacity:0.7;">プロジェクト名とパスワードを更新できます。</p>
+        <input type="text" id="edit-group-id" class="input-box" placeholder="新しいプロジェクト名 (ID)">
+        <input type="password" id="edit-group-pw" class="input-box" placeholder="新しいパスワード">
+        <button class="btn-main" onclick="updateProjectInfo()">保存して変更を適用</button>
+        <button class="btn-main" style="background:#FF3B30; margin-top:10px;" onclick="deleteProject()">プロジェクトを削除</button>
     </div>
-
     <button class="btn-main" style="background:#8E8E93; margin-top:20px;" onclick="localStorage.clear(); location.reload();">ログアウト</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, get, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, get, set, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
@@ -159,10 +129,9 @@
     const db = getDatabase(app);
     let myName = localStorage.getItem('chat_name'), myEmail = localStorage.getItem('chat_email'), currentGid = "";
 
-    // ユーザーチェック
     window.triggerCheckEmail = async () => {
         const email = document.getElementById('reg-email').value.trim().toLowerCase();
-        if(!email.includes('@')) return alert("正しいメールアドレスを入力してください");
+        if(!email.includes('@')) return alert("Invalid email");
         const snap = await get(ref(db, `users/${email.replace(/\./g, '_')}`));
         if(snap.exists()){
             myName = snap.val().name; myEmail = email;
@@ -176,23 +145,22 @@
 
     async function finalizeReg(email) {
         const name = document.getElementById('reg-name').value.trim();
-        if(!name) return alert("名前を入力してください");
+        if(!name) return alert("Enter name");
         await set(ref(db, `users/${email.replace(/\./g, '_')}`), { name: name });
         myName = name; myEmail = email;
         localStorage.setItem('chat_name', name); localStorage.setItem('chat_email', email);
         showStep('home');
     }
 
-    // グループ作成・参加
     window.triggerHandleGroupAction = async () => {
-        const gid = document.getElementById('group-id').value.trim(), pw = btoa(document.getElementById('group-pw').value);
+        const gid = document.getElementById('group-id-input').value.trim(), pw = btoa(document.getElementById('group-pw-input').value);
         if(!gid) return;
         const snap = await get(ref(db, `v5_groups/${gid}`));
         if(window.currentMode === 'create') {
-            if(snap.exists()) return alert("既に存在します");
+            if(snap.exists()) return alert("ID already taken");
             await set(ref(db, `v5_groups/${gid}`), { host: myEmail, pw: pw });
         } else {
-            if(!snap.exists() || snap.val().pw !== pw) return alert("パスワードが違います");
+            if(!snap.exists() || snap.val().pw !== pw) return alert("Wrong ID or Password");
         }
         saveHistory(gid);
         enterChat(gid);
@@ -210,23 +178,62 @@
         document.getElementById('head-title').innerText = gid;
         document.getElementById('chat-area').innerHTML = "";
         
-        // ホスト判定
         const snap = await get(ref(db, `v5_groups/${gid}`));
-        if(snap.exists() && snap.val().host === myEmail) {
+        const groupData = snap.val();
+        if(groupData && groupData.host === myEmail) {
             document.getElementById('host-settings').style.display = 'block';
-            document.getElementById('current-project-name').innerText = gid;
+            document.getElementById('edit-group-id').value = gid;
+        } else {
+            document.getElementById('host-settings').style.display = 'none';
         }
 
         onChildAdded(ref(db, `v5_groups/${gid}/messages`), (s) => {
             const d = s.val();
+            const isHost = (groupData && d.sender === groupData.host);
             const wrap = document.createElement('div');
             wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
-            wrap.innerHTML = `<div style="font-size:10px; margin:2px 5px; opacity:0.6;">${d.name}</div><div class="bubble">${d.text}</div>`;
+            
+            // 王冠アイコンの挿入ロジック
+            const crownHtml = isHost ? `<img src="王冠のアイコン[1].png" class="crown-icon">` : "";
+            wrap.innerHTML = `
+                <div class="sender-info">
+                    ${d.name} ${crownHtml}
+                </div>
+                <div class="bubble">${d.text}</div>
+            `;
             document.getElementById('chat-area').appendChild(wrap);
             renderMathInElement(wrap, { delimiters: [{left: "$", right: "$", display: false}] });
             document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
         });
     }
+
+    // ホスト情報更新 (IDとPW)
+    window.updateProjectInfo = async () => {
+        const newGid = document.getElementById('edit-group-id').value.trim();
+        const newPw = document.getElementById('edit-group-pw').value;
+        if(!newGid || !newPw) return alert("名前とパスワードを入力してください");
+        
+        const snap = await get(ref(db, `v5_groups/${currentGid}`));
+        const oldData = snap.val();
+        
+        if(newGid !== currentGid) {
+            // ID変更時は新しいノードを作成して古いものを消す
+            await set(ref(db, `v5_groups/${newGid}`), { ...oldData, pw: btoa(newPw) });
+            await remove(ref(db, `v5_groups/${currentGid}`));
+            alert("プロジェクト名とパスワードを変更しました。再読み込みします。");
+            location.reload();
+        } else {
+            await set(ref(db, `v5_groups/${currentGid}/pw`), btoa(newPw));
+            alert("パスワードを更新しました");
+        }
+    };
+
+    window.deleteProject = async () => {
+        if(confirm("このプロジェクトを完全に削除しますか？")) {
+            await remove(ref(db, `v5_groups/${currentGid}`));
+            location.reload();
+        }
+    };
 
     window.triggerSendMessage = () => {
         const inp = document.getElementById('msg-input');
@@ -237,7 +244,6 @@
         inp.value = "";
     };
 
-    // UI制御
     window.openModal = (id) => document.getElementById(id).classList.add('active');
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.toggleDark = () => {
@@ -270,7 +276,10 @@
     }
 
     window.onload = () => {
-        if(localStorage.getItem('chat_dark') === 'true') document.body.classList.add('dark-mode');
+        if(localStorage.getItem('chat_dark') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('dark-toggle').checked = true;
+        }
         if(localStorage.getItem('chat_font')) {
             const f = localStorage.getItem('chat_font');
             document.body.style.fontSize = f;
