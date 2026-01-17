@@ -3,143 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Diagnostic Mode</title>
+    <title>Chat-K | Final Expert</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
     <style>
         :root { --line-green: #06C755; --bg-blue: #7494C0; --header-dark: #35495e; --gemini-blue: #4285F4; }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: sans-serif; background: var(--bg-blue); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { background: var(--header-dark); color: white; height: 50px; display: flex; align-items: center; padding: 0 15px; flex-shrink: 0; }
+        body { margin: 0; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #f0f2f5; }
+        
+        header { background: var(--header-dark); color: white; height: 50px; display: flex; align-items: center; padding: 0 15px; z-index: 2000; flex-shrink: 0; }
         header .title { flex: 1; text-align: center; font-weight: bold; }
-        .page { flex: 1; overflow-y: auto; background: #f8f9fa; display: none; padding: 20px; }
+        header button { background: none; border: none; color: white; font-size: 22px; cursor: pointer; width: 40px; }
+
+        .page { position: fixed; top: 50px; left: 0; width: 100%; height: calc(100% - 50px); background: #f8f9fa; display: none; overflow-y: auto; z-index: 100; }
         .page.active { display: block; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-blue); }
-        .bubble { padding: 12px 16px; border-radius: 18px; background: white; max-width: 85%; cursor: pointer; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .me { align-self: flex-end; background: var(--line-green); color: white; }
-        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%; background: white; z-index: 2000; transition: 0.4s; border-radius: 20px 20px 0 0; padding: 25px; overflow-y: auto; box-shadow: 0 -5px 20px rgba(0,0,0,0.3); }
+        
+        /* ホーム画面カード */
+        .dashboard-container { padding: 20px; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .btn-action { width: 100%; padding: 15px; margin-top: 10px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .btn-green { background: var(--line-green); color: white; }
+        .btn-blue { background: var(--gemini-blue); color: white; }
+
+        /* チャット画面 */
+        #chat-page { background: var(--bg-blue); padding: 0; flex-direction: column; }
+        #chat-page.active { display: flex; }
+        #chat-area { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { padding: 12px 16px; border-radius: 18px; background: white; max-width: 85%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; line-height: 1.4; }
+        .bubble.me { align-self: flex-end; background: var(--line-green); color: white; }
+        .hint { font-size: 10px; opacity: 0.8; margin-top: 4px; display: block; }
+
+        /* パネル */
+        .panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%; background: white; z-index: 3000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 20px 20px 0 0; padding: 25px; overflow-y: auto; }
         .panel.open { bottom: 0; }
-        .footer { background: white; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; }
-        textarea { flex: 1; border: none; background: #f0f2f5; padding: 10px; border-radius: 20px; resize: none; outline: none; }
-        .btn { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .btn-send { background: var(--gemini-blue); color: white; border-radius: 50%; width: 44px; height: 44px; }
-        .debug-log { background: #333; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; border-radius: 5px; margin-top: 10px; overflow-x: auto; }
+
+        .footer { background: white; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; flex-shrink: 0; }
+        textarea { flex: 1; border: none; background: #f0f2f5; padding: 12px; border-radius: 20px; resize: none; outline: none; height: 44px; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="location.reload()" style="background:none; border:none; color:white; font-size:18px;">🏠</button>
-    <div class="title">Chat-K AI Expert</div>
-    <button onclick="document.getElementById('set-panel').classList.add('open')" style="background:none; border:none; color:white; font-size:18px;">⚙️</button>
+    <button onclick="window.goHome()">🏠</button>
+    <div class="title" id="top-title">Chat-K</div>
+    <button onclick="window.openPanel('settings-panel')">⚙️</button>
 </header>
 
-<div id="chat-page" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+<div id="login-page" class="page">
+    <div style="text-align:center; padding:60px 20px;">
+        <h2 style="color:var(--line-green); font-size: 28px;">Chat-K Expert</h2>
+        <p style="color:#666;">理系特化型AIプラットフォーム</p>
+        <input type="email" id="login-email" placeholder="メールアドレスを入力" style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; margin-top:20px;">
+        <button class="btn-action btn-green" onclick="window.doLogin()">ログインを開始</button>
+    </div>
+</div>
+
+<div id="dashboard-page" class="page">
+    <div class="dashboard-container">
+        <h3>Researcher: <span id="disp-user" style="color:var(--gemini-blue);"></span></h3>
+        <div class="card">
+            <h4 style="margin-top:0;">🧪 プロジェクト一覧</h4>
+            <button class="btn-action" style="background:#f0f2f5; color:#333; text-align:left;" onclick="window.startChat('理系最先端プロジェクト')">
+                📡 理系最先端プロジェクト <span style="float:right;">入室 ></span>
+            </button>
+        </div>
+        <div class="card">
+            <h4 style="margin-top:0;">🚀 アクション</h4>
+            <button class="btn-action btn-blue" onclick="alert('新規グループ作成を開始します')">＋ 新規グループを作成</button>
+            <button class="btn-action" style="background:#333; color:white;" onclick="window.logout()">ログアウト</button>
+        </div>
+    </div>
+</div>
+
+<div id="chat-page" class="page">
     <div id="chat-area"></div>
     <div class="footer">
-        <textarea id="msg-input" rows="1" placeholder="理系のメッセージを送る..."></textarea>
-        <button onclick="sendMsg()" class="btn-send">➤</button>
+        <textarea id="msg-input" placeholder="理系のメッセージを送る..."></textarea>
+        <button onclick="window.sendMsg()" style="background:var(--gemini-blue); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">➤</button>
     </div>
+</div>
+
+<div id="settings-panel" class="panel">
+    <button onclick="window.closePanel('settings-panel')" style="float:right; border:none; background:none; font-size:24px;">&times;</button>
+    <h3>設定管理</h3>
+    <hr>
+    <label style="font-size:12px; color:#666;">Gemini API Key</label>
+    <input type="password" id="api-key-val" style="width:100%; padding:15px; margin:10px 0; border:1px solid #ddd; border-radius:10px;">
+    <label style="font-size:12px; color:#666;">ユーザー年齢</label>
+    <input type="number" id="age-val" style="width:100%; padding:15px; margin:10px 0; border:1px solid #ddd; border-radius:10px;">
+    <button class="btn-action btn-blue" onclick="window.saveSettings()">保存して適用</button>
 </div>
 
 <div id="ai-panel" class="panel">
-    <button onclick="this.parentElement.classList.remove('open')" style="float:right; border:none; background:none; font-size:24px;">&times;</button>
-    <h3 id="ai-status">AI解析</h3>
-    <div id="ai-content"></div>
-    <div id="debug-area" style="display:none;">
-        <p style="font-weight:bold; color:red; margin-top:20px;">Developer Debug Trace:</p>
-        <div id="debug-log" class="debug-log"></div>
-    </div>
-</div>
-
-<div id="set-panel" class="panel">
-    <h3>設定</h3>
-    <label>Gemini API Key</label>
-    <input type="password" id="api-key-input" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px;">
-    <button class="btn" style="background:var(--gemini-blue); color:white; width:100%;" onclick="saveSettings()">設定を保存</button>
-    <p style="font-size:12px; color:#666; margin-top:10px;">※保存後、メッセージをクリックするとAIが動きます。</p>
+    <button onclick="window.closePanel('ai-panel')" style="float:right; border:none; background:none; font-size:24px;">&times;</button>
+    <h3 style="color:var(--gemini-blue); margin-top:0;">AI Expert Analysis</h3>
+    <div id="ai-content" style="font-size:15px; line-height:1.7;"></div>
+    <div id="debug-log" style="display:none; margin-top:20px; padding:15px; background:#fff0f0; border-radius:10px; font-family:monospace; font-size:11px; color:#d32f2f;"></div>
 </div>
 
 <script>
-    // 設定の読み込み
-    window.onload = () => {
-        document.getElementById('api-key-input').value = localStorage.getItem('gemini_api_key') || "";
+    // ページ制御ロジック
+    const pages = ['login-page', 'dashboard-page', 'chat-page'];
+    window.switchPage = (targetId) => {
+        pages.forEach(id => document.getElementById(id).classList.remove('active'));
+        document.getElementById(targetId).classList.add('active');
+        document.getElementById('top-title').innerText = (targetId === 'dashboard-page' ? 'Home' : (targetId === 'chat-page' ? 'Research Chat' : 'Chat-K'));
     };
 
-    function saveSettings() {
-        localStorage.setItem('gemini_api_key', document.getElementById('api-key-input').value.trim());
-        alert("設定を保存しました。");
-        document.getElementById('set-panel').classList.remove('open');
-    }
+    window.goHome = () => {
+        if(localStorage.getItem('chat_email')) window.switchPage('dashboard-page');
+        else window.switchPage('login-page');
+    };
 
-    function sendMsg() {
+    window.openPanel = (id) => document.getElementById(id).classList.add('open');
+    window.closePanel = (id) => document.getElementById(id).classList.remove('open');
+
+    window.doLogin = () => {
+        const email = document.getElementById('login-email').value;
+        if(!email) return;
+        localStorage.setItem('chat_email', email);
+        document.getElementById('disp-user').innerText = email.split('@')[0];
+        window.switchPage('dashboard-page');
+    };
+
+    window.logout = () => {
+        if(confirm("ログアウトしますか？")) {
+            localStorage.removeItem('chat_email');
+            window.switchPage('login-page');
+        }
+    };
+
+    window.startChat = (name) => {
+        document.getElementById('top-title').innerText = name;
+        window.switchPage('chat-page');
+    };
+
+    window.sendMsg = () => {
         const inp = document.getElementById('msg-input');
         if(!inp.value.trim()) return;
         const area = document.getElementById('chat-area');
         const div = document.createElement('div');
         div.className = "bubble me";
-        div.innerText = inp.value;
-        div.onclick = () => askGemini(inp.value);
+        div.innerHTML = `${inp.value}<span class="hint">💡 クリックでAI解説</span>`;
+        div.onclick = () => window.askGemini(inp.value);
         area.appendChild(div);
         area.scrollTop = area.scrollHeight;
         inp.value = "";
-    }
+    };
 
-    async function askGemini(text) {
+    // --- API接続ロジック（最新モデル対応） ---
+    window.askGemini = async (text) => {
         const key = localStorage.getItem('gemini_api_key');
-        const panel = document.getElementById('ai-panel');
+        const age = localStorage.getItem('user_age') || "20";
         const content = document.getElementById('ai-content');
-        const debugArea = document.getElementById('debug-area');
-        const debugLog = document.getElementById('debug-log');
+        const debug = document.getElementById('debug-log');
         
-        panel.classList.add('open');
-        content.innerHTML = "接続テスト中...";
-        debugArea.style.display = "none";
+        window.openPanel('ai-panel');
+        content.innerHTML = "<b>AI解析中...</b><br>モデルの権限を確認しています。";
+        debug.style.display = "none";
 
         if(!key) { content.innerHTML = "⚙️設定からAPIキーを入力してください。"; return; }
 
-        // 試行するエンドポイントとモデルの組み合わせ
-        const attempts = [
-            { ver: "v1beta", model: "gemini-1.5-flash" },
-            { ver: "v1", model: "gemini-1.5-flash" },
-            { ver: "v1beta", model: "gemini-1.5-flash-latest" },
-            { ver: "v1", model: "gemini-1.5-flash-001" }
-        ];
-
-        let success = false;
+        // 2026年時点で利用可能な最新モデルのリスト
+        const models = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-pro"];
         let lastError = "";
 
-        for(let config of attempts) {
-            content.innerHTML = `試行中: ${config.ver} / ${config.model}...`;
+        for(let m of models) {
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/${config.ver}/models/${config.model}:generateContent?key=${key}`, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: `理系講師として「${text}」を日本語で解説して。数式は$で。` }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `理系講師として、${age}歳向けに「${text}」を日本語で詳しく解説。専門用語は必ずLaTeX（$）で表記すること。` }] }] })
                 });
-
                 const data = await res.json();
-                
                 if(res.ok) {
-                    content.innerHTML = data.candidates[0].content.parts[0].text.replace(/\n/g, "<br>");
+                    content.innerHTML = data.candidates[0].content.parts[0].text.replace(/\n/g, "<br>").replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
                     if(window.renderMathInElement) renderMathInElement(content);
-                    success = true;
-                    break;
-                } else {
-                    lastError += `[${config.ver}/${config.model}] Error: ${data.error.message}\n`;
+                    return;
                 }
-            } catch(e) {
-                lastError += `[${config.ver}/${config.model}] Network Error: ${e.message}\n`;
-            }
+                lastError += `[${m}] ${data.error.message}\n`;
+            } catch(e) { lastError += `[${m}] Network Error\n`; }
         }
 
-        if(!success) {
-            content.innerHTML = "❌ 全てのモデル試行に失敗しました。下のログを確認してください。";
-            debugArea.style.display = "block";
-            debugLog.innerText = lastError;
+        content.innerHTML = `<p style="color:red;">❌ モデルへのアクセスに失敗しました。<br><br><b>解決策:</b> Google AI Studioで「Import Project（プロジェクトをインポート）」を押して、APIキーの権限を確定させてください。</p>`;
+        debug.style.display = "block";
+        debug.innerText = lastError;
+    };
+
+    window.saveSettings = () => {
+        localStorage.setItem('gemini_api_key', document.getElementById('api-key-val').value.trim());
+        localStorage.setItem('user_age', document.getElementById('age-val').value);
+        alert("設定を保存しました。メッセージをタップするとAI解説が始まります。");
+        window.closePanel('settings-panel');
+    };
+
+    window.onload = () => {
+        const email = localStorage.getItem('chat_email');
+        if(email) {
+            document.getElementById('disp-user').innerText = email.split('@')[0];
+            window.switchPage('dashboard-page');
+        } else {
+            window.switchPage('login-page');
         }
-    }
+        document.getElementById('api-key-val').value = localStorage.getItem('gemini_api_key') || "";
+        document.getElementById('age-val').value = localStorage.getItem('user_age') || "20";
+    };
 </script>
 </body>
 </html>
