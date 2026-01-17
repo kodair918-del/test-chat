@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 16.1</title>
+    <title>Chat-K | Ver 16.2</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
@@ -97,6 +97,13 @@
         <h3 style="color:#FF3B30; margin-top:0;">👑 Admin Panel</h3>
         <label style="font-size:12px;">現在のプロジェクトパスワード:</label>
         <div id="current-pw-display" class="pw-display">----</div>
+        
+        <hr>
+        <h4 style="margin: 15px 0 5px;">プロジェクト情報の変更</h4>
+        <input type="text" id="edit-group-id" class="input-box" placeholder="新しいプロジェクト名">
+        <input type="password" id="edit-group-pw" class="input-box" placeholder="新しいパスワード">
+        <button class="btn-main" onclick="updateProjectInfo()">保存して変更を適用</button>
+
         <hr>
         <h4 style="margin: 15px 0 5px;">名前を指定してメッセージ削除</h4>
         <input type="text" id="target-name-input" class="input-box" placeholder="名前を入力">
@@ -158,11 +165,9 @@
         } else {
             if(!snap.exists() || snap.val().pw !== pw) return alert("Wrong ID/PW");
         }
-        
         let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
         if(!h.includes(gid)) h.push(gid);
         localStorage.setItem('chat_history', JSON.stringify(h));
-        
         enterChat(gid);
     };
 
@@ -179,6 +184,7 @@
             if(isHost) {
                 document.getElementById('host-settings').style.display = 'block';
                 document.getElementById('current-pw-display').innerText = atob(data.pw);
+                document.getElementById('edit-group-id').value = gid;
             }
             const chatArea = document.getElementById('chat-area');
             chatArea.innerHTML = "";
@@ -200,6 +206,7 @@
         });
     }
 
+    // 名前指定削除
     window.deleteMessagesByName = async () => {
         const targetName = document.getElementById('target-name-input').value.trim();
         if(!targetName) return alert("名前を入力してください");
@@ -214,6 +221,33 @@
         }
     };
 
+    // グループ名・パスワード変更
+    window.updateProjectInfo = async () => {
+        const newGid = document.getElementById('edit-group-id').value.trim();
+        const newPwRaw = document.getElementById('edit-group-pw').value;
+        if(!newGid) return alert("プロジェクト名を入力してください");
+        
+        const snap = await get(ref(db, `v5_groups/${currentGid}`));
+        const data = snap.val();
+        const newPw = newPwRaw ? btoa(newPwRaw) : data.pw;
+
+        if(newGid !== currentGid) {
+            if(!confirm("プロジェクト名を変更すると以前のIDでは入室できなくなります。よろしいですか？")) return;
+            await set(ref(db, `v5_groups/${newGid}`), { ...data, pw: newPw });
+            await remove(ref(db, `v5_groups/${currentGid}`));
+            
+            // 履歴の更新
+            let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
+            h = h.map(x => x === currentGid ? newGid : x);
+            localStorage.setItem('chat_history', JSON.stringify(h));
+            
+            location.reload();
+        } else {
+            await set(ref(db, `v5_groups/${currentGid}/pw`), newPw);
+            alert("パスワードを更新しました");
+        }
+    };
+
     window.clearAllMessages = () => { if(confirm("全消去しますか？")) remove(ref(db, `v5_groups/${currentGid}/messages`)); };
 
     window.triggerSendMessage = () => {
@@ -223,7 +257,6 @@
         inp.value = "";
     };
 
-    // 履歴を表示するロジック（ここが抜けていました）
     function refreshHistory() {
         const list = document.getElementById('history-list'); list.innerHTML = "";
         document.getElementById('welcome-msg').innerText = "Researcher: " + (myName || "");
@@ -241,11 +274,7 @@
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.toggleDark = () => document.body.classList.toggle('dark-mode');
     window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
-    function showStep(s) { 
-        document.getElementById('step-register').style.display = 'none'; 
-        document.getElementById('step-home').style.display = 'block'; 
-        refreshHistory(); // 履歴を更新
-    }
+    function showStep(s) { document.getElementById('step-register').style.display = 'none'; document.getElementById('step-home').style.display = 'block'; refreshHistory(); }
     
     document.getElementById('msg-input').onkeydown = (e) => {
         if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.triggerSendMessage(); }
