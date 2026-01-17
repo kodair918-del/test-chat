@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 17.9</title>
+    <title>Chat-K | Ver 18.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -23,7 +23,7 @@
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; min-height: 40px; max-height: 120px; resize: none; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
         .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; }
     </style>
@@ -46,13 +46,11 @@
 <div id="main-modal" class="modal">
     <div style="text-align:center; padding-top:40px;">
         <h1 style="font-size:38px; margin-bottom:30px;">🧪 Chat-K</h1>
-        
         <div id="step-register" style="display:none;">
             <p>使用する名前を決めてください</p>
             <input type="text" id="reg-name" class="input-box" placeholder="あなたの名前">
             <button class="btn-main" onclick="window.registerUser()">はじめる</button>
         </div>
-
         <div id="step-home" style="display:none; text-align:left;">
             <div class="card"><b>Researcher: </b><span id="display-name"></span></div>
             <div id="history-list"></div>
@@ -61,19 +59,16 @@
                 <button onclick="window.triggerShowGroupForm('join')" class="btn-main" style="background:#8E8E93;">ID入力</button>
                 <button onclick="window.startScanner()" class="btn-main" style="background:#5856D6;">スキャン</button>
             </div>
-            
             <div id="group-form" style="display:none; margin-top:15px;" class="card">
                 <div id="scanner-container" style="display:none; margin-bottom:15px;"><div id="reader"></div></div>
                 <div id="target-info-blind" style="display:none; color:var(--accent); font-weight:bold; margin-bottom:10px; text-align:center;">🔓 プロジェクトを検出しました</div>
                 <input type="text" id="group-id-input" placeholder="Project ID" class="input-box">
                 <input type="password" id="group-pw-input" placeholder="Password" class="input-box">
-                <button class="btn-main" id="join-submit-btn" onclick="window.triggerHandleGroupAction()">申請を送る</button>
+                <button class="btn-main" onclick="window.triggerHandleGroupAction()">申請 / 入室</button>
             </div>
         </div>
-
         <div id="step-waiting" style="display:none;" class="card">
-            <h3>承認待ち...</h3>
-            <p>ホストが承認するまでお待ちください。</p>
+            <h3>承認待ち...</h3><p>ホストが承認するまでお待ちください。</p>
             <button class="btn-main" style="background:#8E8E93;" onclick="location.reload()">戻る</button>
         </div>
     </div>
@@ -81,12 +76,13 @@
 
 <div id="set-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
-    <div id="host-settings" class="card" style="display:none; border: 3px solid #FF3B30;">
-        <h3 style="color:#FF3B30;">👑 管理者パネル</h3>
-        <div id="qrcode-container"></div>
-        <div id="request-list" style="margin-top:20px;"></div>
+    <div id="host-panel" class="card" style="display:none; border: 3px solid #FF3B30;">
+        <h3 style="color:#FF3B30; margin-top:0;">👑 管理者パネル</h3>
+        <p style="font-size:12px;">招待用QRコード:</p>
+        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:10px; border-radius:10px; margin-bottom:15px;"></div>
+        <div id="request-list-area"></div>
     </div>
-    <button class="btn-main" style="background:#FF3B30;" onclick="localStorage.clear(); location.reload();">初期化</button>
+    <button class="btn-main" style="background:#FF3B30; margin-top:20px;" onclick="if(confirm('全てのデータを消去しますか？')){localStorage.clear(); location.reload();}">初期化・ログアウト</button>
 </div>
 
 <script type="module">
@@ -101,64 +97,43 @@
     let myName = localStorage.getItem('chat_name');
     let currentGid = "";
 
-    function boot() {
-        if (myName) { showStep('home'); } else { showStep('register'); }
+    // ハッシュ化関数 (SHA-256)
+    async function hash(pw) {
+        const msgUint8 = new TextEncoder().encode(pw);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     window.registerUser = () => {
         const name = document.getElementById('reg-name').value.trim();
         if (!name) return;
-        myName = name;
-        localStorage.setItem('chat_name', name);
-        localStorage.setItem('chat_uid', myId);
+        myName = name; localStorage.setItem('chat_name', name); localStorage.setItem('chat_uid', myId);
         showStep('home');
     };
 
-    function showStep(step) {
+    function showStep(s) {
         document.getElementById('main-modal').classList.add('active');
         document.querySelectorAll('#main-modal > div > div').forEach(el => el.style.display = 'none');
-        document.getElementById('step-' + step).style.display = 'block';
-        if(step === 'home') {
-            document.getElementById('display-name').innerText = myName;
-            refreshHistory();
-        }
+        document.getElementById('step-' + s).style.display = 'block';
+        if(s === 'home') { document.getElementById('display-name').innerText = myName; refreshHistory(); }
     }
-
-    window.startScanner = async () => {
-        window.triggerShowGroupForm('join');
-        document.getElementById('scanner-container').style.display = 'block';
-        document.getElementById('group-id-input').style.display = 'none'; // IDを隠す
-        document.getElementById('target-info-blind').style.display = 'block';
-        
-        const scanner = new Html5Qrcode("reader");
-        await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-            const url = new URL(text.replace('chatk://join', 'https://a.b'));
-            document.getElementById('group-id-input').value = url.searchParams.get('id');
-            scanner.stop();
-            document.getElementById('scanner-container').style.display = 'none';
-        });
-    };
 
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
-        const rawPw = document.getElementById('group-pw-input').value;
-        const pw = btoa(rawPw);
+        const pwHash = await hash(document.getElementById('group-pw-input').value);
         if(!gid) return;
 
-        const snap = await get(ref(db, `v5_groups/${gid}`));
+        const snap = await get(ref(db, `v6_groups/${gid}`)); // セキュリティ向上のためパスを変更
         if(window.currentMode === 'create') {
-            await set(ref(db, `v5_groups/${gid}`), { host: myId, pw: pw, members: { [myId]: true } });
+            await set(ref(db, `v6_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true } });
             enterChat(gid);
         } else {
-            if(!snap.exists() || snap.val().pw !== pw) return alert("パスワードが違います");
-            const members = snap.val().members || {};
-            if(members[myId]) {
-                enterChat(gid);
-            } else {
-                // ホストへ通知（申請）
-                await set(ref(db, `v5_groups/${gid}/requests/${myId}`), { name: myName });
+            if(!snap.exists() || snap.val().pw !== pwHash) return alert("パスワードが違います");
+            if(snap.val().members && snap.val().members[myId]) { enterChat(gid); }
+            else {
+                await set(ref(db, `v6_groups/${gid}/requests/${myId}`), { name: myName });
                 showStep('waiting');
-                onValue(ref(db, `v5_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
+                onValue(ref(db, `v6_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
             }
         }
     };
@@ -168,53 +143,65 @@
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
         saveToHistory(gid);
-        
-        onValue(ref(db, `v5_groups/${gid}`), (snap) => {
+
+        onValue(ref(db, `v6_groups/${gid}`), (snap) => {
             const data = snap.val(); if(!data) return;
             const isHost = (data.host === myId);
-            document.getElementById('host-settings').style.display = isHost ? 'block' : 'none';
+            
+            // 管理者パネルの制御
+            document.getElementById('host-panel').style.display = isHost ? 'block' : 'none';
             if(isHost) {
-                const container = document.getElementById('qrcode-container');
-                container.innerHTML = "";
-                new QRCode(container, { text: `chatk://join?id=${gid}&pw=${data.pw}`, width: 160, height: 160 });
+                const qrBox = document.getElementById('qrcode-container');
+                qrBox.innerHTML = "";
+                new QRCode(qrBox, { text: `chatk://join?id=${gid}&pw=${data.pw}`, width: 160, height: 160 });
                 renderRequestList(data.requests);
             }
-            renderMessages(data.messages, data.host);
+
+            const area = document.getElementById('chat-area'); area.innerHTML = "";
+            if(data.messages) Object.values(data.messages).forEach(d => {
+                const wrap = document.createElement('div');
+                wrap.className = `bubble-wrapper ${d.sender === myId ? 'me' : 'other'}`;
+                wrap.innerHTML = `<div style="font-size:10px; margin:2px 5px; opacity:0.6">${d.senderName} ${d.sender === data.host ? '👑' : ''}</div><div class="bubble">${d.text}</div>`;
+                area.appendChild(wrap);
+            });
+            area.scrollTop = area.scrollHeight;
         });
     }
 
     function renderRequestList(reqs) {
-        const list = document.getElementById('request-list');
-        list.innerHTML = "<h4>入室申請</h4>";
+        const area = document.getElementById('request-list-area');
+        area.innerHTML = "<h4>入室申請</h4>";
         if(reqs) Object.entries(reqs).forEach(([uid, val]) => {
-            const d = document.createElement('div'); d.className = "card";
-            d.innerHTML = `<span><b>${val.name}</b> からの申請</span><button class="btn-main" style="height:35px; margin-top:10px;" onclick="window.approveUser('${uid}')">承認する</button>`;
-            list.appendChild(d);
+            const d = document.createElement('div'); d.className = "card"; d.style="border:1px solid #ddd;";
+            d.innerHTML = `<span><b>${val.name}</b></span><button class="btn-main" style="height:35px; margin-top:10px;" onclick="window.approveUser('${uid}')">承認</button>`;
+            area.appendChild(d);
         });
     }
 
     window.approveUser = async (uid) => {
-        await set(ref(db, `v5_groups/${currentGid}/members/${uid}`), true);
-        await remove(ref(db, `v5_groups/${currentGid}/requests/${uid}`));
+        await set(ref(db, `v6_groups/${currentGid}/members/${uid}`), true);
+        await remove(ref(db, `v6_groups/${currentGid}/requests/${uid}`));
     };
 
-    function renderMessages(msgs, hostId) {
-        const area = document.getElementById('chat-area'); area.innerHTML = "";
-        if(msgs) Object.values(msgs).forEach(d => {
-            const wrap = document.createElement('div');
-            wrap.className = `bubble-wrapper ${d.sender === myId ? 'me' : 'other'}`;
-            wrap.innerHTML = `<div style="font-size:10px; margin:2px 5px; opacity:0.6">${d.senderName} ${d.sender === hostId ? '👑' : ''}</div><div class="bubble">${d.text}</div>`;
-            area.appendChild(wrap);
-        });
-        area.scrollTop = area.scrollHeight;
-    }
-
-    // 他の履歴管理などはVer 17.8と同様
+    // --- その他基本機能 ---
     window.triggerSendMessage = () => {
         const inp = document.getElementById('msg-input');
         if(!inp.value.trim() || !currentGid) return;
-        push(ref(db, `v5_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: inp.value });
+        push(ref(db, `v6_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: inp.value });
         inp.value = "";
+    };
+    window.startScanner = async () => {
+        window.triggerShowGroupForm('join');
+        document.getElementById('scanner-container').style.display = 'block';
+        document.getElementById('group-id-input').style.display = 'none';
+        document.getElementById('target-info-blind').style.display = 'block';
+        const scanner = new Html5Qrcode("reader");
+        await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
+            const url = new URL(text.replace('chatk://join', 'https://a.b'));
+            document.getElementById('group-id-input').value = url.searchParams.get('id');
+            document.getElementById('group-pw-input').value = ""; // スキャン時はPW入力を待つ
+            scanner.stop(); document.getElementById('scanner-container').style.display = 'none';
+        });
     };
     function saveToHistory(gid) {
         let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
@@ -230,10 +217,11 @@
             list.appendChild(d);
         });
     }
-    window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; document.getElementById('group-id-input').style.display = 'block'; document.getElementById('target-info-blind').style.display = 'none'; };
     window.triggerOpenSettings = () => document.getElementById('set-modal').classList.add('active');
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-    boot();
+    window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; document.getElementById('group-id-input').style.display = 'block'; document.getElementById('target-info-blind').style.display = 'none'; };
+    
+    if(myName) { showStep('home'); } else { showStep('register'); }
 </script>
 </body>
 </html>
