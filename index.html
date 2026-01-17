@@ -3,100 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Dark Edition</title>
+    <title>Chat-K | Simple & Dark</title>
     <style>
         :root {
-            --bg: #000000;
-            --card-bg: #1c1c1e;
-            --header-bg: rgba(0, 0, 0, 0.75);
-            --text: #ffffff;
-            --accent: #0A84FF;
-            --secondary-text: #8E8E93;
-            --bubble-me: #30D158;
-            --bubble-other: #2c2c2e;
+            --accent: #007AFF;
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text: #000000;
+            --header-bg: rgba(255, 255, 255, 0.8);
+            --bubble-me: #007AFF;
+            --bubble-other: #E9E9EB;
+        }
+
+        /* ダークモード設定 */
+        body.dark-mode {
+            --bg: #1C1C1E;
+            --card-bg: #2C2C2E;
+            --text: #FFFFFF;
+            --header-bg: rgba(28, 28, 30, 0.8);
+            --bubble-me: #0A84FF;
+            --bubble-other: #3A3A3C;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            margin: 0; 
-            font-family: -apple-system, sans-serif; 
-            height: 100vh; 
-            background: var(--bg); 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden;
-            color: var(--text);
+            margin: 0; font-family: -apple-system, sans-serif; height: 100vh; 
+            background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden;
+            transition: background 0.3s, color 0.3s;
         }
 
         header { 
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            background: var(--header-bg);
-            height: 60px; 
-            display: flex; 
-            align-items: center; 
-            padding: 0 20px; 
-            z-index: 2000; 
-            border-bottom: 0.5px solid #333;
-            flex-shrink: 0;
-            padding-top: env(safe-area-inset-top);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: var(--header-bg); height: 60px; display: flex; align-items: center; 
+            padding: 0 20px; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); flex-shrink: 0;
         }
 
-        header .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
-        header button { 
-            background: none; border: none; color: var(--accent); 
-            font-size: 24px; cursor: pointer; width: 44px; height: 44px;
-        }
+        header .title { flex: 1; text-align: center; font-weight: 600; }
+        header button { background: none; border: none; color: var(--accent); font-size: 24px; cursor: pointer; width: 44px; }
 
-        .page { display: none; height: 100%; width: 100%; animation: fadeIn 0.2s ease-out; }
-        .page.active { display: block; }
-
+        .page { display: none; height: 100%; width: 100%; overflow-y: auto; }
+        .page.active { display: block; animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .card { 
-            background: var(--card-bg); 
-            border-radius: 16px; 
-            padding: 24px; 
-            margin: 16px; 
-        }
-
-        .btn { 
-            width: 100%; padding: 16px; border: none; border-radius: 12px; 
-            font-weight: 600; cursor: pointer; font-size: 16px; margin-top: 12px;
-        }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-secondary { background: #2c2c2e; color: white; }
-
-        /* チャット画面 */
-        #chat-page.active { display: flex; flex-direction: column; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         
-        .bubble { 
-            padding: 10px 16px; border-radius: 20px; 
-            background: var(--bubble-other); max-width: 80%; 
-            font-size: 16px; line-height: 1.4;
-        }
-        .bubble.me { 
-            align-self: flex-end; background: var(--bubble-me); color: white; 
-        }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-secondary { background: rgba(120, 120, 128, 0.16); color: var(--accent); }
 
-        .footer { 
-            background: var(--bg); padding: 10px 16px 30px; 
-            display: flex; gap: 10px; border-top: 0.5px solid #333; align-items: center;
+        /* グループリスト */
+        .group-item { 
+            padding: 15px; background: var(--card-bg); border-bottom: 0.5px solid rgba(0,0,0,0.1);
+            display: flex; align-items: center; cursor: pointer;
         }
-        textarea { 
-            flex: 1; border: none; background: #1c1c1e; padding: 12px 18px; 
-            border-radius: 22px; outline: none; font-size: 16px; height: 44px; resize: none; color: white;
-        }
+        .group-item:active { background: rgba(0,0,0,0.05); }
 
-        /* モーダル */
+        /* チャット */
+        #chat-page.active { display: flex; flex-direction: column; background: var(--bg); }
+        #chat-area { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .bubble { padding: 10px 16px; border-radius: 18px; font-size: 16px; max-width: 75%; word-wrap: break-word; }
+        .bubble.me { align-self: flex-end; background: var(--bubble-me); color: white; }
+        .bubble.other { align-self: flex-start; background: var(--bubble-other); color: var(--text); }
+
+        .footer { background: var(--card-bg); padding: 10px 15px 30px; display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); }
+        textarea { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; height: 40px; resize: none; }
+
         .modal { 
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 80%; 
-            background: #1c1c1e; z-index: 3000; transition: 0.3s cubic-bezier(0, 0, 0.2, 1); 
-            border-radius: 20px 20px 0 0; padding: 30px;
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%; 
+            background: var(--card-bg); z-index: 3000; transition: 0.3s ease-out; 
+            border-radius: 25px 25px 0 0; padding: 25px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
         }
         .modal.open { bottom: 0; }
+        
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -108,70 +88,90 @@
 </header>
 
 <div id="login-page" class="page active">
-    <div style="text-align:center; padding:100px 30px;">
-        <h1 style="font-size:40px; margin-bottom:10px;">Chat-K</h1>
-        <p style="color:var(--secondary-text); margin-bottom:40px;">名前を入力してスタート</p>
-        <input type="text" id="u-name-input" placeholder="あなたの名前" style="width:100%; padding:18px; border-radius:14px; border:1px solid #333; font-size:18px; background:#1c1c1e; color:white; outline:none;">
-        <button class="btn btn-primary" onclick="doLogin()">チャットを始める</button>
+    <div style="text-align:center; padding:80px 30px;">
+        <h1 style="font-size:32px;">Welcome</h1>
+        <p style="color:#8E8E93;">名前を入力して開始</p>
+        <input type="text" id="u-name-input" placeholder="あなたの名前" style="width:100%; padding:18px; border-radius:14px; border:1px solid #ddd; font-size:16px; margin-top:20px;">
+        <button class="btn btn-primary" onclick="doLogin()">はじめる</button>
     </div>
 </div>
 
 <div id="dash-page" class="page">
     <div class="card">
-        <div style="font-size:12px; color:var(--accent); font-weight:bold; margin-bottom:4px;">USER</div>
-        <div id="u-display" style="font-size:28px; font-weight:bold;">Name</div>
-        <button class="btn btn-primary" style="margin-top:24px;" onclick="nav('chat')">チャットルームに入る</button>
+        <div style="font-size:12px; opacity:0.6;">LOGIN AS</div>
+        <div id="u-display" style="font-size:24px; font-weight:bold;">---</div>
     </div>
     
     <div class="card">
-        <button class="btn btn-secondary" onclick="createGroup()">新規グループ作成</button>
+        <h3 style="margin:0 0 10px;">プロジェクト一覧</h3>
+        <div id="group-list">
+            </div>
+        <button class="btn btn-secondary" onclick="createGroup()">＋ 新規グループ作成</button>
     </div>
 </div>
 
 <div id="chat-page" class="page">
     <div id="chat-area"></div>
     <div class="footer">
-        <textarea id="msg-input" placeholder="メッセージ"></textarea>
-        <button onclick="sendMsg()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:20px;">↑</button>
+        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
+        <button onclick="sendMsg()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:18px;">↑</button>
     </div>
 </div>
 
 <div id="set-modal" class="modal">
-    <h2 style="margin-top:0;">設定</h2>
-    <div style="margin-top:30px;">
-        <label style="font-size:12px; color:var(--secondary-text);">名前の変更</label>
-        <input type="text" id="set-name" style="width:100%; padding:16px; border-radius:12px; border:1px solid #333; margin:8px 0 20px; font-size:16px; background:#2c2c2e; color:white;">
-        <button class="btn btn-primary" onclick="saveSet()">保存する</button>
-        <button class="btn" style="color:#FF453A; background:none; margin-top:20px;" onclick="logout()">ログアウト</button>
+    <div style="width:40px; height:5px; background:#ddd; border-radius:10px; margin:-10px auto 20px;"></div>
+    <h2>Settings</h2>
+    
+    <div class="toggle-row">
+        <span>ダークモード</span>
+        <input type="checkbox" id="dark-toggle" onchange="toggleDarkMode()" style="width:24px; height:24px;">
     </div>
-    <button class="btn btn-secondary" style="margin-top:20px;" onclick="closeModal('set-modal')">閉じる</button>
+
+    <button class="btn btn-secondary" onclick="logout()" style="color:#FF3B30;">ログアウト</button>
+    <button class="btn btn-primary" onclick="closeModal('set-modal')">閉じる</button>
 </div>
 
 <script>
+    let groups = JSON.parse(localStorage.getItem('ck_groups')) || ["メインチャット"];
+
     function nav(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id + '-page').classList.add('active');
-        document.getElementById('head-title').innerText = id === 'dash' ? 'ホーム' : 'チャット';
-        if(id === 'chat') {
-            const area = document.getElementById('chat-area');
-            area.scrollTop = area.scrollHeight;
-        }
+        document.getElementById('head-title').innerText = id === 'dash' ? 'Home' : 'Chat';
+        if(id === 'dash') renderGroups();
     }
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
     function doLogin() {
-        const name = document.getElementById('u-name-input').value.trim();
+        const name = document.getElementById('u-name-input').value;
         if(!name) return;
-        localStorage.setItem('ck_name', name);
-        updateUI(name);
+        localStorage.setItem('ck_user_name', name);
+        document.getElementById('u-display').innerText = name;
         nav('dash');
     }
 
-    function updateUI(name) {
-        document.getElementById('u-display').innerText = name;
-        document.getElementById('set-name').value = name;
+    function renderGroups() {
+        const list = document.getElementById('group-list');
+        list.innerHTML = "";
+        groups.forEach(g => {
+            const div = document.createElement('div');
+            div.className = "group-item card";
+            div.style.margin = "5px 0";
+            div.innerText = "📁 " + g;
+            div.onclick = () => nav('chat');
+            list.appendChild(div);
+        });
+    }
+
+    function createGroup() {
+        const name = prompt("グループ名を入力してください:");
+        if(name) {
+            groups.push(name);
+            localStorage.setItem('ck_groups', JSON.stringify(groups));
+            renderGroups();
+        }
     }
 
     function sendMsg() {
@@ -185,29 +185,26 @@
         inp.value = "";
     }
 
-    function createGroup() {
-        const g = prompt("グループ名:");
-        if(g) alert("「" + g + "」を作成しました");
-    }
-
-    function saveSet() {
-        const n = document.getElementById('set-name').value.trim();
-        if(n) {
-            localStorage.setItem('ck_name', n);
-            document.getElementById('u-display').innerText = n;
-            closeModal('set-modal');
-        }
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('ck_dark', document.body.classList.contains('dark-mode'));
     }
 
     function logout() {
-        localStorage.removeItem('ck_name');
+        localStorage.removeItem('ck_user_name');
         location.reload();
     }
 
     window.onload = () => {
-        const saved = localStorage.getItem('ck_name');
-        if(saved) {
-            updateUI(saved);
+        // ダークモード復元
+        if(localStorage.getItem('ck_dark') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('dark-toggle').checked = true;
+        }
+        // ユーザー名復元
+        const savedName = localStorage.getItem('ck_user_name');
+        if(savedName) {
+            document.getElementById('u-display').innerText = savedName;
             nav('dash');
         }
     };
