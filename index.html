@@ -2,73 +2,54 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat-K</title>
     <style>
-        body { background-color: #efefef; color: #000; font-family: "MS PGothic", sans-serif; margin: 0; padding: 10px; }
-        #auth-screen { max-width: 400px; margin: 80px auto; background: #fff; padding: 30px; border: 2px solid #ccc; text-align: center; box-shadow: 2px 2px 0 #888; }
-        #main-screen { display: none; }
-        .thread-title { color: #ff0000; font-size: 1.8em; font-weight: bold; margin-bottom: 20px; }
-        .post { margin-bottom: 20px; border-top: 1px dotted #ccc; padding-top: 10px; }
-        .post-header { color: #228b22; font-weight: bold; }
-        .post-info { font-size: 0.9em; color: #666; }
-        .post-body { margin: 5px 0 10px 20px; line-height: 1.5; white-space: pre-wrap; font-size: 16px; }
-        .input-area { background: #ddd; padding: 15px; border: 1px solid #888; position: sticky; bottom: 0; margin-top: 20px; }
-        input[type="text"], textarea { width: 95%; margin-bottom: 10px; padding: 5px; }
-        .google-btn { background: #fff; color: #444; border: 1px solid #888; padding: 10px 20px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; border-radius: 4px; }
-        #version-tag { position: fixed; top: 5px; right: 5px; font-size: 10px; color: #999; }
-        #auth-msg { color: red; font-size: 12px; margin-top: 15px; }
+        body { background-color: #efefef; font-family: sans-serif; padding: 20px; text-align: center; }
+        #auth-screen { background: #fff; padding: 30px; border: 2px solid #ccc; display: inline-block; box-shadow: 2px 2px 0 #888; }
+        .google-btn { background: #fff; border: 1px solid #888; padding: 10px 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 0 auto; }
+        #main-screen { display: none; text-align: left; }
+        .thread-title { color: #ff0000; font-size: 1.5em; font-weight: bold; }
+        .post { background: #fff; border-bottom: 1px solid #ccc; padding: 10px; margin-bottom: 5px; }
+        .input-area { background: #ddd; padding: 15px; position: sticky; bottom: 0; }
     </style>
 </head>
 <body>
 
-<div id="version-tag">Ver 3.1.3 (Key Fix)</div>
-
 <div id="auth-screen">
-    <h2 style="color:#ff0000; margin-top:0;">Chat-K</h2>
-    <p>Googleアカウントでログインしてください</p>
+    <h2 style="color:#ff0000;">Chat-K</h2>
     <button class="google-btn" onclick="handleGoogleLogin()">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Googleでログイン
     </button>
-    <div id="auth-msg"></div>
+    <div id="auth-msg" style="color:red; font-size:12px; margin-top:10px;"></div>
 </div>
 
 <div id="main-screen">
-    <div style="display:flex; justify-content:space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 10px;">
-        <span id="user-info" style="font-size:12px;">ログイン中...</span>
-        <button onclick="handleLogout()" style="font-size:10px;">ログアウト</button>
-    </div>
     <div class="thread-title">【Chat-K】公式掲示板</div>
     <div id="post-list"></div>
     <div class="input-area">
-        名前：<input type="text" id="post-name" value="名無しさん" style="width:150px;"><br>
-        本文：<br>
-        <textarea id="post-body" rows="4"></textarea><br>
-        <button id="send-btn" style="background:#f0f0f0; border:1px solid #888; padding:8px 30px;">書き込む</button>
+        名前：<input type="text" id="post-name" value="名無しさん"><br>
+        本文：<br><textarea id="post-body" rows="4" style="width:90%"></textarea><br>
+        <button id="send-btn">書き込む</button>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // 送っていただいたConfigを正確に反映（apiKeyの0を修正）
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
         authDomain: "my-chat-1d626.firebaseapp.com",
-        databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com",
         projectId: "my-chat-1d626",
-        storageBucket: "my-chat-1d626.firebasestorage.app",
-        messagingSenderId: "769979957640",
+        databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com",
         appId: "1:769979957640:web:777fb6120b5b223e127a3d"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
     const auth = getAuth(app);
+    const db = getDatabase(app);
     const provider = new GoogleAuthProvider();
-    const postsRef = ref(db, "bbs_posts");
 
     setPersistence(auth, browserLocalPersistence);
 
@@ -78,37 +59,28 @@
         });
     };
 
-    window.handleLogout = () => { if(confirm("ログアウトしますか？")) signOut(auth); };
-
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-screen').style.display = 'block';
-            document.getElementById('user-info').innerText = user.displayName + " さんとしてログイン中";
             document.getElementById('post-name').value = user.displayName;
-        } else {
-            document.getElementById('auth-screen').style.display = 'block';
-            document.getElementById('main-screen').style.display = 'none';
         }
     });
 
-    let postCount = 0;
-    onChildAdded(postsRef, (snapshot) => {
-        postCount++;
-        const data = snapshot.val();
-        const date = data.time ? new Date(data.time).toLocaleString() : "不明";
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post';
-        postDiv.innerHTML = `<div class="post-info">${postCount} ：<span class="post-header">${data.name}</span> ：${date}</div><div class="post-body">${data.body}</div>`;
-        document.getElementById('post-list').appendChild(postDiv);
-        window.scrollTo(0, document.body.scrollHeight);
+    onChildAdded(ref(db, "posts"), (snap) => {
+        const d = snap.val();
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.innerHTML = `<b>${d.name}</b>: ${d.body}`;
+        document.getElementById('post-list').appendChild(div);
     });
 
     document.getElementById('send-btn').onclick = () => {
-        const name = document.getElementById('post-name').value;
-        const body = document.getElementById('post-body').value;
-        if(!body.trim()) return alert("本文を入力してください");
-        push(postsRef, { name, body, time: serverTimestamp() });
+        push(ref(db, "posts"), {
+            name: document.getElementById('post-name').value,
+            body: document.getElementById('post-body').value,
+            time: serverTimestamp()
+        });
         document.getElementById('post-body').value = "";
     };
 </script>
