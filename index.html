@@ -1,57 +1,9 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat-K</title>
-    <style>
-        body { background-color: #efefef; color: #000; font-family: "MS PGothic", sans-serif; margin: 0; padding: 10px; }
-        #auth-screen { max-width: 400px; margin: 80px auto; background: #fff; padding: 30px; border: 2px solid #ccc; text-align: center; box-shadow: 2px 2px 0 #888; }
-        #main-screen { display: none; }
-        .thread-title { color: #ff0000; font-size: 1.8em; font-weight: bold; margin-bottom: 20px; }
-        .post { margin-bottom: 20px; border-top: 1px dotted #ccc; padding-top: 10px; }
-        .post-header { color: #228b22; font-weight: bold; }
-        .post-info { font-size: 0.9em; color: #666; }
-        .post-body { margin: 5px 0 10px 20px; line-height: 1.5; white-space: pre-wrap; font-size: 16px; }
-        .input-area { background: #ddd; padding: 15px; border: 1px solid #888; position: sticky; bottom: 0; margin-top: 20px; }
-        input[type="text"], textarea { width: 95%; margin-bottom: 10px; padding: 5px; }
-        .google-btn { background: #fff; color: #444; border: 1px solid #888; padding: 10px 20px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; border-radius: 4px; }
-        #version-tag { position: fixed; top: 5px; right: 5px; font-size: 10px; color: #999; }
-    </style>
-</head>
-<body>
-
-<div id="version-tag">Ver 3.1.1 (Persistence & Auth Fix)</div>
-
-<div id="auth-screen">
-    <h2 style="color:#ff0000; margin-top:0;">Chat-K</h2>
-    <p>Googleアカウントでログインしてください</p>
-    <button class="google-btn" onclick="handleGoogleLogin()">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Googleでログイン
-    </button>
-    <div id="auth-msg" style="color:red; font-size:12px; margin-top:15px;"></div>
-</div>
-
-<div id="main-screen">
-    <div style="display:flex; justify-content:space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
-        <span id="user-info" style="font-size:12px;">ログイン確認中...</span>
-        <button onclick="handleLogout()" style="font-size:10px;">ログアウト</button>
-    </div>
-    <div class="thread-title">【Chat-K】公式掲示板</div>
-    <div id="post-list"></div>
-    <div class="input-area">
-        名前：<input type="text" id="post-name" value="名無しさん" style="width:150px;"><br>
-        本文：<br>
-        <textarea id="post-body" rows="4"></textarea><br>
-        <button id="send-btn" style="background:#f0f0f0; border:1px solid #888; padding:8px 30px;">書き込む</button>
-    </div>
-</div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+    // 余計な文字が入らないよう、正確にセットしています
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
         authDomain: "my-chat-1d626.firebaseapp.com",
@@ -62,56 +14,5 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const postsRef = ref(db, "bbs_posts");
-
-    // ログイン維持設定
-    setPersistence(auth, browserLocalPersistence);
-
-    window.handleGoogleLogin = () => {
-        signInWithPopup(auth, provider)
-            .catch(err => {
-                document.getElementById('auth-msg').innerText = "エラー: " + err.message;
-                console.error(err);
-            });
-    };
-
-    window.handleLogout = () => signOut(auth);
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-screen').style.display = 'block';
-            document.getElementById('user-info').innerText = user.displayName + " さんがログイン中";
-            document.getElementById('post-name').value = user.displayName;
-        } else {
-            document.getElementById('auth-screen').style.display = 'block';
-            document.getElementById('main-screen').style.display = 'none';
-        }
-    });
-
-    let postCount = 0;
-    onChildAdded(postsRef, (snapshot) => {
-        postCount++;
-        const data = snapshot.val();
-        const date = data.time ? new Date(data.time).toLocaleString() : "不明";
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post';
-        postDiv.innerHTML = `
-            <div class="post-info">${postCount} ：<span class="post-header">${data.name}</span> ：${date}</div>
-            <div class="post-body">${data.body}</div>
-        `;
-        document.getElementById('post-list').appendChild(postDiv);
-        window.scrollTo(0, document.body.scrollHeight);
-    });
-
-    document.getElementById('send-btn').onclick = () => {
-        const name = document.getElementById('post-name').value;
-        const body = document.getElementById('post-body').value;
-        if(!body) return alert("本文を入力してください");
-        push(postsRef, { name, body, time: serverTimestamp() });
-        document.getElementById('post-body').value = "";
-    };
+    // ...以下、Ver 3.1.1と同じ
 </script>
-</body>
-</html>
