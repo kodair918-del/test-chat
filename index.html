@@ -10,13 +10,12 @@
         * { box-sizing: border-box; }
         body { background: var(--bg-blue); font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
         
-        /* 画面レイアウト */
         header { background: var(--header-dark); color: white; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; height: 55px; flex-shrink: 0; }
         #chat-area { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 12px; }
         .footer { background: #fff; padding: 8px 10px; display: flex; gap: 8px; border-top: 1px solid #ddd; }
         #msg-input { flex: 1; border: none; background: #f0f2f5; padding: 10px 15px; border-radius: 20px; font-size: 16px; outline: none; }
         
-        /* ホーム・承認待機画面 */
+        /* 共通モーダル設定 */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8f9fa; z-index: 1000; padding: 20px; display: block; overflow-y: auto; text-align: center; }
         .input-group { text-align: left; margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
@@ -24,64 +23,79 @@
         
         .btn-main { width: 100%; padding: 15px; background: var(--line-green); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; }
         .btn-sub { width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 8px; margin-top: 10px; }
-        
-        /* 承認通知 */
-        #admin-panel { background: #fffde7; border: 2px solid #fbc02d; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: none; }
-        
+        .btn-danger { width: 100%; padding: 10px; background: #ff4b4b; color: white; border: none; border-radius: 8px; margin-top: 20px; }
+
+        /* 承認パネル（ホスト用） */
+        #admin-panel { background: #fffde7; border: 2px solid #fbc02d; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; text-align: left; }
+        .req-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #ddd; }
+
         /* 吹き出し */
         .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; }
         .bubble-wrapper.me { align-self: flex-end; align-items: flex-end; }
         .bubble-wrapper.other { align-self: flex-start; align-items: flex-start; }
         .bubble { padding: 8px 12px; border-radius: 18px; font-size: 15px; background: white; border-top-left-radius: 2px; }
         .me .bubble { background: var(--line-green); color: white; border-top-left-radius: 18px; border-top-right-radius: 2px; }
-        .status { font-size: 10px; color: #eee; }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="location.reload()" style="background:none; border:none; color:white; font-size:20px;">🏠</button>
-    <div id="display-group-name">Chat-K</div>
-    <div style="width:20px;"></div>
+    <div style="width:30px;"></div> <div id="display-group-name">Chat-K</div>
+    <div onclick="openConfig()" style="cursor:pointer; font-size: 24px;">⚙️</div>
 </header>
 
 <div id="chat-area">
     <div id="admin-panel">
-        <p style="font-size:12px; margin:0 0 5px 0;">🔔 入室リクエストがあります</p>
+        <p style="font-size:12px; font-weight:bold; margin:0 0 5px 0;">🔔 入室申請</p>
         <div id="request-list"></div>
     </div>
 </div>
 
 <div class="footer">
-    <input type="text" id="msg-input" placeholder="メッセージを入力" autocomplete="off">
+    <input type="text" id="msg-input" placeholder="メッセージを入力">
     <button onclick="sendMessage()" style="background:var(--line-green); color:white; border:none; width:40px; height:40px; border-radius:50%;">➤</button>
 </div>
 
 <div id="home-screen" class="modal">
-    <h2 style="color:var(--line-green);">Chat-K</h2>
-    <div class="input-group"><label>あなたの名前</label><input type="text" id="user-name"></div>
+    <h2 style="color:var(--line-green);">Chat-K Secure</h2>
+    <div class="input-group"><label>あなたの名前</label><input type="text" id="user-name" autocomplete="off"></div>
     <hr>
     <button class="btn-main" onclick="showForm('create')">新しいグループを作る</button>
     <button class="btn-sub" onclick="showForm('join')">既存のグループに入る</button>
     
     <div id="group-form" style="display:none; margin-top:20px; border-top:1px solid #ddd; padding-top:20px;">
         <h3 id="form-title"></h3>
-        <div class="input-group"><label>グループ名(ID)</label><input type="text" id="group-id"></div>
+        <div class="input-group"><label>グループ名</label><input type="text" id="group-id"></div>
         <div class="input-group"><label>パスワード</label><input type="password" id="group-pw" autocomplete="new-password"></div>
         <button class="btn-main" id="exec-btn" onclick="executeGroupAction()">実行</button>
     </div>
 </div>
 
 <div id="wait-screen" class="modal" style="display:none;">
-    <h3>⏳ 承認待ち</h3>
-    <p>ホストが承認するまでお待ちください...</p>
-    <p style="font-size:12px; color:#666;">グループ名: <span id="wait-gid"></span></p>
+    <h3>⏳ 承認待ち...</h3>
+    <p>ホストが許可するまでこのままお待ちください。</p>
     <button class="btn-sub" onclick="location.reload()">キャンセル</button>
+</div>
+
+<div id="config-modal" class="modal" style="display:none;">
+    <h2>⚙️ グループ情報</h2>
+    <div style="text-align:left; background:#eee; padding:15px; border-radius:8px;">
+        <p><b>グループ名:</b> <span id="conf-gid"></span></p>
+        <p><b>あなたの名前:</b> <span id="conf-name"></span></p>
+    </div>
+    
+    <div id="qrcode-section" style="margin-top:20px;">
+        <p style="font-size:12px; color:#666;">招待用QRコード</p>
+        <div id="qrcode-canvas" style="display:flex; justify-content:center; margin:10px 0;"></div>
+    </div>
+
+    <button class="btn-main" onclick="closeConfig()">閉じる</button>
+    <button class="btn-danger" onclick="exitGroup()">グループを退出する</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, onChildChanged, serverTimestamp, update, increment, get, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded, onValue, serverTimestamp, update, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
@@ -93,24 +107,23 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    let mode = ""; // 'create' or 'join'
-    let myName = "";
-    let gid = "";
+    let myName = "", gid = "", mode = "";
 
-    // 簡易ハッシュ化（暗号化）
     const hash = (str) => btoa(encodeURIComponent(str));
 
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const qid = urlParams.get('id');
-        if (qid) { showForm('join'); document.getElementById('group-id').value = qid; }
+        if (urlParams.get('id')) {
+            showForm('join');
+            document.getElementById('group-id').value = urlParams.get('id');
+        }
     };
 
     window.showForm = (type) => {
         mode = type;
         document.getElementById('group-form').style.display = 'block';
         document.getElementById('form-title').innerText = type === 'create' ? "新規作成" : "入室申請";
-        document.getElementById('exec-btn').innerText = type === 'create' ? "グループを作成" : "申請を送る";
+        document.getElementById('exec-btn').innerText = type === 'create' ? "作成して入室" : "申請を送る";
     };
 
     window.executeGroupAction = async () => {
@@ -119,21 +132,18 @@
         const pw = document.getElementById('group-pw').value.trim();
         if(!myName || !gid || !pw) return alert("全て入力してください");
 
-        const groupRef = ref(db, `secure_groups/${gid}`);
-        const snapshot = await get(groupRef);
+        const groupRef = ref(db, `secure_v2/${gid}`);
+        const snap = await get(groupRef);
 
         if (mode === 'create') {
-            if (snapshot.exists()) return alert("そのグループ名は既に存在します");
-            await set(groupRef, { host: myName, pw: hash(pw), created: serverTimestamp() });
+            if (snap.exists()) return alert("その名前は既に使われています");
+            await set(groupRef, { host: myName, pw: hash(pw) });
             localStorage.setItem('chat_role', 'host');
             enterChat();
         } else {
-            if (!snapshot.exists()) return alert("グループが見つかりません");
-            if (snapshot.val().pw !== hash(pw)) return alert("パスワードが違います");
-            
-            // 入室申請
-            const reqRef = ref(db, `secure_groups/${gid}/requests/${myName}`);
-            await set(reqRef, { status: "waiting", time: serverTimestamp() });
+            if (!snap.exists()) return alert("グループが存在しません");
+            if (snap.val().pw !== hash(pw)) return alert("パスワードが違います");
+            await set(ref(db, `secure_v2/${gid}/requests/${myName}`), { status: "waiting" });
             localStorage.setItem('chat_role', 'guest');
             waitForApproval();
         }
@@ -142,12 +152,9 @@
     function waitForApproval() {
         document.getElementById('home-screen').style.display = 'none';
         document.getElementById('wait-screen').style.display = 'block';
-        document.getElementById('wait-gid').innerText = gid;
-        
-        const myReqRef = ref(db, `secure_groups/${gid}/requests/${myName}`);
-        onValue(myReqRef, (snap) => {
-            if(snap.val() && snap.val().status === "approved") enterChat();
-            if(snap.val() && snap.val().status === "denied") { alert("入室が拒否されました"); location.reload(); }
+        onValue(ref(db, `secure_v2/${gid}/requests/${myName}`), (snap) => {
+            if(snap.val()?.status === "approved") enterChat();
+            else if(snap.val()?.status === "denied") { alert("拒否されました"); location.reload(); }
         });
     }
 
@@ -156,47 +163,57 @@
         document.getElementById('wait-screen').style.display = 'none';
         document.getElementById('display-group-name').innerText = gid;
         
-        const chatRef = ref(db, `secure_groups/${gid}/messages`);
-        
-        // ホストの場合、申請を監視
         if(localStorage.getItem('chat_role') === 'host') {
             document.getElementById('admin-panel').style.display = 'block';
-            onChildAdded(ref(db, `secure_groups/${gid}/requests`), (snap) => {
+            onChildAdded(ref(db, `secure_v2/${gid}/requests`), (snap) => {
                 if(snap.val().status === "waiting") {
                     const div = document.createElement('div');
+                    div.className = "req-item";
                     div.id = `req-${snap.key}`;
-                    div.innerHTML = `${snap.key} <button onclick="approve('${snap.key}', true)">許可</button> <button onclick="approve('${snap.key}', false)">拒否</button>`;
+                    div.innerHTML = `<span>${snap.key}</span><div><button onclick="authReq('${snap.key}',true)">許可</button><button onclick="authReq('${snap.key}',false)">拒否</button></div>`;
                     document.getElementById('request-list').appendChild(div);
                 }
             });
         }
 
-        onChildAdded(chatRef, (snap) => {
+        onChildAdded(ref(db, `secure_v2/${gid}/messages`), (snap) => {
             const d = snap.val();
-            addBubble(d.name, d.text, d.name === myName);
+            const area = document.getElementById('chat-area');
+            const wrap = document.createElement('div');
+            wrap.className = `bubble-wrapper ${d.name === myName ? 'me' : 'other'}`;
+            wrap.innerHTML = `<div style="font-size:10px;margin:0 5px;">${d.name}</div><div class="bubble">${d.text}</div>`;
+            area.appendChild(wrap);
+            area.scrollTop = area.scrollHeight;
         });
     }
 
-    window.approve = (userName, isOk) => {
-        update(ref(db, `secure_groups/${gid}/requests/${userName}`), { status: isOk ? "approved" : "denied" });
-        document.getElementById(`req-${userName}`).remove();
+    window.authReq = (u, ok) => {
+        update(ref(db, `secure_v2/${gid}/requests/${u}`), { status: ok ? "approved" : "denied" });
+        document.getElementById(`req-${u}`).remove();
     };
-
-    function addBubble(name, text, isMe) {
-        const chatArea = document.getElementById('chat-area');
-        const wrapper = document.createElement('div');
-        wrapper.className = `bubble-wrapper ${isMe ? 'me' : 'other'}`;
-        wrapper.innerHTML = `<div style="font-size:10px; color:#333; margin:0 5px;">${name}</div><div class="bubble">${text}</div>`;
-        chatArea.appendChild(wrapper);
-        chatArea.scrollTop = chatArea.scrollHeight;
-    }
 
     window.sendMessage = () => {
-        const input = document.getElementById('msg-input');
-        if(!input.value.trim()) return;
-        push(ref(db, `secure_groups/${gid}/messages`), { name: myName, text: input.value, time: serverTimestamp() });
-        input.value = "";
+        const inp = document.getElementById('msg-input');
+        if(!inp.value.trim()) return;
+        push(ref(db, `secure_v2/${gid}/messages`), { name: myName, text: inp.value, time: serverTimestamp() });
+        inp.value = "";
     };
+
+    // --- 設定画面の処理 ---
+    window.openConfig = () => {
+        if(!gid) return;
+        document.getElementById('config-modal').style.display = 'block';
+        document.getElementById('conf-gid').innerText = gid;
+        document.getElementById('conf-name').innerText = myName;
+        
+        document.getElementById('qrcode-canvas').innerHTML = "";
+        const url = window.location.origin + window.location.pathname + "?id=" + gid;
+        new QRCode(document.getElementById("qrcode-canvas"), { text: url, width: 140, height: 140 });
+    };
+
+    window.closeConfig = () => document.getElementById('config-modal').style.display = 'none';
+    window.exitGroup = () => { if(confirm("退出しますか？")) location.reload(); };
+
 </script>
 </body>
 </html>
