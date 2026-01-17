@@ -3,213 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Science Edition</title>
+    <title>Chat-K | True AI Intelligence</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --line-green: #06C755; --bg-blue: #7494C0; --header-dark: #35495e; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; width: 100%; background: var(--bg-blue); font-family: sans-serif; }
+        :root { --line-green: #06C755; --bg-blue: #7494C0; --header-dark: #35495e; --gemini-blue: #4285F4; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; overflow: hidden; position: fixed; width: 100%; background: var(--bg-blue); font-family: sans-serif; }
         body { display: flex; flex-direction: column; }
-        header { background: var(--header-dark); color: white; display: flex; align-items: center; height: 50px; padding: 0 10px; padding-top: env(safe-area-inset-top); flex-shrink: 0; z-index: 100; }
-        header .title { flex: 1; text-align: center; font-weight: bold; font-size: 16px; }
-        header button { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; }
-        .footer { background: #ffffff; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 8px; border-top: 1px solid #ddd; flex-shrink: 0; }
-        #msg-input { flex: 1; border: none; background: #f0f2f5; padding: 10px 15px; border-radius: 20px; font-size: 16px; outline: none; max-height: 100px; resize: none; line-height: 1.4; }
-        .system-msg { align-self: center; background: rgba(0,0,0,0.15); color: white; font-size: 11px; padding: 4px 12px; border-radius: 12px; margin: 5px 0; }
-        .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; }
-        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .sender-name { font-size: 11px; color: #555; margin-bottom: 3px; margin-left: 5px; font-weight: bold; }
-        .me { align-self: flex-end; } .me .bubble { background: var(--line-green); color: white; border-top-right-radius: 2px; }
-        .other { align-self: flex-start; } .other .bubble { border-top-left-radius: 2px; }
-        .ai-bubble { align-self: flex-start; max-width: 90%; margin: 10px 0; border: 1.5px dashed var(--line-green); padding: 12px; border-radius: 15px; background: rgba(255,255,255,0.95); font-size: 13px; color: #333; }
-        .ai-badge { background: var(--line-green); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-bottom: 5px; display: inline-block; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8f9fa; z-index: 1000; padding: 20px; display: block; overflow-y: auto; }
-        .btn-main { width: 100%; padding: 15px; background: var(--line-green); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .input-box { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 16px; }
+        header { background: var(--header-dark); color: white; display: flex; align-items: center; height: 50px; padding: 0 15px; flex-shrink: 0; }
+        header .title { flex: 1; text-align: center; font-weight: bold; }
+        #chat-area { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 12px; }
+        .bubble-wrapper { display: flex; flex-direction: column; max-width: 80%; position: relative; margin-bottom: 5px; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; transition: 0.2s; }
+        .me { align-self: flex-end; } .me .bubble { background: var(--line-green); color: white; }
+        .ai-hint { font-size: 9px; color: white; margin-top: 2px; margin-left: 5px; opacity: 0.8; }
+        #detail-panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 80%; background: white; z-index: 2000; transition: 0.4s cubic-bezier(0, 0.5, 0.5, 1); border-radius: 20px 20px 0 0; padding: 25px; overflow-y: auto; }
+        #detail-panel.open { bottom: 0; }
+        .footer { background: white; padding: 10px; display: flex; align-items: flex-end; gap: 8px; border-top: 1px solid #ddd; }
+        #msg-input { flex: 1; border: none; background: #f0f2f5; padding: 10px 15px; border-radius: 20px; font-size: 16px; outline: none; }
+        .settings-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 1500; }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="location.reload()">🏠</button>
-    <div class="title" id="display-group-name">Chat-K Expert</div>
-    <button id="gear-btn" onclick="openSettings()" style="display:none;">⚙️</button>
+    <div style="width:30px;">🏠</div>
+    <div class="title">Gemini Expert Chat</div>
+    <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
 </header>
 
 <div id="chat-area"></div>
+<div id="overlay" class="overlay" onclick="closeDetail()"></div>
 
-<div class="footer">
-    <textarea id="msg-input" rows="1" placeholder="$\alpha, \beta$ 数式は$で囲む" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-    <button onclick="window.triggerSendMessage()" style="background:var(--line-green); color:white; border:none; width:40px; height:40px; border-radius:50%;">➤</button>
+<div id="detail-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <span style="color:var(--gemini-blue); font-weight:bold;">✨ Gemini AI 解説</span>
+        <button onclick="closeDetail()" style="border:none; background:none; font-size:24px;">&times;</button>
+    </div>
+    <div id="detail-content" style="line-height:1.6;">AIが思考中...</div>
 </div>
 
-<div id="main-modal" class="modal">
-    <h2 style="text-align:center; color:var(--line-green); margin-top:40px;">Chat-K Expert</h2>
-    <div id="step-register">
-        <input type="email" id="reg-email" class="input-box" placeholder="メールアドレス">
-        <div id="name-input-area" style="display:none;">
-            <input type="text" id="reg-name" class="input-box" placeholder="お名前（専門など）">
-        </div>
-        <button class="btn-main" id="auth-btn" onclick="window.triggerCheckEmail()">ログイン / 新規登録</button>
-    </div>
-    <div id="step-home" style="display:none; text-align:center;">
-        <div style="background:white; padding:15px; border-radius:15px; margin-bottom:20px; border:1px solid #ddd;">
-            <p id="welcome-msg" style="font-weight:bold; margin:0;"></p>
-        </div>
-        <div id="history-list"></div>
-        <button onclick="window.triggerShowGroupForm('create')" class="btn-main" style="margin-top:10px;">新規グループ作成</button>
-        <button onclick="window.triggerShowGroupForm('join')" style="width:100%; background:#eee; border:none; padding:15px; border-radius:12px; margin-top:10px; font-weight:bold;">既存グループに参加</button>
-        <div id="group-form" style="display:none; margin-top:15px; padding:15px; background:#fff; border-radius:12px; border:1px solid #ddd;">
-            <input type="text" id="group-id" placeholder="グループ名" class="input-box" style="margin-bottom:10px;">
-            <input type="password" id="group-pw" placeholder="パスワード" class="input-box">
-            <button class="btn-main" onclick="window.triggerHandleGroupAction()">決定</button>
-        </div>
-        <button onclick="localStorage.clear(); location.reload();" style="color:red; border:none; background:none; margin-top:40px; font-size:12px;">ログアウト</button>
-    </div>
+<div id="settings-panel" style="position:fixed; top:0; right:-100%; width:100%; height:100%; background:white; z-index:3000; transition:0.3s; padding:20px;">
+    <h3>AI & ユーザー設定</h3>
+    <hr>
+    <label>Gemini API Key:</label>
+    <input type="password" id="api-key" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd;" placeholder="AI Studioで取得したキー">
+    <label>あなたの年齢:</label>
+    <input type="number" id="user-age" value="20" style="width:100%; padding:10px; margin:10px 0; border:1px solid #ddd;">
+    <button onclick="saveSettings()" style="width:100%; padding:15px; background:var(--gemini-blue); color:white; border:none; border-radius:12px; font-weight:bold;">保存して適用</button>
+    <button onclick="toggleSettings()" style="width:100%; margin-top:10px; border:none; background:none;">戻る</button>
+</div>
+
+<div class="footer">
+    <textarea id="msg-input" rows="1" placeholder="理系の話をしましょう..."></textarea>
+    <button onclick="send()" style="background:var(--gemini-blue); color:white; border:none; width:44px; height:44px; border-radius:50%;">➤</button>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded, get, set, off, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    let apiKey = localStorage.getItem('gemini_api_key') || "";
+    let userAge = localStorage.getItem('user_age') || "20";
+    document.getElementById('api-key').value = apiKey;
+    document.getElementById('user-age').value = userAge;
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
-        authDomain: "my-chat-1d626.firebaseapp.com",
-        databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com",
-        projectId: "my-chat-1d626",
-        appId: "1:769979957640:web:777fb6120b5b223e127a3d"
-    };
+    // --- Gemini API 連携ロジック ---
+    async function fetchGeminiExplanation(text) {
+        if(!apiKey) return "設定画面からAPIキーを入力してください。";
+        
+        const prompt = `あなたは理系専門家のチャットボットです。
+        ユーザー年齢: ${userAge}歳
+        以下のメッセージに含まれる難しい専門用語を抽出し、その年齢に合わせた難易度で解説してください。
+        数式が必要な場合は LaTeX形式（$ または $$ で囲む）を使ってください。
+        返信はHTML形式で、見出しなどは <b> や <h4> を使ってください。
+        
+        対象メッセージ: "${text}"`;
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    let myName = localStorage.getItem('chat_name'), myEmail = localStorage.getItem('chat_email'), currentGid = "";
-
-    // 数式レンダリング用オプション
-    const mathOptions = { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}], throwOnError: false };
-
-    // --- 外部呼び出し用関数をwindowに登録 (ボタン無反応対策) ---
-    window.triggerCheckEmail = async () => {
-        const email = document.getElementById('reg-email').value.trim().toLowerCase();
-        if(!email.includes('@')) return alert("有効なメールアドレスを入力してください");
-        const snap = await get(ref(db, `users/${email.replace(/\./g, '_')}`));
-        if(snap.exists()){
-            myName = snap.val().name; myEmail = email;
-            localStorage.setItem('chat_name', myName); localStorage.setItem('chat_email', myEmail);
-            showStep('home');
-        } else {
-            document.getElementById('name-input-area').style.display = 'block';
-            document.getElementById('auth-btn').onclick = () => finalizeReg(email);
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            return data.candidates[0].content.parts[0].text;
+        } catch (e) {
+            return "エラー: APIとの通信に失敗しました。キーが正しいか確認してください。";
         }
-    };
-
-    async function finalizeReg(email) {
-        const name = document.getElementById('reg-name').value.trim();
-        if(!name) return alert("名前を入力してください");
-        await set(ref(db, `users/${email.replace(/\./g, '_')}`), { name: name });
-        myName = name; myEmail = email;
-        localStorage.setItem('chat_name', name); localStorage.setItem('chat_email', email);
-        showStep('home');
     }
 
-    window.triggerSendMessage = () => {
+    window.send = () => {
         const inp = document.getElementById('msg-input');
-        if(!inp.value.trim() || !currentGid) return;
-        push(ref(db, `v5_groups/${currentGid}/messages`), { 
-            name: myName, sender: myEmail, text: inp.value, type: 'text', time: serverTimestamp() 
-        });
-        inp.value = ""; inp.style.height = 'auto';
+        if(!inp.value.trim()) return;
+        renderMessage("User", inp.value);
+        inp.value = "";
     };
 
-    window.triggerHandleGroupAction = async () => {
-        const gid = document.getElementById('group-id').value.trim(), pw = btoa(document.getElementById('group-pw').value);
-        if(!gid) return;
-        const snap = await get(ref(db, `v5_groups/${gid}`));
-        if(window.currentMode === 'create') {
-            if(snap.exists()) return alert("既に存在します");
-            await set(ref(db, `v5_groups/${gid}`), { host: myEmail, pw: pw });
-        } else {
-            if(!snap.exists() || snap.val().pw !== pw) return alert("情報が正しくありません");
-        }
-        let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
-        if(!h.includes(gid)) h.push(gid);
-        localStorage.setItem('chat_history', JSON.stringify(h));
-        enterChat(gid);
-    };
-
-    window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
-
-    // --- チャットコア機能 ---
-    function enterChat(gid) {
-        currentGid = gid;
-        document.getElementById('main-modal').style.display = 'none';
-        document.getElementById('display-group-name').innerText = gid;
-        document.getElementById('chat-area').innerHTML = "";
-
-        // 入室通知
-        push(ref(db, `v5_groups/${gid}/messages`), { text: `${myName}さんが参加しました`, type: 'system' });
-
-        const chatRef = ref(db, `v5_groups/${gid}/messages`);
-        onChildAdded(chatRef, (snap) => {
-            const d = snap.val();
-            const wrap = document.createElement('div');
-            if(d.type === 'system') {
-                wrap.className = 'system-msg'; wrap.innerText = d.text;
-            } else {
-                wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
-                wrap.innerHTML = `<div class="sender-name">${d.name}</div><div class="bubble">${d.text}</div>`;
-                if(window.renderMathInElement) renderMathInElement(wrap, mathOptions);
+    function renderMessage(name, text) {
+        const area = document.getElementById('chat-area');
+        const wrap = document.createElement('div');
+        wrap.className = `bubble-wrapper ${name === "User" ? "me" : "other"}`;
+        wrap.innerHTML = `<div class="bubble">${text}</div><div class="ai-hint">💡 クリックしてAI解説</div>`;
+        
+        wrap.onclick = async () => {
+            document.getElementById('detail-content').innerHTML = "Geminiが思考中...";
+            document.getElementById('detail-panel').classList.add('open');
+            document.getElementById('overlay').style.display = 'block';
+            
+            const explanation = await fetchGeminiExplanation(text);
+            document.getElementById('detail-content').innerHTML = explanation;
+            
+            // 数式をレンダリング
+            if(window.renderMathInElement) {
+                renderMathInElement(document.getElementById('detail-content'), {
+                    delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}]
+                });
             }
-            document.getElementById('chat-area').appendChild(wrap);
-            document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
-            if(d.sender !== myEmail && d.type === 'text') checkExpertTerms(d.text);
-        });
-    }
-
-    // AI解説 (理系用語)
-    function checkExpertTerms(text) {
-        const dictionary = {
-            "シュレディンガー": "【AI解説】量子力学の根幹「シュレディンガー方程式」で有名。状態の重ね合わせを猫で例えました。",
-            "エントロピー": "【AI解説】不規則さの尺度。熱力学では $S = k_B \ln \Omega$ と定義されます。",
-            "オイラーの等式": "【AI解説】数学史上最も美しい式とされる $e^{i\pi} + 1 = 0$ です。",
-            "ナヴィエ・ストークス": "【AI解説】流体の運動を記述する方程式。非線形偏微分方程式であり、解の存在証明は難問です。"
         };
-        for(let key in dictionary) {
-            if(text.includes(key)) {
-                setTimeout(() => {
-                    const ai = document.createElement('div'); ai.className = 'ai-bubble';
-                    ai.innerHTML = `<span class="ai-badge">Gemini Support</span><br>${dictionary[key]}`;
-                    if(window.renderMathInElement) renderMathInElement(ai, mathOptions);
-                    document.getElementById('chat-area').appendChild(ai);
-                    document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
-                }, 1000);
-                break;
-            }
-        }
+
+        area.appendChild(wrap);
+        area.scrollTop = area.scrollHeight;
     }
 
-    function showStep(s) {
-        document.getElementById('step-register').style.display = 'none';
-        document.getElementById('step-home').style.display = 'none';
-        document.getElementById('step-'+s).style.display = 'block';
-        if(s === 'home') refreshHistory();
-    }
-
-    function refreshHistory() {
-        const list = document.getElementById('history-list'); list.innerHTML = "";
-        JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(gid => {
-            const div = document.createElement('div');
-            div.style = "background:white; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
-            div.innerHTML = `<span><b>${gid}</b></span><button onclick="window.enterChatTrigger('${gid}')" style="background:var(--line-green);color:white;border:none;padding:8px 15px;border-radius:10px;">入室</button>`;
-            list.appendChild(div);
-        });
-        document.getElementById('welcome-msg').innerText = "Researcher: " + myName;
-    }
-    window.enterChatTrigger = (gid) => enterChat(gid);
-    window.onload = () => { (myName && myEmail) ? showStep('home') : showStep('register'); };
+    window.saveSettings = () => {
+        apiKey = document.getElementById('api-key').value;
+        userAge = document.getElementById('user-age').value;
+        localStorage.setItem('gemini_api_key', apiKey);
+        localStorage.setItem('user_age', userAge);
+        toggleSettings();
+    };
+    window.toggleSettings = () => {
+        const p = document.getElementById('settings-panel');
+        p.style.right = p.style.right === "0px" ? "-100%" : "0px";
+    };
+    window.closeDetail = () => {
+        document.getElementById('detail-panel').classList.remove('open');
+        document.getElementById('overlay').style.display = 'none';
+    };
 </script>
 </body>
 </html>
