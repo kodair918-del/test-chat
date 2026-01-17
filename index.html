@@ -3,211 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Simple & Dark</title>
+    <title>Chat-K | Next Gen Expert</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <style>
         :root {
-            --accent: #007AFF;
-            --bg: #F2F2F7;
-            --card-bg: #FFFFFF;
-            --text: #000000;
-            --header-bg: rgba(255, 255, 255, 0.8);
-            --bubble-me: #007AFF;
-            --bubble-other: #E9E9EB;
-        }
-
-        /* ダークモード設定 */
-        body.dark-mode {
-            --bg: #1C1C1E;
+            --accent: #007AFF; /* iOS Blue */
+            --bg: #1C1C1E; /* Dark Gray */
             --card-bg: #2C2C2E;
             --text: #FFFFFF;
             --header-bg: rgba(28, 28, 30, 0.8);
-            --bubble-me: #0A84FF;
-            --bubble-other: #3A3A3C;
+            --line-green: #32D74B;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            margin: 0; font-family: -apple-system, sans-serif; height: 100vh; 
-            background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden;
-            transition: background 0.3s, color 0.3s;
+            margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            height: 100vh; background: var(--bg); color: var(--text);
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
+        /* 洗練されたヘッダー */
         header { 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             background: var(--header-bg); height: 60px; display: flex; align-items: center; 
-            padding: 0 20px; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); flex-shrink: 0;
+            padding: 0 20px; z-index: 2000; border-bottom: 0.5px solid rgba(255,255,255,0.1); flex-shrink: 0;
+            padding-top: env(safe-area-inset-top);
         }
+        header .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; letter-spacing: -0.4px; }
+        header button { background: none; border: none; color: var(--accent); font-size: 22px; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 
-        header .title { flex: 1; text-align: center; font-weight: 600; }
-        header button { background: none; border: none; color: var(--accent); font-size: 24px; cursor: pointer; width: 44px; }
+        /* チャットエリア */
+        #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 16px; background: var(--bg); }
 
-        .page { display: none; height: 100%; width: 100%; overflow-y: auto; }
-        .page.active { display: block; animation: fadeIn 0.2s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        /* メッセージの気泡 */
+        .bubble-wrapper { display: flex; flex-direction: column; max-width: 80%; }
+        .sender-name { font-size: 12px; color: #8E8E93; margin-bottom: 4px; margin-left: 8px; }
+        .bubble { padding: 12px 16px; border-radius: 20px; font-size: 16px; line-height: 1.4; position: relative; }
         
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-secondary { background: rgba(120, 120, 128, 0.16); color: var(--accent); }
-
-        /* グループリスト */
-        .group-item { 
-            padding: 15px; background: var(--card-bg); border-bottom: 0.5px solid rgba(0,0,0,0.1);
-            display: flex; align-items: center; cursor: pointer;
-        }
-        .group-item:active { background: rgba(0,0,0,0.05); }
-
-        /* チャット */
-        #chat-page.active { display: flex; flex-direction: column; background: var(--bg); }
-        #chat-area { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .bubble { padding: 10px 16px; border-radius: 18px; font-size: 16px; max-width: 75%; word-wrap: break-word; }
-        .bubble.me { align-self: flex-end; background: var(--bubble-me); color: white; }
-        .bubble.other { align-self: flex-start; background: var(--bubble-other); color: var(--text); }
-
-        .footer { background: var(--card-bg); padding: 10px 15px 30px; display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); }
-        textarea { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; height: 40px; resize: none; }
-
-        .modal { 
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%; 
-            background: var(--card-bg); z-index: 3000; transition: 0.3s ease-out; 
-            border-radius: 25px 25px 0 0; padding: 25px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
-        }
-        .modal.open { bottom: 0; }
+        .me { align-self: flex-end; }
+        .me .bubble { background: var(--accent); color: white; border-bottom-right-radius: 4px; }
         
-        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin: 20px 0; }
+        .other { align-self: flex-start; }
+        .other .bubble { background: #3A3A3C; color: white; border-bottom-left-radius: 4px; }
+
+        .system-msg { align-self: center; background: rgba(255,255,255,0.1); color: #8E8E93; font-size: 11px; padding: 4px 14px; border-radius: 20px; margin: 10px 0; }
+
+        /* AI解説の気泡 */
+        .ai-bubble { 
+            align-self: flex-start; width: 90%; margin: 10px 0; 
+            background: rgba(50, 215, 75, 0.1); border: 1px solid var(--line-green); 
+            padding: 14px; border-radius: 18px; color: #EEE; font-size: 14px;
+        }
+        .ai-badge { background: var(--line-green); color: black; font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: bold; margin-bottom: 6px; display: inline-block; }
+
+        /* 入力エリア */
+        .footer { 
+            background: var(--header-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 10px 15px 30px; display: flex; align-items: flex-end; gap: 10px; 
+            border-top: 0.5px solid rgba(255,255,255,0.1);
+        }
+        #msg-input { 
+            flex: 1; border: none; background: rgba(255,255,255,0.1); color: white;
+            padding: 12px 18px; border-radius: 22px; font-size: 16px; outline: none; 
+            max-height: 120px; resize: none; line-height: 1.4;
+        }
+        .send-btn { background: var(--accent); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+        /* モーダル・ホーム画面 */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: 40px 25px; display: flex; flex-direction: column; }
+        .card { background: var(--card-bg); border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 0.5px solid rgba(255,255,255,0.05); }
+        .input-box { width: 100%; padding: 16px; border-radius: 14px; border: none; background: rgba(255,255,255,0.08); color: white; margin-bottom: 12px; font-size: 16px; outline: none; }
+        .btn-main { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; font-size: 16px; cursor: pointer; transition: opacity 0.2s; }
+        .btn-sub { width: 100%; padding: 16px; background: rgba(255,255,255,0.05); color: var(--accent); border: none; border-radius: 14px; font-weight: 600; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="nav('dash')">🏠</button>
-    <div class="title" id="head-title">Home</div>
-    <button onclick="openModal('set-modal')">⚙️</button>
-</header>
+    <button onclick="location.reload()">🏠</button>
+    <div class="title" id="display-group-name">Chat-K Expert</div>
+    <div style="width:44px;"></div> </header>
 
-<div id="login-page" class="page active">
-    <div style="text-align:center; padding:80px 30px;">
-        <h1 style="font-size:32px;">Welcome</h1>
-        <p style="color:#8E8E93;">名前を入力して開始</p>
-        <input type="text" id="u-name-input" placeholder="あなたの名前" style="width:100%; padding:18px; border-radius:14px; border:1px solid #ddd; font-size:16px; margin-top:20px;">
-        <button class="btn btn-primary" onclick="doLogin()">はじめる</button>
+<div id="chat-area"></div>
+
+<div class="footer">
+    <textarea id="msg-input" rows="1" placeholder="Aa" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button class="send-btn" onclick="window.triggerSendMessage()">↑</button>
+</div>
+
+<div id="main-modal" class="modal">
+    <div style="text-align:center; margin-bottom:40px;">
+        <div style="font-size:50px; margin-bottom:10px;">🧪</div>
+        <h2 style="margin:0; font-size:28px;">Chat-K Expert</h2>
+        <p style="color:#8E8E93;">Advanced Science Communication</p>
+    </div>
+
+    <div id="step-register">
+        <input type="email" id="reg-email" class="input-box" placeholder="Email Address">
+        <div id="name-input-area" style="display:none;">
+            <input type="text" id="reg-name" class="input-box" placeholder="Display Name / Field">
+        </div>
+        <button class="btn-main" id="auth-btn" onclick="window.triggerCheckEmail()">Continue</button>
+    </div>
+
+    <div id="step-home" style="display:none;">
+        <div class="card">
+            <p id="welcome-msg" style="margin:0; font-size:18px; font-weight:bold;"></p>
+            <p style="margin:5px 0 0; font-size:12px; color:#8E8E93;">Research Sessions</p>
+        </div>
+        
+        <div id="history-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px;"></div>
+
+        <button onclick="window.triggerShowGroupForm('create')" class="btn-main">Create New Project</button>
+        <button onclick="window.triggerShowGroupForm('join')" class="btn-sub">Join Project ID</button>
+
+        <div id="group-form" style="display:none; margin-top:15px;" class="card">
+            <input type="text" id="group-id" placeholder="Project Name" class="input-box">
+            <input type="password" id="group-pw" placeholder="Passcode" class="input-box">
+            <button class="btn-main" onclick="window.triggerHandleGroupAction()">Confirm</button>
+        </div>
+
+        <button onclick="localStorage.clear(); location.reload();" style="color:#FF453A; border:none; background:none; margin: 30px auto 0; display: block; font-size:13px;">Sign Out</button>
     </div>
 </div>
 
-<div id="dash-page" class="page">
-    <div class="card">
-        <div style="font-size:12px; opacity:0.6;">LOGIN AS</div>
-        <div id="u-display" style="font-size:24px; font-weight:bold;">---</div>
-    </div>
-    
-    <div class="card">
-        <h3 style="margin:0 0 10px;">プロジェクト一覧</h3>
-        <div id="group-list">
-            </div>
-        <button class="btn btn-secondary" onclick="createGroup()">＋ 新規グループ作成</button>
-    </div>
-</div>
+<script type="module">
+    // --- Logic is exactly the same as provided ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, get, set, off, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-<div id="chat-page" class="page">
-    <div id="chat-area"></div>
-    <div class="footer">
-        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button onclick="sendMsg()" style="background:var(--accent); color:white; border:none; width:40px; height:40px; border-radius:50%; font-size:18px;">↑</button>
-    </div>
-</div>
+    const firebaseConfig = {
+        apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
+        authDomain: "my-chat-1d626.firebaseapp.com",
+        databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com",
+        projectId: "my-chat-1d626",
+        appId: "1:769979957640:web:777fb6120b5b223e127a3d"
+    };
 
-<div id="set-modal" class="modal">
-    <div style="width:40px; height:5px; background:#ddd; border-radius:10px; margin:-10px auto 20px;"></div>
-    <h2>Settings</h2>
-    
-    <div class="toggle-row">
-        <span>ダークモード</span>
-        <input type="checkbox" id="dark-toggle" onchange="toggleDarkMode()" style="width:24px; height:24px;">
-    </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    let myName = localStorage.getItem('chat_name'), myEmail = localStorage.getItem('chat_email'), currentGid = "";
+    const mathOptions = { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}], throwOnError: false };
 
-    <button class="btn btn-secondary" onclick="logout()" style="color:#FF3B30;">ログアウト</button>
-    <button class="btn btn-primary" onclick="closeModal('set-modal')">閉じる</button>
-</div>
+    window.triggerCheckEmail = async () => {
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
+        if(!email.includes('@')) return alert("Enter a valid email.");
+        const snap = await get(ref(db, `users/${email.replace(/\./g, '_')}`));
+        if(snap.exists()){
+            myName = snap.val().name; myEmail = email;
+            localStorage.setItem('chat_name', myName); localStorage.setItem('chat_email', myEmail);
+            showStep('home');
+        } else {
+            document.getElementById('name-input-area').style.display = 'block';
+            document.getElementById('auth-btn').onclick = () => finalizeReg(email);
+        }
+    };
 
-<script>
-    let groups = JSON.parse(localStorage.getItem('ck_groups')) || ["メインチャット"];
-
-    function nav(id) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id + '-page').classList.add('active');
-        document.getElementById('head-title').innerText = id === 'dash' ? 'Home' : 'Chat';
-        if(id === 'dash') renderGroups();
+    async function finalizeReg(email) {
+        const name = document.getElementById('reg-name').value.trim();
+        if(!name) return alert("Name is required.");
+        await set(ref(db, `users/${email.replace(/\./g, '_')}`), { name: name });
+        myName = name; myEmail = email;
+        localStorage.setItem('chat_name', name); localStorage.setItem('chat_email', email);
+        showStep('home');
     }
 
-    function openModal(id) { document.getElementById(id).classList.add('open'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    window.triggerSendMessage = () => {
+        const inp = document.getElementById('msg-input');
+        if(!inp.value.trim() || !currentGid) return;
+        push(ref(db, `v5_groups/${currentGid}/messages`), { 
+            name: myName, sender: myEmail, text: inp.value, type: 'text', time: serverTimestamp() 
+        });
+        inp.value = ""; inp.style.height = 'auto';
+    };
 
-    function doLogin() {
-        const name = document.getElementById('u-name-input').value;
-        if(!name) return;
-        localStorage.setItem('ck_user_name', name);
-        document.getElementById('u-display').innerText = name;
-        nav('dash');
-    }
+    window.triggerHandleGroupAction = async () => {
+        const gid = document.getElementById('group-id').value.trim(), pw = btoa(document.getElementById('group-pw').value);
+        if(!gid) return;
+        const snap = await get(ref(db, `v5_groups/${gid}`));
+        if(window.currentMode === 'create') {
+            if(snap.exists()) return alert("Already exists.");
+            await set(ref(db, `v5_groups/${gid}`), { host: myEmail, pw: pw });
+        } else {
+            if(!snap.exists() || snap.val().pw !== pw) return alert("Invalid ID/Password.");
+        }
+        let h = JSON.parse(localStorage.getItem('chat_history') || "[]");
+        if(!h.includes(gid)) h.push(gid);
+        localStorage.setItem('chat_history', JSON.stringify(h));
+        enterChat(gid);
+    };
 
-    function renderGroups() {
-        const list = document.getElementById('group-list');
-        list.innerHTML = "";
-        groups.forEach(g => {
-            const div = document.createElement('div');
-            div.className = "group-item card";
-            div.style.margin = "5px 0";
-            div.innerText = "📁 " + g;
-            div.onclick = () => nav('chat');
-            list.appendChild(div);
+    window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
+
+    function enterChat(gid) {
+        currentGid = gid;
+        document.getElementById('main-modal').style.display = 'none';
+        document.getElementById('display-group-name').innerText = gid;
+        document.getElementById('chat-area').innerHTML = "";
+        push(ref(db, `v5_groups/${gid}/messages`), { text: `${myName} joined the project`, type: 'system' });
+
+        const chatRef = ref(db, `v5_groups/${gid}/messages`);
+        onChildAdded(chatRef, (snap) => {
+            const d = snap.val();
+            const wrap = document.createElement('div');
+            if(d.type === 'system') {
+                wrap.className = 'system-msg'; wrap.innerText = d.text;
+            } else {
+                wrap.className = `bubble-wrapper ${d.sender === myEmail ? 'me' : 'other'}`;
+                wrap.innerHTML = `<div class="sender-name">${d.name}</div><div class="bubble">${d.text}</div>`;
+                if(window.renderMathInElement) renderMathInElement(wrap, mathOptions);
+            }
+            document.getElementById('chat-area').appendChild(wrap);
+            document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+            if(d.sender !== myEmail && d.type === 'text') checkExpertTerms(d.text);
         });
     }
 
-    function createGroup() {
-        const name = prompt("グループ名を入力してください:");
-        if(name) {
-            groups.push(name);
-            localStorage.setItem('ck_groups', JSON.stringify(groups));
-            renderGroups();
+    function checkExpertTerms(text) {
+        const dictionary = {
+            "シュレディンガー": "【AI解説】量子力学の根幹「シュレディンガー方程式」で有名。状態の重ね合わせを猫で例えました。",
+            "エントロピー": "【AI解説】不規則さの尺度。熱力学では $S = k_B \ln \Omega$ と定義されます。",
+            "オイラーの等式": "【AI解説】数学史上最も美しい式とされる $e^{i\pi} + 1 = 0$ です。",
+            "ナヴィエ・ストークス": "【AI解説】流体の運動を記述する方程式。非線形偏微分方程式であり、解の存在証明は難問です。"
+        };
+        for(let key in dictionary) {
+            if(text.includes(key)) {
+                setTimeout(() => {
+                    const ai = document.createElement('div'); ai.className = 'ai-bubble';
+                    ai.innerHTML = `<span class="ai-badge">Gemini Support</span><br>${dictionary[key]}`;
+                    if(window.renderMathInElement) renderMathInElement(ai, mathOptions);
+                    document.getElementById('chat-area').appendChild(ai);
+                    document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
+                }, 1000);
+                break;
+            }
         }
     }
 
-    function sendMsg() {
-        const inp = document.getElementById('msg-input');
-        if(!inp.value.trim()) return;
-        const div = document.createElement('div');
-        div.className = "bubble me";
-        div.innerText = inp.value;
-        document.getElementById('chat-area').appendChild(div);
-        document.getElementById('chat-area').scrollTop = document.getElementById('chat-area').scrollHeight;
-        inp.value = "";
+    function showStep(s) {
+        document.getElementById('step-register').style.display = 'none';
+        document.getElementById('step-home').style.display = 'none';
+        document.getElementById('step-'+s).style.display = 'block';
+        if(s === 'home') refreshHistory();
     }
 
-    function toggleDarkMode() {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('ck_dark', document.body.classList.contains('dark-mode'));
+    function refreshHistory() {
+        const list = document.getElementById('history-list'); list.innerHTML = "";
+        JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(gid => {
+            const div = document.createElement('div');
+            div.className = "card";
+            div.style = "display:flex; justify-content:space-between; align-items:center; padding: 15px;";
+            div.innerHTML = `<span><b>${gid}</b></span><button onclick="window.enterChatTrigger('${gid}')" style="background:var(--accent);color:white;border:none;padding:8px 15px;border-radius:10px;font-weight:600;">Open</button>`;
+            list.appendChild(div);
+        });
+        document.getElementById('welcome-msg').innerText = "Researcher: " + myName;
     }
-
-    function logout() {
-        localStorage.removeItem('ck_user_name');
-        location.reload();
-    }
-
-    window.onload = () => {
-        // ダークモード復元
-        if(localStorage.getItem('ck_dark') === 'true') {
-            document.body.classList.add('dark-mode');
-            document.getElementById('dark-toggle').checked = true;
-        }
-        // ユーザー名復元
-        const savedName = localStorage.getItem('ck_user_name');
-        if(savedName) {
-            document.getElementById('u-display').innerText = savedName;
-            nav('dash');
-        }
-    };
+    window.enterChatTrigger = (gid) => enterChat(gid);
+    window.onload = () => { (myName && myEmail) ? showStep('home') : showStep('register'); };
 </script>
 </body>
 </html>
