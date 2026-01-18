@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 19.0</title>
+    <title>Chat-K | Ver 19.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -52,7 +52,7 @@
                 <button id="tab-login" style="flex:1; border:none; padding:8px; border-radius:8px; background:white;" onclick="window.setAuthMode('login')">ログイン</button>
                 <button id="tab-reg" style="flex:1; border:none; padding:8px; border-radius:8px; background:none;" onclick="window.setAuthMode('reg')">新規登録</button>
             </div>
-            <input type="text" id="auth-uid" class="input-box" placeholder="ユーザーID (世界に1つ)">
+            <input type="text" id="auth-uid" class="input-box" placeholder="ユーザーID">
             <input type="text" id="auth-name" class="input-box" placeholder="表示名" style="display:none;">
             <input type="password" id="auth-pw" class="input-box" placeholder="パスワード">
             <button class="btn-main" id="auth-btn" onclick="window.handleAuth()">ログイン</button>
@@ -63,9 +63,13 @@
 <div id="main-modal" class="modal">
     <div style="text-align:center; padding-top:20px;">
         <div id="step-home" style="text-align:left;">
-            <div class="card">
+            <div class="card" onclick="window.togglePassDisplay()" style="cursor:pointer; position:relative;">
                 <b>User:</b> <span id="display-name"></span><br>
                 <b>ID:</b> <span id="display-uid" style="font-size:12px; opacity:0.6;"></span>
+                <div id="pass-display" style="display:none; margin-top:10px; font-family:monospace; background:rgba(0,0,0,0.05); padding:5px; border-radius:5px; font-size:14px; color:var(--accent);">
+                    PASS: <span id="display-pass">****</span>
+                </div>
+                <div style="position:absolute; right:15px; top:50%; transform:translateY(-50%); opacity:0.3; font-size:20px;">👁️</div>
             </div>
             <div id="history-list"></div>
             <button onclick="window.triggerShowGroupForm('create')" class="btn-main" style="background:#34C759;">＋ 新規プロジェクト作成</button>
@@ -103,8 +107,8 @@
     <div id="host-panel" style="display:none;">
         <div class="card" style="border: 3px solid #FF3B30;">
             <h3 style="color:#FF3B30;">👑 管理者パネル</h3>
-            <input type="text" id="new-gid" class="input-box" placeholder="新しいID名">
-            <button class="btn-main" onclick="window.renameGroup()">名前変更</button>
+            <input type="text" id="new-gid" class="input-box" placeholder="名前変更">
+            <button class="btn-main" onclick="window.renameGroup()">変更</button>
             <input type="password" id="new-pw" class="input-box" placeholder="新PW">
             <button class="btn-main" onclick="window.changePassword()">PW更新</button>
             <button class="btn-main btn-danger" onclick="window.deleteAllMessages()">全削除</button>
@@ -112,7 +116,7 @@
             <div id="request-list-area"></div>
         </div>
     </div>
-    <button class="btn-main btn-danger" onclick="if(confirm('ログアウトしますか？')){localStorage.clear(); location.reload();}">ログアウト</button>
+    <button class="btn-main btn-danger" onclick="if(confirm('ログアウトしますか？')){localStorage.clear(); sessionStorage.clear(); location.reload();}">ログアウト</button>
 </div>
 
 <script type="module">
@@ -134,6 +138,14 @@
         return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    window.togglePassDisplay = () => {
+        const el = document.getElementById('pass-display');
+        const passText = document.getElementById('display-pass');
+        const savedPass = sessionStorage.getItem('chat_raw_pw') || "不明";
+        passText.innerText = savedPass;
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    };
+
     window.setAuthMode = (m) => {
         authMode = m;
         document.getElementById('auth-name').style.display = m === 'reg' ? 'block' : 'none';
@@ -146,19 +158,21 @@
         const uid = document.getElementById('auth-uid').value.trim();
         const pw = document.getElementById('auth-pw').value;
         const name = document.getElementById('auth-name').value.trim();
-        if(!uid || !pw) return alert("入力してください");
+        if(!uid || !pw) return alert("入力必須");
         const pwHash = await hash(pw);
 
         const userRef = ref(db, `v10_users/${uid}`);
         const snap = await get(userRef);
 
         if(authMode === 'reg') {
-            if(snap.exists()) return alert("このIDは既に使用されています");
-            if(!name) return alert("名前を入力してください");
+            if(snap.exists()) return alert("使用済みID");
+            if(!name) return alert("名前必須");
             await set(userRef, { name, pw: pwHash });
+            sessionStorage.setItem('chat_raw_pw', pw); // 表示用にセッション保存
             login(uid, name);
         } else {
-            if(!snap.exists() || snap.val().pw !== pwHash) return alert("IDまたはPWが違います");
+            if(!snap.exists() || snap.val().pw !== pwHash) return alert("認証失敗");
+            sessionStorage.setItem('chat_raw_pw', pw); // 表示用にセッション保存
             login(uid, snap.val().name);
         }
     };
@@ -205,7 +219,7 @@
         const pwHash = await hash(document.getElementById('group-pw-input').value);
         const snap = await get(ref(db, `v10_groups/${gid}`));
         if(window.currentMode === 'create') {
-            if(snap.exists()) return alert("既存IDです");
+            if(snap.exists()) return alert("既存ID");
             await set(ref(db, `v10_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
             enterChat(gid);
         } else {
