@@ -273,7 +273,15 @@
     window.startScan = () => {
         document.getElementById('qr-reader-container').style.display = "block";
         const scanner = new Html5Qrcode("reader");
-        scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (txt) => {
+        // 修正後（より確実に背面カメラを指定し、権限を要求する書き方）
+        scanner.start(
+            { facingMode: { exact: "environment" } }, // 背面カメラを強制
+            { fps: 10, qrbox: 250 },
+            async (txt) => { ... }
+        ).catch(err => {
+            // 失敗した場合は前面カメラ等、利用可能なカメラで再試行
+            scanner.start({ facingMode: "user" }, { fps: 10, qrbox: 250 }, async (txt) => { ... });
+        });
             scanner.stop();
             document.getElementById('qr-reader-container').style.display = "none";
             if(txt.startsWith("chatk://join?t=")) {
@@ -448,3 +456,4 @@
 </script>
 </body>
 </html>
+
