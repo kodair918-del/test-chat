@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 19.5</title>
+    <title>Chat-K | Ver 19.8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.85); --bubble-me: #007AFF; --bubble-other: #E9E9EB; }
@@ -47,20 +47,48 @@
     <div style="text-align:center; padding-top:40px;">
         <h2>プロフィール編集</h2>
         <div class="card">
-            <p style="text-align:left; font-size:12px; margin-bottom:5px;">表示名:</p>
             <input type="text" id="edit-name" class="input-box" placeholder="名前">
-            <p style="text-align:left; font-size:12px; margin-bottom:5px;">ユーザーID (世界に一つ):</p>
             <input type="text" id="edit-uid" class="input-box" placeholder="ID">
-            <p style="text-align:left; font-size:12px; margin-bottom:5px;">パスワード:</p>
             <input type="text" id="edit-pw" class="input-box" placeholder="パスワード">
-            
-            <button class="btn-main" onclick="window.saveUserProfile()">保存する</button>
-            <button class="btn-main" style="background:#8E8E93;" onclick="window.closeModal('user-edit-modal')">キャンセル</button>
+            <button class="btn-main" onclick="window.saveUserProfile()">保存</button>
+            <button class="btn-main" style="background:#8E8E93;" onclick="window.closeModal('user-edit-modal')">閉じる</button>
         </div>
     </div>
 </div>
 
-<div id="auth-modal" class="modal">
+<div id="set-modal" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
+    
+    <div class="card">
+        <h3>プロジェクト情報</h3>
+        <p>名: <b id="set-group-name">-</b></p>
+        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px;"></div>
+        <button class="btn-main" style="background:#8E8E93;" onclick="document.body.classList.toggle('dark-mode')">🌙 ダークモード切替</button>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+            <span>文字サイズ:</span>
+            <button onclick="window.changeFontSize(-2)">小</button>
+            <button onclick="window.changeFontSize(2)">大</button>
+        </div>
+    </div>
+
+    <div id="host-panel" style="display:none;">
+        <div class="card" style="border: 3px solid #FF3B30;">
+            <h3 style="color:#FF3B30;">👑 ホスト管理権限</h3>
+            <p style="font-size:12px;">新しいID/パスワードに変更:</p>
+            <input type="text" id="new-gid" class="input-box" placeholder="新プロジェクトID">
+            <input type="password" id="new-gpw" class="input-box" placeholder="新パスワード">
+            <button class="btn-main" onclick="window.updateGroupInfo()">情報を更新</button>
+            
+            <button class="btn-main btn-danger" onclick="window.deleteAllMessages()">全メッセージ削除</button>
+            <button class="btn-main btn-danger" onclick="window.deleteGroup()">プロジェクトを完全に削除</button>
+            <div id="request-list-area"></div>
+        </div>
+    </div>
+    
+    <button class="btn-main btn-danger" onclick="if(confirm('ログアウト？')){localStorage.clear(); location.reload();}">ログアウト</button>
+</div>
+
+<div id="auth-modal" class="modal active">
     <div style="text-align:center; padding-top:40px;">
         <h1 style="font-size:38px; margin-bottom:30px;">🧪 Chat-K</h1>
         <div class="card">
@@ -79,39 +107,23 @@
 <div id="main-modal" class="modal">
     <div style="text-align:center; padding-top:20px;">
         <div id="step-home">
-            <div class="card" onclick="window.openUserEdit()" style="cursor:pointer; position:relative; text-align:left; border: 1px solid var(--accent);">
+            <div class="card" onclick="window.openUserEdit()" style="cursor:pointer; text-align:left; border: 1px solid var(--accent);">
                 <b>User:</b> <span id="display-name"></span><br>
-                <b>ID:</b> <span id="display-uid" style="font-size:12px; opacity:0.6;"></span>
-                <div style="font-size:10px; color:var(--accent); margin-top:5px;">タップして編集 / PASS表示</div>
-                <div style="position:absolute; right:15px; top:50%; transform:translateY(-50%); opacity:0.3; font-size:20px;">📝</div>
+                <b>ID:</b> <span id="display-uid"></span>
             </div>
             <div id="history-list"></div>
             <button onclick="window.triggerShowGroupForm('create')" class="btn-main" style="background:#34C759;">＋ 新規プロジェクト作成</button>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button onclick="window.triggerShowGroupForm('join')" class="btn-main" style="background:#8E8E93;">ID入力</button>
-                <button class="btn-main" style="background:#5856D6;" onclick="alert('開発中')">スキャン</button>
+                <button class="btn-main" style="background:#5856D6;" onclick="alert('QRスキャン準備中')">スキャン</button>
             </div>
-            <div id="group-form" style="display:none; margin-top:15px;" class="card">
+            <div id="group-form" style="display:none;" class="card">
                 <input type="text" id="group-id-input" placeholder="Project ID" class="input-box">
                 <input type="password" id="group-pw-input" placeholder="Password" class="input-box">
-                <button class="btn-main" onclick="window.triggerHandleGroupAction()">申請 / 入室</button>
+                <button class="btn-main" onclick="window.triggerHandleGroupAction()">決定</button>
             </div>
         </div>
     </div>
-</div>
-
-<div id="set-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
-    <div class="card">
-        <button class="btn-main" style="background:#8E8E93;" onclick="document.body.classList.toggle('dark-mode')">🌙 ダークモード切替</button>
-    </div>
-    <div id="host-panel" style="display:none;">
-        <div class="card" style="border: 2px solid #FF3B30;">
-            <h3 style="color:#FF3B30;">👑 管理パネル</h3>
-            <button class="btn-main btn-danger" onclick="window.deleteGroup()">プロジェクト削除</button>
-        </div>
-    </div>
-    <button class="btn-main btn-danger" onclick="if(confirm('ログアウト？')){localStorage.clear(); location.reload();}">ログアウト</button>
 </div>
 
 <script type="module">
@@ -126,6 +138,7 @@
     let myName = localStorage.getItem('chat_name');
     let currentGid = "";
     let authMode = 'login';
+    let chatUnsubscribe = null;
 
     async function hash(pw) {
         const msgUint8 = new TextEncoder().encode(pw);
@@ -133,46 +146,61 @@
         return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // --- ユーザー編集機能 ---
-    window.openUserEdit = () => {
-        document.getElementById('edit-name').value = myName;
-        document.getElementById('edit-uid').value = myId;
-        document.getElementById('edit-pw').value = localStorage.getItem('chat_raw_pw') || "";
-        document.getElementById('user-edit-modal').classList.add('active');
-    };
-
-    window.saveUserProfile = async () => {
-        const newName = document.getElementById('edit-name').value.trim();
-        const newUid = document.getElementById('edit-uid').value.trim();
-        const newPw = document.getElementById('edit-pw').value.trim();
-        if(!newName || !newUid || !newPw) return alert("空欄はダメです");
-
-        const newPwHash = await hash(newPw);
-
-        // IDが変わる場合
-        if(newUid !== myId) {
-            const checkSnap = await get(ref(db, `v10_users/${newUid}`));
-            if(checkSnap.exists()) return alert("そのIDは他の人が使っています");
-            
-            // 古いデータを消して新しいIDで作成
-            await remove(ref(db, `v10_users/${myId}`));
-        }
-
-        await set(ref(db, `v10_users/${newUid}`), { name: newName, pw: newPwHash });
+    // --- ⚙️ 設定画面の全機能 ---
+    window.triggerOpenSettings = async () => {
+        if(!currentGid) return;
+        document.getElementById('set-modal').classList.add('active');
+        document.getElementById('set-group-name').innerText = currentGid;
         
-        // ローカル更新
-        myId = newUid;
-        myName = newName;
-        localStorage.setItem('chat_uid', newUid);
-        localStorage.setItem('chat_name', newName);
-        localStorage.setItem('chat_raw_pw', newPw);
+        const snap = await get(ref(db, `v10_groups/${currentGid}`));
+        const data = snap.val();
+        if(!data) return;
 
-        alert("プロフィールを更新しました");
-        window.closeModal('user-edit-modal');
-        showStep('home');
+        // QR復活
+        const qrBox = document.getElementById('qrcode-container');
+        qrBox.innerHTML = "";
+        new QRCode(qrBox, { text: `chatk://join?id=${currentGid}`, width: 150, height: 150 });
+
+        // ホスト判定 & パネル表示
+        if(data.host === myId) {
+            document.getElementById('host-panel').style.display = 'block';
+            renderRequestList(data.requests);
+        } else {
+            document.getElementById('host-panel').style.display = 'none';
+        }
     };
 
-    // --- 認証機能 ---
+    window.updateGroupInfo = async () => {
+        const newGid = document.getElementById('new-gid').value.trim();
+        const newGpw = document.getElementById('new-gpw').value;
+        const snap = await get(ref(db, `v10_groups/${currentGid}`));
+        let data = snap.val();
+        if(newGpw) data.pw = await hash(newGpw);
+        if(newGid && newGid !== currentGid) {
+            await set(ref(db, `v10_groups/${newGid}`), data);
+            await remove(ref(db, `v10_groups/${currentGid}`));
+            enterChat(newGid);
+        } else if(newGpw) {
+            await set(ref(db, `v10_groups/${currentGid}`), data);
+        }
+        alert("更新完了");
+    };
+
+    window.deleteAllMessages = () => { if(confirm("全消去？")) remove(ref(db, `v10_groups/${currentGid}/messages`)); };
+    window.deleteGroup = async () => { if(confirm("解散？")) { await remove(ref(db, `v10_groups/${currentGid}`)); location.reload(); } };
+
+    function renderRequestList(r) {
+        const a = document.getElementById('request-list-area');
+        a.innerHTML = "<h4>入室承認待ち</h4>";
+        if(r) Object.entries(r).forEach(([uid, v]) => {
+            const d = document.createElement('div');
+            d.innerHTML = `${v.name} (@${uid}) <button onclick="window.approveUser('${uid}')">承認</button>`;
+            a.appendChild(d);
+        });
+    }
+    window.approveUser = async (u) => { await set(ref(db, `v10_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v10_groups/${currentGid}/requests/${u}`)); };
+
+    // --- その他基本機能 ---
     window.setAuthMode = (m) => {
         authMode = m;
         document.getElementById('auth-name').style.display = m === 'reg' ? 'block' : 'none';
@@ -184,79 +212,71 @@
         const uid = document.getElementById('auth-uid').value.trim();
         const pw = document.getElementById('auth-pw').value;
         const name = document.getElementById('auth-name').value.trim();
-        if(!uid || !pw) return alert("入力してください");
         const pwHash = await hash(pw);
-
         const userRef = ref(db, `v10_users/${uid}`);
-        const snap = await get(userRef);
-
         if(authMode === 'reg') {
-            if(snap.exists()) return alert("使用済みID");
             await set(userRef, { name, pw: pwHash });
-            localStorage.setItem('chat_raw_pw', pw);
-            login(uid, name);
+            login(uid, name, pw);
         } else {
-            if(!snap.exists() || snap.val().pw !== pwHash) return alert("不一致");
-            localStorage.setItem('chat_raw_pw', pw);
-            login(uid, snap.val().name);
+            const s = await get(userRef);
+            if(s.exists() && s.val().pw === pwHash) login(uid, s.val().name, pw); else alert("失敗");
         }
     };
 
-    function login(uid, name) {
+    function login(uid, name, rawPw) {
         myId = uid; myName = name;
         localStorage.setItem('chat_uid', uid);
         localStorage.setItem('chat_name', name);
+        localStorage.setItem('chat_raw_pw', rawPw);
         document.getElementById('auth-modal').classList.remove('active');
         showStep('home');
     }
 
-    function showStep(s) {
-        document.getElementById('main-modal').classList.add('active');
-        document.getElementById('display-name').innerText = myName;
-        document.getElementById('display-uid').innerText = "@" + myId;
-        refreshHistory();
-    }
+    window.openUserEdit = () => {
+        document.getElementById('edit-name').value = myName;
+        document.getElementById('edit-uid').value = myId;
+        document.getElementById('edit-pw').value = localStorage.getItem('chat_raw_pw');
+        document.getElementById('user-edit-modal').classList.add('active');
+    };
 
-    // --- グループ機能 ---
-    window.triggerOpenSettings = async () => {
-        if(!currentGid) return;
-        document.getElementById('set-modal').classList.add('active');
-        const snap = await get(ref(db, `v10_groups/${currentGid}`));
-        if(snap.val() && snap.val().host === myId) document.getElementById('host-panel').style.display = 'block';
+    window.saveUserProfile = async () => {
+        const nId = document.getElementById('edit-uid').value;
+        const nNm = document.getElementById('edit-name').value;
+        const nPw = document.getElementById('edit-pw').value;
+        const nH = await hash(nPw);
+        if(nId !== myId) await remove(ref(db, `v10_users/${myId}`));
+        await set(ref(db, `v10_users/${nId}`), { name: nNm, pw: nH });
+        localStorage.setItem('chat_uid', nId); localStorage.setItem('chat_name', nNm); localStorage.setItem('chat_raw_pw', nPw);
+        location.reload();
     };
 
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
         const pwHash = await hash(document.getElementById('group-pw-input').value);
+        const snap = await get(ref(db, `v10_groups/${gid}`));
         if(window.currentMode === 'create') {
-            await set(ref(db, `v10_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
+            await set(ref(db, `v10_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true } });
             enterChat(gid);
         } else {
-            const snap = await get(ref(db, `v10_groups/${gid}`));
-            if(snap.val() && snap.val().members && snap.val().members[myId]) enterChat(gid);
-            else {
-                await set(ref(db, `v10_groups/${gid}/requests/${myId}`), { name: myName });
-                alert("承認待ちです");
-            }
+            if(snap.val().members && snap.val().members[myId]) enterChat(gid);
+            else { await set(ref(db, `v10_groups/${gid}/requests/${myId}`), { name: myName }); alert("申請しました"); }
         }
     };
 
-    async function enterChat(gid) {
-        currentGid = gid;
-        document.getElementById('main-modal').classList.remove('active');
+    function enterChat(gid) {
+        currentGid = gid; document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
-        saveToHistory(gid);
-        onValue(ref(db, `v10_groups/${gid}`), (snap) => {
-            const data = snap.val();
-            const area = document.getElementById('chat-area'); area.innerHTML = "";
-            if(data && data.messages) Object.entries(data.messages).forEach(([mid, d]) => {
-                const wrap = document.createElement('div');
-                wrap.className = `bubble-wrapper ${d.sender === myId ? 'me' : 'other'}`;
-                wrap.innerHTML = `<div style="font-size:10px; opacity:0.6;">${d.senderName}</div><div class="bubble">${d.text}</div>`;
-                area.appendChild(wrap);
+        if(chatUnsubscribe) chatUnsubscribe();
+        chatUnsubscribe = onValue(ref(db, `v10_groups/${gid}`), (s) => {
+            const d = s.val(); const area = document.getElementById('chat-area'); area.innerHTML = "";
+            if(d && d.messages) Object.entries(d.messages).forEach(([mid, m]) => {
+                const w = document.createElement('div'); w.className = `bubble-wrapper ${m.sender === myId ? 'me' : 'other'}`;
+                w.innerHTML = `<div style="font-size:10px; opacity:0.6;">${m.senderName}</div><div class="bubble">${m.text}</div>`;
+                area.appendChild(w);
             });
             area.scrollTop = area.scrollHeight;
         });
+        let h = JSON.parse(localStorage.getItem('chat_history') || "[]"); if(!h.includes(gid)) h.push(gid); localStorage.setItem('chat_history', JSON.stringify(h));
     }
 
     window.triggerSendMessage = () => {
@@ -265,8 +285,8 @@
         i.value = "";
     };
 
-    window.goHome = () => { currentGid=""; showStep('home'); };
-    function saveToHistory(g) { let h = JSON.parse(localStorage.getItem('chat_history') || "[]"); if(!h.includes(g)) h.push(g); localStorage.setItem('chat_history', JSON.stringify(h)); }
+    window.changeFontSize = (n) => { let a = document.getElementById('chat-area'); let s = parseInt(window.getComputedStyle(a).fontSize); a.style.fontSize = (s + n) + "px"; };
+    window.goHome = () => { currentGid=""; document.getElementById('main-modal').classList.add('active'); refreshHistory(); };
     function refreshHistory() {
         const l = document.getElementById('history-list'); l.innerHTML = "";
         JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(g => {
@@ -277,7 +297,13 @@
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
 
-    if(!myId) document.getElementById('auth-modal').classList.add('active'); else showStep('home');
+    if(myId) { document.getElementById('auth-modal').classList.remove('active'); showStep('home'); }
+    function showStep(s) { 
+        document.getElementById('main-modal').classList.add('active');
+        document.getElementById('display-name').innerText = myName;
+        document.getElementById('display-uid').innerText = "@" + myId;
+        refreshHistory();
+    }
 </script>
 </body>
 </html>
