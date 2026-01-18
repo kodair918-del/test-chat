@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 19.0b</title>
+    <title>Chat-K | Ver 19.0.2a</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -90,18 +90,21 @@
 <div id="user-settings-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h2>ユーザー設定</h2>
-        <button onclick="window.closeModal('user-settings-modal')" style="font-size:28px;">×</button>
+        <button onclick="window.closeModal('user-settings-modal')" style="font-size:28px; border:none; background:none; cursor:pointer;">×</button>
     </div>
     <div class="card">
-        <label>ユーザーID（不変）</label><input type="text" id="settings-uid" class="input-box" readonly>
-        <label>名前</label><input type="text" id="settings-name" class="input-box">
-        <label>新パスワード</label><input type="password" id="settings-pw" class="input-box">
+        <label style="font-size:12px; opacity:0.6;">ユーザーID</label>
+        <input type="text" id="settings-uid" class="input-box" readonly style="opacity:0.5;">
+        <label style="font-size:12px; opacity:0.6;">名前</label>
+        <input type="text" id="settings-name" class="input-box">
+        <label style="font-size:12px; opacity:0.6;">新パスワード（空白で変更なし）</label>
+        <input type="password" id="settings-pw" class="input-box">
         <button class="btn-main" onclick="window.saveUserSettings()">保存</button>
     </div>
 </div>
 
 <div id="set-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px; border:none; background:none; cursor:pointer;">×</button></div>
     <div class="card">
         <p>プロジェクト: <b id="set-group-name">-</b></p>
         <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px;"></div>
@@ -133,7 +136,6 @@
     let myId = localStorage.getItem('chat_uid');
     let myName = localStorage.getItem('chat_name');
     let currentGid = "";
-    let currentHostId = ""; // 現在の部屋のホストIDを保持
     let authMode = 'login';
 
     async function hash(pw) {
@@ -142,15 +144,12 @@
         return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // --- Auth 関連 ---
+    // Auth
     window.setAuthMode = (m) => {
         authMode = m;
         document.getElementById('auth-name').style.display = m === 'reg' ? 'block' : 'none';
         document.getElementById('auth-btn').innerText = m === 'reg' ? '新規登録' : 'ログイン';
-        document.getElementById('tab-login').style.background = m === 'login' ? 'white' : 'none';
-        document.getElementById('tab-reg').style.background = m === 'reg' ? 'white' : 'none';
     };
-
     window.handleAuth = async () => {
         const uid = document.getElementById('auth-uid').value.trim();
         const pw = document.getElementById('auth-pw').value;
@@ -160,15 +159,14 @@
         const userRef = ref(db, `v10_users/${uid}`);
         const snap = await get(userRef);
         if(authMode === 'reg') {
-            if(snap.exists()) return alert("このIDは使用されています");
+            if(snap.exists()) return alert("既存ID");
             await set(userRef, { name, pw: pwHash });
             login(uid, name);
         } else {
-            if(!snap.exists() || snap.val().pw !== pwHash) return alert("認証失敗");
+            if(!snap.exists() || snap.val().pw !== pwHash) return alert("失敗");
             login(uid, snap.val().name);
         }
     };
-
     function login(uid, name) {
         myId = uid; myName = name;
         localStorage.setItem('chat_uid', uid);
@@ -177,7 +175,7 @@
         showStep('home');
     }
 
-    // --- UI 遷移 ---
+    // Navigation
     function showStep(s) {
         document.getElementById('main-modal').classList.add('active');
         document.querySelectorAll('#main-modal > div > div').forEach(el => el.style.display = 'none');
@@ -189,23 +187,19 @@
         }
     }
 
-    // --- グループアクション ---
+    // Group Action
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
-        const pw = document.getElementById('group-pw-input').value;
-        const pwHash = await hash(pw);
+        const pwHash = await hash(document.getElementById('group-pw-input').value);
         const snap = await get(ref(db, `v10_groups/${gid}`));
-
         if(window.currentMode === 'create') {
-            if(snap.exists()) return alert("既存IDです");
-            // 作成時にホストIDを自分のIDに固定して保存
+            if(snap.exists()) return alert("既存ID");
             await set(ref(db, `v10_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
             enterChat(gid);
         } else {
-            if(!snap.exists() || snap.val().pw !== pwHash) return alert("IDまたはPWが違います");
-            if(snap.val().members && snap.val().members[myId]) {
-                enterChat(gid);
-            } else {
+            if(!snap.exists() || snap.val().pw !== pwHash) return alert("不一致");
+            if(snap.val().members && snap.val().members[myId]) enterChat(gid);
+            else {
                 await set(ref(db, `v10_groups/${gid}/requests/${myId}`), { name: myName });
                 showStep('waiting');
                 onValue(ref(db, `v10_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
@@ -213,30 +207,21 @@
         }
     };
 
-    // --- チャット入室 (ホスト判定の核心) ---
+    // Chat
     async function enterChat(gid) {
         if(currentGid) off(ref(db, `v10_groups/${currentGid}`));
         currentGid = gid;
-        
-        // 入室時にFirebaseからホストIDを直接取得
-        const snap = await get(ref(db, `v10_groups/${gid}`));
-        const groupData = snap.val();
-        if(!groupData) return;
-        currentHostId = groupData.host; // ホストIDを変数に保持
-
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
         saveToHistory(gid);
-
         onValue(ref(db, `v10_groups/${gid}`), (snap) => {
             const data = snap.val();
-            if(!data || !data.active) { alert("終了しました"); removeFromHistory(gid); location.reload(); return; }
-            
+            if(!data || !data.active) { alert("終了"); removeFromHistory(gid); location.reload(); return; }
             const area = document.getElementById('chat-area'); area.innerHTML = "";
             if(data.messages) Object.entries(data.messages).forEach(([mid, d]) => {
                 const wrap = document.createElement('div');
                 wrap.className = `bubble-wrapper ${d.sender === myId ? 'me' : 'other'}`;
-                // 送信者がこのグループのホストか判定
+                // 送信者がDB上のホストIDと一致するか厳密判定
                 const isHost = (d.sender === data.host);
                 wrap.innerHTML = `<div style="font-size:10px; margin:2px 5px; opacity:0.6">${d.senderName} ${isHost ? '👑' : ''}</div>
                                   <div class="bubble" onclick="window.askDeleteMessage('${mid}', '${d.sender}', '${data.host}')">${d.text}</div>`;
@@ -246,20 +231,22 @@
         });
     }
 
-    // --- 設定画面 ---
+    // Settings (ホスト判定の修正箇所)
     window.triggerOpenSettings = async () => {
         if(!currentGid) return;
         document.getElementById('set-modal').classList.add('active');
         document.getElementById('set-group-name').innerText = currentGid;
         
+        // Firebaseからこの瞬間のホスト情報を取得して判定
         const snap = await get(ref(db, `v10_groups/${currentGid}`));
         const data = snap.val();
-        
+        if(!data) return;
+
         const qrBox = document.getElementById('qrcode-container');
         qrBox.innerHTML = "";
         new QRCode(qrBox, { text: `chatk://join?id=${currentGid}&pw=${data.pw}`, width: 150, height: 150 });
 
-        // ホスト判定: Firebaseに保存されているホストIDと自分のIDを照合
+        // myId(ローカルの自分のID) と data.host(DB上のホストID) を照合
         if(data.host === myId) {
             document.getElementById('host-panel').style.display = 'block';
             renderRequestList(data.requests);
@@ -268,28 +255,28 @@
         }
     };
 
-    // --- 管理者アクション ---
-    window.approveUser = async (u) => { await set(ref(db, `v10_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v10_groups/${currentGid}/requests/${u}`)); };
-    window.deleteAllMessages = () => { if(confirm("全削除？")) remove(ref(db, `v10_groups/${currentGid}/messages`)); };
-    window.deleteGroup = async () => { if(confirm("解散？")) { await update(ref(db, `v10_groups/${currentGid}`), {active:false}); await remove(ref(db, `v10_groups/${currentGid}`)); location.reload(); } };
-
-    // --- ユーザー設定 ---
+    // ユーザー設定
     window.openUserSettings = () => {
         document.getElementById('settings-uid').value = myId;
         document.getElementById('settings-name').value = myName;
         document.getElementById('user-settings-modal').classList.add('active');
     };
     window.saveUserSettings = async () => {
-        const name = document.getElementById('settings-name').value;
-        const pw = document.getElementById('settings-pw').value;
-        let up = { name };
-        if(pw) up.pw = await hash(pw);
-        await update(ref(db, `v10_users/${myId}`), up);
-        myName = name; localStorage.setItem('chat_name', name);
-        alert("保存完了"); window.closeModal('user-settings-modal');
+        const newName = document.getElementById('settings-name').value.trim();
+        const newPw = document.getElementById('settings-pw').value;
+        if(!newName) return alert("名前は必須です");
+        let updates = { name: newName };
+        if(newPw) updates.pw = await hash(newPw);
+        await update(ref(db, `v10_users/${myId}`), updates);
+        myName = newName;
+        localStorage.setItem('chat_name', newName);
+        alert("保存しました");
+        window.closeModal('user-settings-modal');
     };
 
-    // --- 共通 ---
+    // その他
+    window.askDeleteMessage = (mid, sId, hId) => { if(myId === hId || sId === myId) if(confirm("削除？")) remove(ref(db, `v10_groups/${currentGid}/messages/${mid}`)); };
+    window.approveUser = async (u) => { await set(ref(db, `v10_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v10_groups/${currentGid}/requests/${u}`)); };
     window.goHome = () => { if(currentGid) off(ref(db, `v10_groups/${currentGid}`)); currentGid = ""; showStep('home'); };
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.triggerSendMessage = () => {
@@ -310,7 +297,7 @@
         });
     }
     function renderRequestList(r) {
-        const a = document.getElementById('request-list-area'); a.innerHTML = "<h4>入室申請</h4>";
+        const a = document.getElementById('request-list-area'); a.innerHTML = "<h4>申請一覧</h4>";
         if(r) Object.entries(r).forEach(([uid, v]) => {
             const d = document.createElement('div'); d.className = "card";
             d.innerHTML = `<span>${v.name} (@${uid})</span><button class="btn-main" onclick="window.approveUser('${uid}')">承認</button>`;
