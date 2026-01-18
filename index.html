@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 18.6</title>
+    <title>Chat-K | Ver 19.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.85); --bubble-me: #007AFF; --bubble-other: #E9E9EB; }
-        body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 28, 30, 0.85); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
+        body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 30, 32, 0.85); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; background: var(--bg); color: var(--text); }
         header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
@@ -44,15 +44,29 @@
     <button onclick="window.triggerSendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
 </div>
 
-<div id="main-modal" class="modal">
+<div id="auth-modal" class="modal">
     <div style="text-align:center; padding-top:40px;">
         <h1 style="font-size:38px; margin-bottom:30px;">🧪 Chat-K</h1>
-        <div id="step-register" style="display:none;">
-            <input type="text" id="reg-name" class="input-box" placeholder="あなたの名前">
-            <button class="btn-main" onclick="window.registerUser()">はじめる</button>
+        <div class="card">
+            <div id="auth-toggle" style="display:flex; margin-bottom:20px; background:rgba(0,0,0,0.05); border-radius:10px; padding:4px;">
+                <button id="tab-login" style="flex:1; border:none; padding:8px; border-radius:8px; background:white;" onclick="window.setAuthMode('login')">ログイン</button>
+                <button id="tab-reg" style="flex:1; border:none; padding:8px; border-radius:8px; background:none;" onclick="window.setAuthMode('reg')">新規登録</button>
+            </div>
+            <input type="text" id="auth-uid" class="input-box" placeholder="ユーザーID (世界に1つ)">
+            <input type="text" id="auth-name" class="input-box" placeholder="表示名" style="display:none;">
+            <input type="password" id="auth-pw" class="input-box" placeholder="パスワード">
+            <button class="btn-main" id="auth-btn" onclick="window.handleAuth()">ログイン</button>
         </div>
-        <div id="step-home" style="display:none; text-align:left;">
-            <div class="card"><b>Researcher: </b><span id="display-name"></span></div>
+    </div>
+</div>
+
+<div id="main-modal" class="modal">
+    <div style="text-align:center; padding-top:20px;">
+        <div id="step-home" style="text-align:left;">
+            <div class="card">
+                <b>User:</b> <span id="display-name"></span><br>
+                <b>ID:</b> <span id="display-uid" style="font-size:12px; opacity:0.6;"></span>
+            </div>
             <div id="history-list"></div>
             <button onclick="window.triggerShowGroupForm('create')" class="btn-main" style="background:#34C759;">＋ 新規プロジェクト作成</button>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -67,7 +81,7 @@
             </div>
         </div>
         <div id="step-waiting" style="display:none;" class="card">
-            <h3>承認待ち...</h3><p>ホストが承認するまでお待ちください。</p>
+            <h3>承認待ち...</h3>
             <button class="btn-main" style="background:#8E8E93;" onclick="location.reload()">戻る</button>
         </div>
     </div>
@@ -75,11 +89,10 @@
 
 <div id="set-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
-    
     <div class="card">
         <h3>基本設定</h3>
         <p>プロジェクト: <b id="set-group-name">-</b></p>
-        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px; min-height:150px;"></div>
+        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px;"></div>
         <button class="btn-main" style="background:#8E8E93;" onclick="document.body.classList.toggle('dark-mode')">🌙 ダークモード切替</button>
         <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
             <span>文字サイズ:</span>
@@ -87,26 +100,19 @@
             <button onclick="window.changeFontSize(2)">大</button>
         </div>
     </div>
-
     <div id="host-panel" style="display:none;">
         <div class="card" style="border: 3px solid #FF3B30;">
-            <h3 style="color:#FF3B30; margin-top:0;">👑 ホスト管理権限</h3>
-            <p style="font-size:12px;">プロジェクト名変更:</p>
+            <h3 style="color:#FF3B30;">👑 管理者パネル</h3>
             <input type="text" id="new-gid" class="input-box" placeholder="新しいID名">
-            <button class="btn-main" onclick="window.renameGroup()">変更を実行</button>
-            
-            <p style="font-size:12px;">パスワード変更:</p>
-            <input type="password" id="new-pw" class="input-box" placeholder="新しいパスワード">
-            <button class="btn-main" onclick="window.changePassword()">パスワードを更新</button>
-
-            <button class="btn-main btn-danger" onclick="window.deleteAllMessages()">全メッセージ削除</button>
-            <button class="btn-main btn-danger" onclick="window.deleteGroup()">プロジェクトを完全に削除</button>
-            
-            <div id="request-list-area" style="margin-top:15px;"></div>
+            <button class="btn-main" onclick="window.renameGroup()">名前変更</button>
+            <input type="password" id="new-pw" class="input-box" placeholder="新PW">
+            <button class="btn-main" onclick="window.changePassword()">PW更新</button>
+            <button class="btn-main btn-danger" onclick="window.deleteAllMessages()">全削除</button>
+            <button class="btn-main btn-danger" onclick="window.deleteGroup()">グループ解散</button>
+            <div id="request-list-area"></div>
         </div>
     </div>
-    
-    <button class="btn-main btn-danger" style="margin-top:20px;" onclick="if(confirm('初期化しますか？')){localStorage.clear(); location.reload();}">ログアウト・初期化</button>
+    <button class="btn-main btn-danger" onclick="if(confirm('ログアウトしますか？')){localStorage.clear(); location.reload();}">ログアウト</button>
 </div>
 
 <script type="module">
@@ -117,10 +123,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let myId = localStorage.getItem('chat_uid') || ('u_' + Math.random().toString(36).substr(2, 9));
+    let myId = localStorage.getItem('chat_uid');
     let myName = localStorage.getItem('chat_name');
     let currentGid = "";
-    let fontSize = 16;
+    let authMode = 'login';
 
     async function hash(pw) {
         const msgUint8 = new TextEncoder().encode(pw);
@@ -128,34 +134,64 @@
         return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    window.registerUser = () => {
-        const n = document.getElementById('reg-name').value.trim();
-        if(n) { myName=n; localStorage.setItem('chat_name',n); localStorage.setItem('chat_uid',myId); showStep('home'); }
+    window.setAuthMode = (m) => {
+        authMode = m;
+        document.getElementById('auth-name').style.display = m === 'reg' ? 'block' : 'none';
+        document.getElementById('auth-btn').innerText = m === 'reg' ? '新規登録' : 'ログイン';
+        document.getElementById('tab-login').style.background = m === 'login' ? 'white' : 'none';
+        document.getElementById('tab-reg').style.background = m === 'reg' ? 'white' : 'none';
     };
+
+    window.handleAuth = async () => {
+        const uid = document.getElementById('auth-uid').value.trim();
+        const pw = document.getElementById('auth-pw').value;
+        const name = document.getElementById('auth-name').value.trim();
+        if(!uid || !pw) return alert("入力してください");
+        const pwHash = await hash(pw);
+
+        const userRef = ref(db, `v10_users/${uid}`);
+        const snap = await get(userRef);
+
+        if(authMode === 'reg') {
+            if(snap.exists()) return alert("このIDは既に使用されています");
+            if(!name) return alert("名前を入力してください");
+            await set(userRef, { name, pw: pwHash });
+            login(uid, name);
+        } else {
+            if(!snap.exists() || snap.val().pw !== pwHash) return alert("IDまたはPWが違います");
+            login(uid, snap.val().name);
+        }
+    };
+
+    function login(uid, name) {
+        myId = uid; myName = name;
+        localStorage.setItem('chat_uid', uid);
+        localStorage.setItem('chat_name', name);
+        document.getElementById('auth-modal').classList.remove('active');
+        showStep('home');
+    }
 
     function showStep(s) {
         document.getElementById('main-modal').classList.add('active');
         document.querySelectorAll('#main-modal > div > div').forEach(el => el.style.display = 'none');
         document.getElementById('step-' + s).style.display = 'block';
-        if(s === 'home') { document.getElementById('display-name').innerText = myName; refreshHistory(); }
+        if(s === 'home') {
+            document.getElementById('display-name').innerText = myName;
+            document.getElementById('display-uid').innerText = "@" + myId;
+            refreshHistory();
+        }
     }
 
-    // ⚙️ 設定を開くたびに「ホストかどうか」をFirebaseへ直接確認
     window.triggerOpenSettings = async () => {
         if(!currentGid) return;
         document.getElementById('set-modal').classList.add('active');
         document.getElementById('set-group-name').innerText = currentGid;
-        
-        const snap = await get(ref(db, `v9_groups/${currentGid}`));
+        const snap = await get(ref(db, `v10_groups/${currentGid}`));
         const data = snap.val();
         if(!data) return;
-
-        // QR生成
         const qrBox = document.getElementById('qrcode-container');
         qrBox.innerHTML = "";
         new QRCode(qrBox, { text: `chatk://join?id=${currentGid}&pw=${data.pw}`, width: 150, height: 150 });
-
-        // 徹底したホスト照合
         if(data.host === myId) {
             document.getElementById('host-panel').style.display = 'block';
             renderRequestList(data.requests);
@@ -167,19 +203,18 @@
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
         const pwHash = await hash(document.getElementById('group-pw-input').value);
-        const snap = await get(ref(db, `v9_groups/${gid}`));
-        
+        const snap = await get(ref(db, `v10_groups/${gid}`));
         if(window.currentMode === 'create') {
             if(snap.exists()) return alert("既存IDです");
-            await set(ref(db, `v9_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
+            await set(ref(db, `v10_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
             enterChat(gid);
         } else {
             if(!snap.exists() || snap.val().pw !== pwHash) return alert("PW不一致");
             if(snap.val().members && snap.val().members[myId]) enterChat(gid);
             else {
-                await set(ref(db, `v9_groups/${gid}/requests/${myId}`), { name: myName });
+                await set(ref(db, `v10_groups/${gid}/requests/${myId}`), { name: myName });
                 showStep('waiting');
-                onValue(ref(db, `v9_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
+                onValue(ref(db, `v10_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
             }
         }
     };
@@ -189,11 +224,9 @@
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
         saveToHistory(gid);
-
-        onValue(ref(db, `v9_groups/${gid}`), (snap) => {
+        onValue(ref(db, `v10_groups/${gid}`), (snap) => {
             const data = snap.val();
             if(!data || !data.active) { alert("削除されました"); removeFromHistory(gid); location.reload(); return; }
-            
             const area = document.getElementById('chat-area'); area.innerHTML = "";
             if(data.messages) Object.entries(data.messages).forEach(([mid, d]) => {
                 const wrap = document.createElement('div');
@@ -206,47 +239,28 @@
         });
     }
 
-    window.askDeleteMessage = (mid, senderId, hostId) => {
-        if(myId === hostId || senderId === myId) {
-            if(confirm("メッセージを削除しますか？")) remove(ref(db, `v9_groups/${currentGid}/messages/${mid}`));
-        }
-    };
-
-    window.deleteAllMessages = () => { if(confirm("全消去しますか？")) remove(ref(db, `v9_groups/${currentGid}/messages`)); };
-
-    window.deleteGroup = async () => {
-        if(!confirm("プロジェクトを完全に消去します。よろしいですか？")) return;
-        await update(ref(db, `v9_groups/${currentGid}`), { active: false });
-        await remove(ref(db, `v9_groups/${currentGid}`));
-        location.reload();
-    };
-
-    window.changePassword = async () => {
-        const n = document.getElementById('new-pw').value;
-        if(!n) return;
-        const h = await hash(n);
-        await update(ref(db, `v9_groups/${currentGid}`), { pw: h });
-        alert("パスワードを変更しました");
-    };
-
+    window.askDeleteMessage = (mid, sId, hId) => { if(myId === hId || sId === myId) if(confirm("消しますか？")) remove(ref(db, `v10_groups/${currentGid}/messages/${mid}`)); };
+    window.deleteAllMessages = () => { if(confirm("全消去？")) remove(ref(db, `v10_groups/${currentGid}/messages`)); };
+    window.deleteGroup = async () => { if(confirm("解散？")) { await update(ref(db, `v10_groups/${currentGid}`), {active:false}); await remove(ref(db, `v10_groups/${currentGid}`)); location.reload(); } };
+    window.changePassword = async () => { const p = document.getElementById('new-pw').value; if(p) { const h = await hash(p); await update(ref(db, `v10_groups/${currentGid}`), {pw:h}); alert("更新"); } };
     window.renameGroup = async () => {
         const n = document.getElementById('new-gid').value.trim();
         if(!n || n === currentGid) return;
-        const snap = await get(ref(db, `v9_groups/${currentGid}`));
-        await set(ref(db, `v9_groups/${n}`), snap.val());
-        await update(ref(db, `v9_groups/${currentGid}`), { active: false });
-        await remove(ref(db, `v9_groups/${currentGid}`));
+        const snap = await get(ref(db, `v10_groups/${currentGid}`));
+        await set(ref(db, `v10_groups/${n}`), snap.val());
+        await update(ref(db, `v10_groups/${currentGid}`), {active:false});
+        await remove(ref(db, `v10_groups/${currentGid}`));
         enterChat(n);
     };
 
-    window.changeFontSize = (n) => { fontSize += n; document.getElementById('chat-area').style.fontSize = fontSize + "px"; };
+    window.changeFontSize = (n) => { let a = document.getElementById('chat-area'); let s = parseInt(window.getComputedStyle(a).fontSize); a.style.fontSize = (s + n) + "px"; };
     window.goHome = () => { currentGid=""; showStep('home'); };
     function saveToHistory(g) { let h = JSON.parse(localStorage.getItem('chat_history') || "[]"); if(!h.includes(g)) h.push(g); localStorage.setItem('chat_history', JSON.stringify(h)); }
     function removeFromHistory(g) { let h = JSON.parse(localStorage.getItem('chat_history') || "[]").filter(i => i !== g); localStorage.setItem('chat_history', JSON.stringify(h)); }
     function refreshHistory() {
         const l = document.getElementById('history-list'); l.innerHTML = "";
         JSON.parse(localStorage.getItem('chat_history') || "[]").forEach(g => {
-            const d = document.createElement('div'); d.className = "card"; d.style = "display:flex; justify-content:space-between; align-items:center;";
+            const d = document.createElement('div'); d.className = "card"; d.style="display:flex; justify-content:space-between; align-items:center;";
             d.innerHTML = `<span><b>${g}</b></span><button class="btn-main" style="width:auto; padding:0 20px; height:40px; margin:0;">入室</button>`;
             d.onclick = () => enterChat(g);
             l.appendChild(d);
@@ -256,14 +270,14 @@
         const a = document.getElementById('request-list-area'); a.innerHTML = "<h4>入室申請</h4>";
         if(r) Object.entries(r).forEach(([uid, v]) => {
             const d = document.createElement('div'); d.className = "card"; d.style="border:1px solid #ddd;";
-            d.innerHTML = `<span><b>${v.name}</b></span><button class="btn-main" style="height:35px; margin-top:10px; background:#34C759;" onclick="window.approveUser('${uid}')">承認</button>`;
+            d.innerHTML = `<span><b>${v.name}</b> (@${uid})</span><button class="btn-main" style="height:35px; margin-top:10px; background:#34C759;" onclick="window.approveUser('${uid}')">承認</button>`;
             a.appendChild(d);
         });
     }
-    window.approveUser = async (u) => { await set(ref(db, `v9_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v9_groups/${currentGid}/requests/${u}`)); };
+    window.approveUser = async (u) => { await set(ref(db, `v10_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v10_groups/${currentGid}/requests/${u}`)); };
     window.triggerSendMessage = () => {
         const i = document.getElementById('msg-input');
-        if(i.value.trim() && currentGid) push(ref(db, `v9_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: i.value });
+        if(i.value.trim() && currentGid) push(ref(db, `v10_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: i.value });
         i.value = "";
     };
     window.startScanner = async () => {
@@ -278,7 +292,8 @@
     };
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.triggerShowGroupForm = (m) => { window.currentMode = m; document.getElementById('group-form').style.display = 'block'; };
-    if(myName) showStep('home'); else showStep('register');
+
+    if(!myId) document.getElementById('auth-modal').classList.add('active'); else showStep('home');
 </script>
 </body>
 </html>
