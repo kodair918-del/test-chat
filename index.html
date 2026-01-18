@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.1b</title>
+    <title>Chat-K | Ver 0.1.0.b</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; }
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 30, 32, 0.9); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
@@ -15,13 +14,18 @@
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
         #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px 120px; display: flex; flex-direction: column; gap: 12px; height: calc(100% - 60px); }
+        .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; }
+        .bubble { padding: 10px 16px; border-radius: 20px; font-size: 16px; line-height: 1.4; word-break: break-all; }
+        .me { align-self: flex-end; } .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
+        .other { align-self: flex-start; } .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
         .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; }
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 120px; resize: none; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
         .modal.active { display: block; }
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
-        .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; }
+        .btn-danger { background: #FF3B30 !important; }
+        .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; width: 100%; }
         .toast { background: var(--accent); color: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
     </style>
 </head>
@@ -56,17 +60,18 @@
 
 <div id="main-modal" class="modal">
     <div style="padding-top:20px;">
-        <div class="card" onclick="window.openUserCard()" style="cursor:pointer;">
-            <b id="user-display-name">-</b> <span style="opacity:0.6; font-size:12px;" id="user-display-id">@id</span>
+        <div class="card" onclick="window.openUserCard()" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <div><b id="user-display-name">-</b><br><span style="opacity:0.6; font-size:12px;" id="user-display-id">@id</span></div>
+            <span>👤</span>
         </div>
+        <h3 style="margin: 20px 0 10px;">プロジェクト</h3>
         <div id="project-list"></div>
-        <button onclick="window.showProjectForm('create')" class="btn-main" style="background:#34C759;">＋ 新規プロジェクト作成</button>
+        <button onclick="window.showProjectForm('create')" class="btn-main" style="background:#34C759; margin-top:20px;">＋ 新規プロジェクト作成</button>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button onclick="window.showProjectForm('join')" class="btn-main" style="background:#8E8E93;">ID入力</button>
-            <button onclick="window.startScan()" class="btn-main" style="background:#5856D6;">QRスキャン</button>
+            <button onclick="window.showProjectForm('join')" class="btn-main" style="background:#8E8E93;">ID入力で参加</button>
+            <button onclick="alert('招待URLをブラウザで開くと自動的に参加画面になります')" class="btn-main" style="background:#5856D6;">招待URLヘルプ</button>
         </div>
         <div id="project-form" style="display:none; margin-top:20px;" class="card">
-            <div id="qr-reader-container" style="display:none; margin-bottom:10px;"><div id="reader"></div></div>
             <input type="text" id="p-id" class="input-box" placeholder="プロジェクトID">
             <input type="password" id="p-pw" class="input-box" placeholder="パスワード">
             <button class="btn-main" id="p-btn" onclick="window.execProjectAction()">実行</button>
@@ -74,17 +79,43 @@
     </div>
 </div>
 
+<div id="token-join-modal" class="modal">
+    <div style="padding-top:40px; text-align:center;">
+        <h2>招待URLで入室</h2>
+        <p>パスワードを入力してください</p>
+        <div class="card">
+            <input type="password" id="token-p-pw" class="input-box" placeholder="パスワード">
+            <button class="btn-main" onclick="window.execTokenJoin()">入室申請</button>
+            <button class="btn-main" style="background:none; color:var(--text);" onclick="window.closeModal('token-join-modal')">キャンセル</button>
+        </div>
+    </div>
+</div>
+
+<div id="user-card-modal" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>ユーザー設定</h2><button onclick="window.closeModal('user-card-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
+    <div class="card">
+        <label>表示名</label><input type="text" id="edit-name" class="input-box">
+        <label>新パスワード</label><input type="password" id="edit-pw" class="input-box">
+        <button class="btn-main" onclick="window.saveUserConfig()">保存</button>
+        <button class="btn-main" style="background:#8E8E93;" onclick="window.toggleDarkMode()">🌙 ダークモード切替</button>
+        <button class="btn-main btn-danger" onclick="localStorage.clear(); location.reload();">ログアウト</button>
+    </div>
+</div>
+
 <div id="settings-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px;">×</button></div>
-    <div id="guest-panel" class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
+    <div class="card">
         <p>ホスト: <b id="info-host-name">-</b></p>
-        <p>パスワード: <code id="info-pw">-</code></p>
-        <div id="qr-area" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px;"></div>
+        <p>パスワード: <code id="info-pw" onclick="alert('パスワードを表示しました')">-</code></p>
+        <button class="btn-main" onclick="window.copyInviteLink()" style="background:#5856D6;">🔗 招待リンクをコピー</button>
     </div>
     <div id="host-panel" style="display:none;" class="card">
+        <h3 style="color:var(--accent);">👑 管理者機能</h3>
+        <input type="text" id="new-p-name" class="input-box" placeholder="新しいプロジェクトID(移動)">
+        <button class="btn-main" onclick="window.renameProject()">ID名変更</button>
         <button class="btn-main btn-danger" onclick="window.clearChat()">チャット全消去</button>
-        <button class="btn-main btn-danger" onclick="window.deleteProject()">プロジェクト解散</button>
-        <div id="request-list-area"></div>
+        <button class="btn-main btn-danger" onclick="window.deleteProject()">解散</button>
+        <div id="request-list"></div>
     </div>
 </div>
 
@@ -99,6 +130,7 @@
     let myId = localStorage.getItem('chat_uid');
     let myName = localStorage.getItem('chat_name');
     let currentGid = null;
+    let urlTokenGid = null;
 
     async function hash(pw) {
         const msgUint8 = new TextEncoder().encode(pw);
@@ -106,14 +138,29 @@
         return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // --- 初期表示制御 ---
-    window.onload = () => {
+    // --- 初期化ロジック ---
+    window.onload = async () => {
         if(!myId) {
             document.getElementById('auth-modal').classList.add('active');
         } else {
-            window.goHome();
+            await window.goHome();
+            checkUrlParams(); // 招待URLのチェック
         }
     };
+
+    async function checkUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('t');
+        if(token) {
+            const snap = await get(ref(db, `v20_inviteTokens/${token}`));
+            if(snap.exists()) {
+                urlTokenGid = snap.val();
+                document.getElementById('token-join-modal').classList.add('active');
+                // URLを綺麗にする（トークンを消去）
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+    }
 
     window.handleAuth = async (mode) => {
         const uid = document.getElementById('auth-uid').value.trim();
@@ -135,8 +182,7 @@
         myId = uid; myName = name;
         localStorage.setItem('chat_uid', uid);
         localStorage.setItem('chat_name', name);
-        document.getElementById('auth-modal').classList.remove('active');
-        window.goHome();
+        location.reload(); // パラメータチェックのためリロード
     }
 
     window.goHome = async () => {
@@ -144,6 +190,10 @@
         document.getElementById('main-modal').classList.add('active');
         document.getElementById('user-display-name').innerText = myName;
         document.getElementById('user-display-id').innerText = "@" + myId;
+        document.getElementById('head-title').innerText = "ホーム";
+        document.getElementById('header-set-btn').style.visibility = "hidden";
+        document.getElementById('chat-area').innerHTML = "";
+        document.getElementById('chat-footer').style.display = "none";
         
         const snap = await get(ref(db, `v20_users/${myId}/myGroups`));
         const list = document.getElementById('project-list');
@@ -151,12 +201,51 @@
         if(snap.exists()) {
             Object.keys(snap.val()).forEach(gid => {
                 const b = document.createElement('button');
-                b.className = "btn-main"; b.style = "background:white; color:black; border:1px solid #ddd;";
+                b.className = "btn-main"; b.style = "background:var(--card-bg); color:var(--text); border:1px solid rgba(0,0,0,0.1);";
                 b.innerText = gid; b.onclick = () => enterChat(gid);
                 list.appendChild(b);
             });
         }
     };
+
+    window.execProjectAction = async () => {
+        const gid = document.getElementById('p-id').value.trim();
+        const pw = document.getElementById('p-pw').value;
+        const h = await hash(pw);
+        if(window.pMode === 'create') {
+            const token = btoa(Math.random()).substring(0, 12);
+            await set(ref(db, `v20_groups/${gid}`), { hostId: myId, hostName: myName, pw: h, inviteToken: token, active: true });
+            await set(ref(db, `v20_inviteTokens/${token}`), gid);
+            await set(ref(db, `v20_users/${myId}/myGroups/${gid}`), true);
+            await set(ref(db, `v20_groups/${gid}/members/${myId}`), true);
+            enterChat(gid);
+        } else {
+            const snap = await get(ref(db, `v20_groups/${gid}`));
+            if(snap.exists() && snap.val().pw === h) requestJoin(gid);
+            else alert("不一致");
+        }
+    };
+
+    window.execTokenJoin = async () => {
+        const pw = document.getElementById('token-p-pw').value;
+        const h = await hash(pw);
+        const snap = await get(ref(db, `v20_groups/${urlTokenGid}`));
+        if(snap.val().pw === h) {
+            requestJoin(urlTokenGid);
+            window.closeModal('token-join-modal');
+        } else alert("パスワードが違います");
+    };
+
+    async function requestJoin(gid) {
+        await set(ref(db, `v20_groups/${gid}/requests/${myId}`), { name: myName });
+        alert("申請中...");
+        onValue(ref(db, `v20_groups/${gid}/members/${myId}`), async (s) => {
+            if(s.exists()) {
+                await set(ref(db, `v20_users/${myId}/myGroups/${gid}`), true);
+                enterChat(gid);
+            }
+        });
+    }
 
     async function enterChat(gid) {
         currentGid = gid;
@@ -164,7 +253,6 @@
         document.getElementById('head-title').innerText = gid;
         document.getElementById('header-set-btn').style.visibility = "visible";
         document.getElementById('chat-footer').style.display = "flex";
-        
         onValue(ref(db, `v20_groups/${gid}`), (snap) => {
             const data = snap.val();
             const area = document.getElementById('chat-area');
@@ -181,23 +269,12 @@
         });
     }
 
-    // --- カメラ機能修正 ---
-    window.startScan = () => {
-        document.getElementById('qr-reader-container').style.display = "block";
-        const scanner = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: 250 };
-        
-        scanner.start({ facingMode: "environment" }, config, (txt) => {
-            scanner.stop();
-            document.getElementById('qr-reader-container').style.display = "none";
-            alert("QR取得: " + txt);
-        }).catch(err => {
-            // エラー時（PC等）は通常のカメラで再試行
-            scanner.start({ facingMode: "user" }, config, (txt) => {
-                scanner.stop();
-                alert("QR取得: " + txt);
-            });
-        });
+    window.copyInviteLink = async () => {
+        const snap = await get(ref(db, `v20_groups/${currentGid}`));
+        const token = snap.val().inviteToken;
+        const link = `${window.location.origin}${window.location.pathname}?t=${token}`;
+        await navigator.clipboard.writeText(link);
+        alert("招待リンクをコピーしました！");
     };
 
     window.sendMessage = () => {
@@ -213,16 +290,30 @@
         const data = snap.val();
         document.getElementById('settings-modal').classList.add('active');
         document.getElementById('info-host-name').innerText = data.hostName;
-        document.getElementById('info-pw').innerText = data.pw;
-        if(data.hostId === myId) document.getElementById('host-panel').style.display = "block";
-        
-        const qr = document.getElementById('qr-area');
-        qr.innerHTML = "";
-        new QRCode(qr, { text: `chatk://join?t=${data.inviteToken}`, width:150, height:150 });
+        document.getElementById('info-pw').innerText = "非表示（クリックで詳細）";
+        if(data.hostId === myId) {
+            document.getElementById('host-panel').style.display = "block";
+            const reqArea = document.getElementById('request-list');
+            reqArea.innerHTML = "<h4>申請中リスト</h4>";
+            if(data.requests) {
+                Object.entries(data.requests).forEach(([uid, d]) => {
+                    const dv = document.createElement('div');
+                    dv.innerHTML = `${d.name} <button onclick="window.approveUser('${uid}')">承認</button>`;
+                    reqArea.appendChild(dv);
+                });
+            }
+        }
+    };
+
+    window.approveUser = async (uId) => {
+        await set(ref(db, `v20_groups/${currentGid}/members/${uId}`), true);
+        await remove(ref(db, `v20_groups/${currentGid}/requests/${uId}`));
     };
 
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.showProjectForm = (m) => { window.pMode = m; document.getElementById('project-form').style.display = "block"; };
+    window.openUserCard = () => document.getElementById('user-card-modal').classList.add('active');
+    window.toggleDarkMode = () => document.body.classList.toggle('dark-mode');
 </script>
 </body>
 </html>
