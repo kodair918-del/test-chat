@@ -63,7 +63,7 @@
 <div id="main-modal" class="modal">
     <div style="text-align:center; padding-top:20px;">
         <div id="step-home" style="text-align:left;">
-            <div class="card" onclick="alert('ユーザーカードがクリックされました')" style="cursor:pointer;">
+            <div class="card" onclick="document.getElementById('user-settings-modal').classList.add('active')" style="cursor:pointer;">
                 <b>User:</b> <span id="display-name"></span><br>
                 <b>ID:</b> <span id="display-uid" style="font-size:12px; opacity:0.6;"></span>
             </div>
@@ -84,6 +84,16 @@
             <h3>承認待ち...</h3>
             <button class="btn-main" style="background:#8E8E93;" onclick="location.reload()">戻る</button>
         </div>
+    </div>
+</div>
+
+<div id="user-settings-modal" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2>ユーザー設定</h2>
+        <button onclick="window.closeModal('user-settings-modal')" style="font-size:28px; background:none; border:none; color:inherit; cursor:pointer;">×</button>
+    </div>
+    <div class="card">
+        <p>ここに設定項目を追加できます</p>
     </div>
 </div>
 
@@ -220,7 +230,7 @@
     };
 
     async function enterChat(gid) {
-        if(currentGid) off(ref(db, `v10_groups/${currentGid}`)); // 前の監視を解除
+        if(currentGid) off(ref(db, `v10_groups/${currentGid}`));
         currentGid = gid;
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
@@ -257,9 +267,9 @@
     window.changeFontSize = (n) => { let a = document.getElementById('chat-area'); let s = parseInt(window.getComputedStyle(a).fontSize); a.style.fontSize = (s + n) + "px"; };
     
     window.goHome = () => { 
-        if(currentGid) off(ref(db, `v10_groups/${currentGid}`)); // Firebase監視停止
+        if(currentGid) off(ref(db, `v10_groups/${currentGid}`));
         currentGid = ""; 
-        document.getElementById('chat-area').innerHTML = ""; // クリア
+        document.getElementById('chat-area').innerHTML = "";
         document.getElementById('head-title').innerText = "Chat-K";
         showStep('home'); 
     };
