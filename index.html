@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Chat-K</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -10,42 +10,52 @@
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; }
         * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
         html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); overflow: hidden; }
-        header { height: 60px; display: flex; align-items: center; padding: 0 15px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-bottom: 0.5px solid #ccc; z-index: 2000; position: relative; }
+        header { height: 60px; display: flex; align-items: center; padding: 0 15px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 5000; padding: 20px; display: none; overflow-y: auto; }
         .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
-        .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 15px; font-size: 16px; }
+        .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 15px; font-size: 16px; background: var(--card-bg); color: var(--text); }
     </style>
 </head>
 <body>
 
 <header>
-    <button onclick="window.goHome()" style="font-size:20px; background:none; border:none;">🏠</button>
+    <button onclick="window.goHome()" style="background:none; border:none; font-size:20px;">🏠</button>
     <div style="flex:1; text-align:center; font-weight:bold;">Chat-K</div>
-    <button onclick="window.openSettings()" style="font-size:20px; background:none; border:none;">⚙️</button>
+    <button onclick="window.openSettings()" style="background:none; border:none; font-size:20px;">⚙️</button>
 </header>
 
+<div id="chat-area" style="height:calc(100% - 120px); overflow-y:auto; padding:15px;"></div>
+
 <div id="set-modal" class="modal">
-    <h2>⚙️ 設定 / 編集</h2>
+    <h2>👤 プロフィール編集</h2>
     <div class="card">
-        <h3>👤 ユーザー情報</h3>
         <input type="text" id="edit-name" class="input-box" placeholder="名前">
-        <input type="text" id="edit-uid" class="input-box" placeholder="ID">
-        <input type="text" id="edit-pw" class="input-box" placeholder="PASS">
-        <button class="btn-main" onclick="window.saveUserProfile()">保存 (レ→ソ音)</button>
+        <input type="text" id="edit-uid" class="input-box" placeholder="ユーザーID">
+        <input type="text" id="edit-pw" class="input-box" placeholder="パスワード">
+        <button class="btn-main" onclick="window.saveUserProfile()">変更を保存</button>
+        <button class="btn-main" style="background:#8E8E93;" onclick="window.closeModal('set-modal')">キャンセル</button>
     </div>
-    <button class="btn-main" style="background:#8E8E93;" onclick="window.closeModal('set-modal')">閉じる</button>
 </div>
 
 <div id="home-modal" class="modal">
     <div style="padding-top:20px;">
-        <div class="card" onclick="event.stopPropagation(); window.openSettings();" style="border: 2px solid var(--accent); cursor:pointer;">
-            <div style="font-size:10px; color:var(--accent); font-weight:bold;">USER PROFILE (タップで「ド」音)</div>
-            <b id="display-name"></b> <span id="display-uid"></span>
+        <div id="user-card" onclick="event.stopPropagation(); window.openSettings();" style="cursor:pointer; border: 2.5px solid var(--accent); background:rgba(0,122,255,0.05); padding:15px; border-radius:16px; margin-bottom:15px; position:relative; z-index:10;">
+            <div style="font-size:11px; color:var(--accent); font-weight:bold; margin-bottom:5px;">USER PROFILE (Tap to edit)</div>
+            <b id="display-name" style="font-size:18px;"></b><br>
+            <span id="display-uid" style="opacity:0.6;"></span>
         </div>
+        
         <div id="history-list"></div>
-        <button onclick="window.showGroupForm('create')" class="btn-main" style="background:#34C759;">＋ 新規作成</button>
+        <button onclick="window.showGroupForm('create')" class="btn-main" style="background:#34C759;">＋ 新規プロジェクト作成</button>
+        <button onclick="window.showGroupForm('join')" class="btn-main" style="background:#8E8E93;">ID入力で入室</button>
+
+        <div id="group-form" style="display:none;" class="card">
+            <input type="text" id="g-id" placeholder="Project ID" class="input-box">
+            <input type="password" id="g-pw" placeholder="Password" class="input-box">
+            <button class="btn-main" onclick="window.groupAction()">決定</button>
+        </div>
     </div>
 </div>
 
@@ -57,21 +67,14 @@
     const app = initializeApp(config);
     const db = getDatabase(app);
 
-    // --- 🔊 デバッグ音 (そのまま) ---
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    function beep(f) {
-        const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.frequency.value = f; o.start();
-        g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5); o.stop(ctx.currentTime + 0.5);
-    }
-
     let myId = localStorage.getItem('chat_uid');
     let myName = localStorage.getItem('chat_name');
     let myPw = localStorage.getItem('chat_raw_pw');
 
+    // モーダル制御
+    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+    
     window.openSettings = () => {
-        beep(523.25); // ド
         document.getElementById('edit-name').value = myName || "";
         document.getElementById('edit-uid').value = myId || "";
         document.getElementById('edit-pw').value = myPw || "";
@@ -79,36 +82,36 @@
     };
 
     window.saveUserProfile = async () => {
-        beep(587.33); // レ
         const nid = document.getElementById('edit-uid').value.trim();
         const nnm = document.getElementById('edit-name').value.trim();
         const npw = document.getElementById('edit-pw').value.trim();
+        if(!nid || !nnm) return;
 
         if(nid !== myId) await remove(ref(db, `v10_users/${myId}`));
         await set(ref(db, `v10_users/${nid}`), { name: nnm, pw: npw });
 
-        // 保存直後に変数を上書き
+        // 変数とストレージの更新
         myId = nid; myName = nnm; myPw = npw;
         localStorage.setItem('chat_uid', nid);
         localStorage.setItem('chat_name', nnm);
         localStorage.setItem('chat_raw_pw', npw);
 
-        beep(392.00); // ソ
-        alert("保存完了");
+        alert("更新完了");
         window.closeModal('set-modal');
-        renderHome();
+        window.renderHome();
     };
 
-    window.goHome = () => { renderHome(); };
-    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-
-    function renderHome() {
-        document.getElementById('display-name').innerText = myName || "未設定";
-        document.getElementById('display-uid').innerText = "@" + (myId || "none");
+    window.renderHome = () => {
+        document.getElementById('display-name').innerText = myName || "Unknown";
+        document.getElementById('display-uid').innerText = "@" + (myId || "---");
         document.getElementById('home-modal').classList.add('active');
-    }
+    };
 
-    if(myId) renderHome(); else document.getElementById('home-modal').classList.add('active');
+    window.goHome = () => { window.renderHome(); };
+    window.showGroupForm = (m) => { window.gMode = m; document.getElementById('group-form').style.display='block'; };
+    
+    // 初回起動
+    if(myId) window.renderHome(); else document.getElementById('home-modal').classList.add('active');
 </script>
 </body>
 </html>
