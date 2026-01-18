@@ -63,7 +63,7 @@
 <div id="main-modal" class="modal">
     <div style="text-align:center; padding-top:20px;">
         <div id="step-home" style="text-align:left;">
-            <div class="card" onclick="document.getElementById('user-settings-modal').classList.add('active')" style="cursor:pointer;">
+            <div class="card" onclick="window.openUserSettings()" style="cursor:pointer;">
                 <b>User:</b> <span id="display-name"></span><br>
                 <b>ID:</b> <span id="display-uid" style="font-size:12px; opacity:0.6;"></span>
             </div>
@@ -93,7 +93,16 @@
         <button onclick="window.closeModal('user-settings-modal')" style="font-size:28px; background:none; border:none; color:inherit; cursor:pointer;">×</button>
     </div>
     <div class="card">
-        <p>ここに設定項目を追加できます</p>
+        <label style="font-size:12px; opacity:0.6;">ユーザーID（変更不可）</label>
+        <input type="text" id="settings-uid" class="input-box" readonly style="opacity:0.5;">
+        
+        <label style="font-size:12px; opacity:0.6;">名前</label>
+        <input type="text" id="settings-name" class="input-box" placeholder="名前">
+        
+        <label style="font-size:12px; opacity:0.6;">新パスワード（空白で変更なし）</label>
+        <input type="password" id="settings-pw" class="input-box" placeholder="パスワード">
+        
+        <button class="btn-main" onclick="window.saveUserSettings()">保存</button>
     </div>
 </div>
 
@@ -191,6 +200,31 @@
             refreshHistory();
         }
     }
+
+    window.openUserSettings = () => {
+        document.getElementById('settings-uid').value = myId;
+        document.getElementById('settings-name').value = myName;
+        document.getElementById('settings-pw').value = "";
+        document.getElementById('user-settings-modal').classList.add('active');
+    };
+
+    window.saveUserSettings = async () => {
+        const newName = document.getElementById('settings-name').value.trim();
+        const newPw = document.getElementById('settings-pw').value;
+        if(!newName) return alert("名前を入力してください");
+        
+        let updates = { name: newName };
+        if(newPw) updates.pw = await hash(newPw);
+        
+        try {
+            await update(ref(db, `v10_users/${myId}`), updates);
+            myName = newName;
+            localStorage.setItem('chat_name', newName);
+            document.getElementById('display-name').innerText = newName;
+            alert("保存しました");
+            window.closeModal('user-settings-modal');
+        } catch(e) { alert("保存に失敗しました"); }
+    };
 
     window.triggerOpenSettings = async () => {
         if(!currentGid) return;
