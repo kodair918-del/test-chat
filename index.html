@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 18.5</title>
+    <title>Chat-K | Ver 18.6</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.85); --bubble-me: #007AFF; --bubble-other: #E9E9EB; }
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 28, 30, 0.85); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
-        * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; background: var(--bg); color: var(--text); }
         header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
@@ -39,7 +39,7 @@
 
 <div id="chat-area"></div>
 
-<div class="footer" id="app-footer">
+<div class="footer">
     <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
     <button onclick="window.triggerSendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
 </div>
@@ -75,10 +75,11 @@
 
 <div id="set-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>設定</h2><button onclick="window.closeModal('set-modal')" style="font-size:28px;">×</button></div>
-    <div id="common-settings" class="card">
+    
+    <div class="card">
         <h3>基本設定</h3>
         <p>プロジェクト: <b id="set-group-name">-</b></p>
-        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px;"></div>
+        <div id="qrcode-container" style="display:flex; justify-content:center; background:white; padding:15px; border-radius:12px; margin-bottom:15px; min-height:150px;"></div>
         <button class="btn-main" style="background:#8E8E93;" onclick="document.body.classList.toggle('dark-mode')">🌙 ダークモード切替</button>
         <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
             <span>文字サイズ:</span>
@@ -86,19 +87,26 @@
             <button onclick="window.changeFontSize(2)">大</button>
         </div>
     </div>
+
     <div id="host-panel" style="display:none;">
-        <div class="card" style="border: 2px solid #FF3B30;">
-            <h3 style="color:#FF3B30;">👑 ホスト管理</h3>
-            <input type="text" id="new-gid" class="input-box" placeholder="新しい名前(ID)">
-            <button class="btn-main" onclick="window.renameGroup()">プロジェクト名を変更</button>
+        <div class="card" style="border: 3px solid #FF3B30;">
+            <h3 style="color:#FF3B30; margin-top:0;">👑 ホスト管理権限</h3>
+            <p style="font-size:12px;">プロジェクト名変更:</p>
+            <input type="text" id="new-gid" class="input-box" placeholder="新しいID名">
+            <button class="btn-main" onclick="window.renameGroup()">変更を実行</button>
+            
+            <p style="font-size:12px;">パスワード変更:</p>
             <input type="password" id="new-pw" class="input-box" placeholder="新しいパスワード">
-            <button class="btn-main" onclick="window.changePassword()">パスワード変更</button>
+            <button class="btn-main" onclick="window.changePassword()">パスワードを更新</button>
+
             <button class="btn-main btn-danger" onclick="window.deleteAllMessages()">全メッセージ削除</button>
-            <button class="btn-main btn-danger" onclick="window.deleteGroup()">プロジェクトを削除</button>
-            <div id="request-list-area"></div>
+            <button class="btn-main btn-danger" onclick="window.deleteGroup()">プロジェクトを完全に削除</button>
+            
+            <div id="request-list-area" style="margin-top:15px;"></div>
         </div>
     </div>
-    <button class="btn-main btn-danger" onclick="if(confirm('アプリを初期化しますか？')){localStorage.clear(); location.reload();}">アプリ初期化・ログアウト</button>
+    
+    <button class="btn-main btn-danger" style="margin-top:20px;" onclick="if(confirm('初期化しますか？')){localStorage.clear(); location.reload();}">ログアウト・初期化</button>
 </div>
 
 <script type="module">
@@ -112,7 +120,6 @@
     let myId = localStorage.getItem('chat_uid') || ('u_' + Math.random().toString(36).substr(2, 9));
     let myName = localStorage.getItem('chat_name');
     let currentGid = "";
-    let isHostGlobal = false;
     let fontSize = 16;
 
     async function hash(pw) {
@@ -133,16 +140,22 @@
         if(s === 'home') { document.getElementById('display-name').innerText = myName; refreshHistory(); }
     }
 
+    // ⚙️ 設定を開くたびに「ホストかどうか」をFirebaseへ直接確認
     window.triggerOpenSettings = async () => {
         if(!currentGid) return;
         document.getElementById('set-modal').classList.add('active');
         document.getElementById('set-group-name').innerText = currentGid;
-        const snap = await get(ref(db, `v8_groups/${currentGid}`));
+        
+        const snap = await get(ref(db, `v9_groups/${currentGid}`));
         const data = snap.val();
         if(!data) return;
+
+        // QR生成
         const qrBox = document.getElementById('qrcode-container');
         qrBox.innerHTML = "";
         new QRCode(qrBox, { text: `chatk://join?id=${currentGid}&pw=${data.pw}`, width: 150, height: 150 });
+
+        // 徹底したホスト照合
         if(data.host === myId) {
             document.getElementById('host-panel').style.display = 'block';
             renderRequestList(data.requests);
@@ -154,18 +167,19 @@
     window.triggerHandleGroupAction = async () => {
         const gid = document.getElementById('group-id-input').value.trim();
         const pwHash = await hash(document.getElementById('group-pw-input').value);
-        const snap = await get(ref(db, `v8_groups/${gid}`));
+        const snap = await get(ref(db, `v9_groups/${gid}`));
+        
         if(window.currentMode === 'create') {
             if(snap.exists()) return alert("既存IDです");
-            await set(ref(db, `v8_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
+            await set(ref(db, `v9_groups/${gid}`), { host: myId, pw: pwHash, members: { [myId]: true }, active: true });
             enterChat(gid);
         } else {
             if(!snap.exists() || snap.val().pw !== pwHash) return alert("PW不一致");
             if(snap.val().members && snap.val().members[myId]) enterChat(gid);
             else {
-                await set(ref(db, `v8_groups/${gid}/requests/${myId}`), { name: myName });
+                await set(ref(db, `v9_groups/${gid}/requests/${myId}`), { name: myName });
                 showStep('waiting');
-                onValue(ref(db, `v8_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
+                onValue(ref(db, `v9_groups/${gid}/members/${myId}`), (s) => { if(s.exists()) enterChat(gid); });
             }
         }
     };
@@ -175,47 +189,56 @@
         document.getElementById('main-modal').classList.remove('active');
         document.getElementById('head-title').innerText = gid;
         saveToHistory(gid);
-        onValue(ref(db, `v8_groups/${gid}`), (snap) => {
+
+        onValue(ref(db, `v9_groups/${gid}`), (snap) => {
             const data = snap.val();
             if(!data || !data.active) { alert("削除されました"); removeFromHistory(gid); location.reload(); return; }
-            isHostGlobal = (data.host === myId);
+            
             const area = document.getElementById('chat-area'); area.innerHTML = "";
             if(data.messages) Object.entries(data.messages).forEach(([mid, d]) => {
                 const wrap = document.createElement('div');
                 wrap.className = `bubble-wrapper ${d.sender === myId ? 'me' : 'other'}`;
                 wrap.innerHTML = `<div style="font-size:10px; margin:2px 5px; opacity:0.6">${d.senderName} ${d.sender === data.host ? '👑' : ''}</div>
-                                  <div class="bubble" onclick="window.askDeleteMessage('${mid}', '${d.sender}')">${d.text}</div>`;
+                                  <div class="bubble" onclick="window.askDeleteMessage('${mid}', '${d.sender}', '${data.host}')">${d.text}</div>`;
                 area.appendChild(wrap);
             });
             area.scrollTop = area.scrollHeight;
         });
     }
 
-    window.askDeleteMessage = (mid, senderId) => {
-        if(isHostGlobal || senderId === myId) {
-            if(confirm("削除しますか？")) remove(ref(db, `v8_groups/${currentGid}/messages/${mid}`));
+    window.askDeleteMessage = (mid, senderId, hostId) => {
+        if(myId === hostId || senderId === myId) {
+            if(confirm("メッセージを削除しますか？")) remove(ref(db, `v9_groups/${currentGid}/messages/${mid}`));
         }
     };
-    window.deleteAllMessages = () => { if(confirm("全消去？")) remove(ref(db, `v8_groups/${currentGid}/messages`)); };
+
+    window.deleteAllMessages = () => { if(confirm("全消去しますか？")) remove(ref(db, `v9_groups/${currentGid}/messages`)); };
+
     window.deleteGroup = async () => {
-        if(!confirm("完全削除しますか？")) return;
-        await update(ref(db, `v8_groups/${currentGid}`), { active: false });
-        await remove(ref(db, `v8_groups/${currentGid}`));
+        if(!confirm("プロジェクトを完全に消去します。よろしいですか？")) return;
+        await update(ref(db, `v9_groups/${currentGid}`), { active: false });
+        await remove(ref(db, `v9_groups/${currentGid}`));
         location.reload();
     };
+
     window.changePassword = async () => {
-        const pw = document.getElementById('new-pw').value;
-        if(pw) { const h = await hash(pw); await update(ref(db, `v8_groups/${currentGid}`), { pw: h }); alert("変更済"); }
+        const n = document.getElementById('new-pw').value;
+        if(!n) return;
+        const h = await hash(n);
+        await update(ref(db, `v9_groups/${currentGid}`), { pw: h });
+        alert("パスワードを変更しました");
     };
+
     window.renameGroup = async () => {
         const n = document.getElementById('new-gid').value.trim();
         if(!n || n === currentGid) return;
-        const snap = await get(ref(db, `v8_groups/${currentGid}`));
-        await set(ref(db, `v8_groups/${n}`), snap.val());
-        await update(ref(db, `v8_groups/${currentGid}`), { active: false });
-        await remove(ref(db, `v8_groups/${currentGid}`));
+        const snap = await get(ref(db, `v9_groups/${currentGid}`));
+        await set(ref(db, `v9_groups/${n}`), snap.val());
+        await update(ref(db, `v9_groups/${currentGid}`), { active: false });
+        await remove(ref(db, `v9_groups/${currentGid}`));
         enterChat(n);
     };
+
     window.changeFontSize = (n) => { fontSize += n; document.getElementById('chat-area').style.fontSize = fontSize + "px"; };
     window.goHome = () => { currentGid=""; showStep('home'); };
     function saveToHistory(g) { let h = JSON.parse(localStorage.getItem('chat_history') || "[]"); if(!h.includes(g)) h.push(g); localStorage.setItem('chat_history', JSON.stringify(h)); }
@@ -237,10 +260,10 @@
             a.appendChild(d);
         });
     }
-    window.approveUser = async (u) => { await set(ref(db, `v8_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v8_groups/${currentGid}/requests/${u}`)); };
+    window.approveUser = async (u) => { await set(ref(db, `v9_groups/${currentGid}/members/${u}`), true); await remove(ref(db, `v9_groups/${currentGid}/requests/${u}`)); };
     window.triggerSendMessage = () => {
         const i = document.getElementById('msg-input');
-        if(i.value.trim() && currentGid) push(ref(db, `v8_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: i.value });
+        if(i.value.trim() && currentGid) push(ref(db, `v9_groups/${currentGid}/messages`), { senderName: myName, sender: myId, text: i.value });
         i.value = "";
     };
     window.startScanner = async () => {
