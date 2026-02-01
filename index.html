@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.1.b</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>Chat-K | Ver 0.1.2.b</title>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; }
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 30, 32, 0.9); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
@@ -14,7 +13,7 @@
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
         #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px 120px; display: flex; flex-direction: column; gap: 12px; height: calc(100% - 60px); }
-        .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; margin-bottom: 4px; }
+        .bubble-wrapper { display: flex; flex-direction: column; max-width: 85%; }
         .bubble-name { font-size: 11px; opacity: 0.7; margin-bottom: 2px; margin-left: 8px; }
         .bubble { padding: 10px 16px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-break: break-all; }
         .me { align-self: flex-end; } .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; } .me .bubble-name { align-self: flex-end; margin-right: 8px; }
@@ -27,8 +26,6 @@
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .btn-danger { background: #FF3B30 !important; }
         .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; }
-        .toast { background: var(--accent); color: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); animation: slideIn 0.3s; }
-        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -40,7 +37,6 @@
 </header>
 
 <div id="chat-area"></div>
-<div id="realtime-notify" style="position:fixed; top:70px; left:10px; right:10px; z-index:4000;"></div>
 
 <div class="footer" id="chat-footer" style="display:none;">
     <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
@@ -88,6 +84,13 @@
     </div>
 </div>
 
+<div id="user-card-modal" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>ユーザー設定</h2><button onclick="window.closeModal('user-card-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
+    <div class="card">
+        <button class="btn-main btn-danger" onclick="localStorage.clear(); location.reload();">ログアウト</button>
+    </div>
+</div>
+
 <div id="settings-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
     <div class="card">
@@ -97,15 +100,14 @@
     <div id="host-panel" style="display:none;" class="card">
         <h3 style="color:var(--accent);">👑 管理者機能</h3>
         <div id="member-list-area"></div>
-        <button class="btn-main btn-danger" onclick="window.clearChat()">チャット全消去</button>
-        <button class="btn-main btn-danger" onclick="window.deleteProject()">解散</button>
         <div id="request-list"></div>
+        <button class="btn-main btn-danger" onclick="window.deleteProject()">プロジェクトを解散</button>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, get, push, onValue, update, remove, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, get, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", authDomain: "my-chat-1d626.firebaseapp.com", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626", appId: "1:769979957640:web:777fb6120b5b223e127a3d" };
     const app = initializeApp(firebaseConfig);
@@ -126,18 +128,15 @@
             document.getElementById('auth-modal').classList.add('active');
         } else {
             await window.goHome();
-            listenForApprovals(); // 承認の監視開始
+            listenForApprovals();
         }
     };
 
-    // 承認をリアルタイムで監視し、承認された側に通知を出す
     function listenForApprovals() {
         onValue(ref(db, `v20_users/${myId}/myGroups`), (snap) => {
             if(snap.exists() && !currentGid) {
-                const groups = snap.val();
-                Object.keys(groups).forEach(gid => {
-                    if(groups[gid] === "pending_approval") { // 申請中のフラグ
-                        // 承認されたかチェック
+                Object.entries(snap.val()).forEach(([gid, status]) => {
+                    if(status === "pending_approval") {
                         get(ref(db, `v20_groups/${gid}/members/${myId}`)).then(mSnap => {
                             if(mSnap.exists()) {
                                 update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
@@ -156,19 +155,17 @@
         const name = document.getElementById('auth-name').value.trim();
         const pw = document.getElementById('auth-pw').value;
         const h = await hash(pw);
-        const uRef = ref(db, `v20_users/${uid}`);
         if(mode === 'reg') {
-            await set(uRef, { name, pw: h });
+            await set(ref(db, `v20_users/${uid}`), { name, pw: h });
             login(uid, name);
         } else {
-            const snap = await get(uRef);
+            const snap = await get(ref(db, `v20_users/${uid}`));
             if(snap.exists() && snap.val().pw === h) login(uid, snap.val().name);
             else alert("認証失敗");
         }
     };
 
     function login(uid, name) {
-        myId = uid; myName = name;
         localStorage.setItem('chat_uid', uid);
         localStorage.setItem('chat_name', name);
         location.reload();
@@ -177,12 +174,9 @@
     window.goHome = async () => {
         currentGid = null;
         document.getElementById('main-modal').classList.add('active');
-        document.getElementById('user-display-name').innerText = myName;
+        document.getElementById('user-display-name').innerText = myName || "不明なユーザー";
         document.getElementById('user-display-id').innerText = "@" + myId;
-        document.getElementById('head-title').innerText = "ホーム";
         document.getElementById('header-set-btn').style.visibility = "hidden";
-        document.getElementById('chat-area').innerHTML = "";
-        document.getElementById('chat-footer').style.display = "none";
         
         const snap = await get(ref(db, `v20_users/${myId}/myGroups`));
         const list = document.getElementById('project-list');
@@ -205,7 +199,7 @@
         const h = await hash(pw);
         if(window.pMode === 'create') {
             const token = btoa(Math.random()).substring(0, 12);
-            await set(ref(db, `v20_groups/${gid}`), { hostId: myId, hostName: myName, pw: h, inviteToken: token, active: true });
+            await set(ref(db, `v20_groups/${gid}`), { hostId: myId, hostName: myName, pw: h, inviteToken: token });
             await set(ref(db, `v20_inviteTokens/${token}`), gid);
             await set(ref(db, `v20_users/${myId}/myGroups/${gid}`), true);
             await set(ref(db, `v20_groups/${gid}/members/${myId}`), { name: myName });
@@ -234,13 +228,27 @@
                 Object.values(data.messages).forEach(m => {
                     const wrap = document.createElement('div');
                     wrap.className = `bubble-wrapper ${m.uid === myId ? 'me' : 'other'}`;
-                    wrap.innerHTML = `<div class="bubble-name">${m.name}</div><div class="bubble">${m.text}</div>`;
+                    // 名前がundefinedにならないよう m.name または m.userName をフォールバック
+                    const displayName = m.name || m.userName || "不明";
+                    wrap.innerHTML = `<div class="bubble-name">${displayName}</div><div class="bubble">${m.text}</div>`;
                     area.appendChild(wrap);
                 });
             }
             area.scrollTop = area.scrollHeight;
         });
     }
+
+    window.sendMessage = () => {
+        const i = document.getElementById('msg-input');
+        if(i.value && currentGid) {
+            push(ref(db, `v20_groups/${currentGid}/messages`), { 
+                uid: myId, 
+                name: myName, // ここで確実に localStorage の名前を入れる
+                text: i.value 
+            });
+            i.value = "";
+        }
+    };
 
     window.openSettings = async () => {
         const snap = await get(ref(db, `v20_groups/${currentGid}`));
@@ -249,21 +257,21 @@
         document.getElementById('info-host-name').innerText = data.hostName;
         if(data.hostId === myId) {
             document.getElementById('host-panel').style.display = "block";
-            renderAdminTools(data);
+            renderAdmin(data);
         } else {
             document.getElementById('host-panel').style.display = "none";
         }
     };
 
-    function renderAdminTools(data) {
+    function renderAdmin(data) {
         const mArea = document.getElementById('member-list-area');
-        mArea.innerHTML = "<h4>メンバー管理</h4>";
+        mArea.innerHTML = "<h4>メンバー</h4>";
         if(data.members) {
             Object.entries(data.members).forEach(([uid, m]) => {
                 if(uid === myId) return;
                 const dv = document.createElement('div');
-                dv.style = "display:flex; justify-content:space-between; margin-bottom:8px; align-items:center;";
-                dv.innerHTML = `<span>${m.name}</span> <button class="btn-main" style="width:auto; height:30px; background:#FF3B30; font-size:12px;" onclick="window.removeUser('${uid}')">削除</button>`;
+                dv.style = "display:flex; justify-content:space-between; margin-bottom:10px; align-items:center;";
+                dv.innerHTML = `<span>${m.name}</span> <button class="btn-main" style="width:60px; height:30px; background:#FF3B30; font-size:12px;" onclick="window.removeUser('${uid}')">削除</button>`;
                 mArea.appendChild(dv);
             });
         }
@@ -281,29 +289,26 @@
     window.approveUser = async (uId, uName) => {
         await set(ref(db, `v20_groups/${currentGid}/members/${uId}`), { name: uName });
         await remove(ref(db, `v20_groups/${currentGid}/requests/${uId}`));
-        // 承認された側は、listenForApprovals()によって自動で検知される
     };
 
     window.removeUser = async (uId) => {
         if(confirm("このユーザーを削除しますか？")) {
             await remove(ref(db, `v20_groups/${currentGid}/members/${uId}`));
             await remove(ref(db, `v20_users/${uId}/myGroups/${currentGid}`));
-            alert("削除しました");
             window.openSettings();
-        }
-    };
-
-    window.sendMessage = () => {
-        const i = document.getElementById('msg-input');
-        if(i.value && currentGid) {
-            push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value });
-            i.value = "";
         }
     };
 
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.showProjectForm = (m) => { window.pMode = m; document.getElementById('project-form').style.display = "block"; };
     window.openUserCard = () => document.getElementById('user-card-modal').classList.add('active');
+    window.copyInviteLink = async () => {
+        const snap = await get(ref(db, `v20_groups/${currentGid}`));
+        const token = snap.val().inviteToken;
+        const link = `https://kodair918-del.github.io/test-chat/?t=${token}`;
+        await navigator.clipboard.writeText(link);
+        alert("リンクをコピーしました");
+    };
 </script>
 </body>
 </html>
