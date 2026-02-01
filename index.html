@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.2.b</title>
+    <title>Chat-K | Ver 0.1.3.b</title>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; }
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 30, 32, 0.9); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
@@ -65,11 +65,16 @@
         <h3 style="margin: 20px 0 10px;">プロジェクト</h3>
         <div id="project-list"></div>
         <button onclick="window.showProjectForm('create')" class="btn-main" style="background:#34C759; margin-top:20px;">＋ 新規プロジェクト作成</button>
-        <button onclick="window.showProjectForm('join')" class="btn-main" style="background:#8E8E93;">ID入力で参加</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button onclick="window.showProjectForm('join')" class="btn-main" style="background:#8E8E93;">IDで参加</button>
+            <button onclick="window.showProjectForm('token')" class="btn-main" style="background:#5856D6;">招待コード入力</button>
+        </div>
         <div id="project-form" style="display:none; margin-top:20px;" class="card">
-            <input type="text" id="p-id" class="input-box" placeholder="プロジェクトID">
-            <input type="password" id="p-pw" class="input-box" placeholder="パスワード">
-            <button class="btn-main" id="p-btn" onclick="window.execProjectAction()">実行</button>
+            <div id="form-inner">
+                <input type="text" id="p-id" class="input-box" placeholder="プロジェクトID または コード">
+                <input type="password" id="p-pw" class="input-box" placeholder="パスワード">
+                <button class="btn-main" id="p-btn" onclick="window.execProjectAction()">実行</button>
+            </div>
         </div>
     </div>
 </div>
@@ -84,13 +89,6 @@
     </div>
 </div>
 
-<div id="user-card-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>ユーザー設定</h2><button onclick="window.closeModal('user-card-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
-    <div class="card">
-        <button class="btn-main btn-danger" onclick="localStorage.clear(); location.reload();">ログアウト</button>
-    </div>
-</div>
-
 <div id="settings-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
     <div class="card">
@@ -101,7 +99,7 @@
         <h3 style="color:var(--accent);">👑 管理者機能</h3>
         <div id="member-list-area"></div>
         <div id="request-list"></div>
-        <button class="btn-main btn-danger" onclick="window.deleteProject()">プロジェクトを解散</button>
+        <button class="btn-main btn-danger" onclick="window.deleteProject()">解散</button>
     </div>
 </div>
 
@@ -129,8 +127,20 @@
         } else {
             await window.goHome();
             listenForApprovals();
+            checkUrlParams();
         }
     };
+
+    async function checkUrlParams() {
+        const t = new URLSearchParams(window.location.search).get('t');
+        if(t) {
+            const snap = await get(ref(db, `v20_inviteTokens/${t}`));
+            if(snap.exists()) {
+                window.showProjectForm('token');
+                document.getElementById('p-id').value = t;
+            }
+        }
+    }
 
     function listenForApprovals() {
         onValue(ref(db, `v20_users/${myId}/myGroups`), (snap) => {
@@ -174,7 +184,7 @@
     window.goHome = async () => {
         currentGid = null;
         document.getElementById('main-modal').classList.add('active');
-        document.getElementById('user-display-name').innerText = myName || "不明なユーザー";
+        document.getElementById('user-display-name').innerText = myName || "不明";
         document.getElementById('user-display-id').innerText = "@" + myId;
         document.getElementById('header-set-btn').style.visibility = "hidden";
         
@@ -193,10 +203,25 @@
         }
     };
 
+    window.showProjectForm = (m) => { 
+        window.pMode = m; 
+        document.getElementById('project-form').style.display = "block";
+        const input = document.getElementById('p-id');
+        input.placeholder = (m === 'token') ? "招待コードを入力" : "プロジェクトIDを入力";
+        input.value = "";
+    };
+
     window.execProjectAction = async () => {
-        const gid = document.getElementById('p-id').value.trim();
+        let gid = document.getElementById('p-id').value.trim();
         const pw = document.getElementById('p-pw').value;
         const h = await hash(pw);
+
+        if(window.pMode === 'token') {
+            const tSnap = await get(ref(db, `v20_inviteTokens/${gid}`));
+            if(tSnap.exists()) gid = tSnap.val();
+            else { alert("無効なコードです"); return; }
+        }
+
         if(window.pMode === 'create') {
             const token = btoa(Math.random()).substring(0, 12);
             await set(ref(db, `v20_groups/${gid}`), { hostId: myId, hostName: myName, pw: h, inviteToken: token });
@@ -228,9 +253,7 @@
                 Object.values(data.messages).forEach(m => {
                     const wrap = document.createElement('div');
                     wrap.className = `bubble-wrapper ${m.uid === myId ? 'me' : 'other'}`;
-                    // 名前がundefinedにならないよう m.name または m.userName をフォールバック
-                    const displayName = m.name || m.userName || "不明";
-                    wrap.innerHTML = `<div class="bubble-name">${displayName}</div><div class="bubble">${m.text}</div>`;
+                    wrap.innerHTML = `<div class="bubble-name">${m.name || "不明"}</div><div class="bubble">${m.text}</div>`;
                     area.appendChild(wrap);
                 });
             }
@@ -241,11 +264,7 @@
     window.sendMessage = () => {
         const i = document.getElementById('msg-input');
         if(i.value && currentGid) {
-            push(ref(db, `v20_groups/${currentGid}/messages`), { 
-                uid: myId, 
-                name: myName, // ここで確実に localStorage の名前を入れる
-                text: i.value 
-            });
+            push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value });
             i.value = "";
         }
     };
@@ -258,9 +277,7 @@
         if(data.hostId === myId) {
             document.getElementById('host-panel').style.display = "block";
             renderAdmin(data);
-        } else {
-            document.getElementById('host-panel').style.display = "none";
-        }
+        } else { document.getElementById('host-panel').style.display = "none"; }
     };
 
     function renderAdmin(data) {
@@ -300,8 +317,6 @@
     };
 
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-    window.showProjectForm = (m) => { window.pMode = m; document.getElementById('project-form').style.display = "block"; };
-    window.openUserCard = () => document.getElementById('user-card-modal').classList.add('active');
     window.copyInviteLink = async () => {
         const snap = await get(ref(db, `v20_groups/${currentGid}`));
         const token = snap.val().inviteToken;
