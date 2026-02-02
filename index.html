@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.8.b</title>
+    <title>Chat-K | Ver 0.1.9.b</title>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30; --success: #34C759; }
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 30, 32, 0.9); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
@@ -13,7 +13,7 @@
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
         #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px 120px; display: flex; flex-direction: column; gap: 15px; height: calc(100% - 60px); position: relative; }
-        #admin-notify { display:none; background: var(--accent); color: white; padding: 10px; font-size: 13px; text-align: center; border-radius: 12px; margin-bottom: 10px; z-index: 100; }
+        #admin-notify { display:none; background: var(--accent); color: white; padding: 10px; font-size: 13px; text-align: center; border-radius: 12px; margin-bottom: 10px; }
         .bubble-wrapper { display: flex; gap: 8px; max-width: 85%; align-items: flex-end; }
         .me { align-self: flex-end; flex-direction: row-reverse; }
         .other { align-self: flex-start; }
@@ -55,7 +55,7 @@
         <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
     </div>
     <div id="host-panel" style="display:none;" class="card">
-        <h3 style="color:var(--accent);">👑 管理者パネル (Host Mode)</h3>
+        <h3 style="color:var(--accent);">👑 管理者パネル</h3>
         <div id="request-list-area" style="margin-bottom:15px;"></div>
         <button class="btn-main" onclick="window.deleteGroup()" style="background:#000;">🗑️ グループを完全に削除</button>
     </div>
@@ -138,13 +138,14 @@
         else { el.innerText = name ? name[0] : "?"; el.style.background = "#007AFF"; }
     }
 
-    // ホスト判定の互換性関数
+    // ホスト判定（シンプル文字列比較 + オブジェクト救済）
     async function checkIsHost(gid) {
         const snap = await get(ref(db, `v20_groups/${gid}/host`));
         if(!snap.exists()) return false;
-        const hostData = snap.val();
-        // 昔の保存方法（文字列）か、新しい方法（オブジェクト内UID）かを判定
-        return (typeof hostData === 'string' ? hostData : hostData.uid) === myId;
+        const h = snap.val();
+        // 文字列ならそのまま、オブジェクトなら .uid を見て、自分のIDと一致するか確認
+        const hostUid = (typeof h === 'string') ? h : h.uid;
+        return hostUid === myId;
     }
 
     window.goHome = async () => {
@@ -181,16 +182,18 @@
         // ホスト用リアルタイム通知（修正版）
         if(await checkIsHost(gid)) {
             onValue(ref(db, `v20_groups/${gid}/requests`), (snap) => {
-                const notifyArea = document.getElementById('admin-notify') || document.createElement('div');
-                notifyArea.id = 'admin-notify';
+                const area = document.getElementById('chat-area');
+                let notify = document.getElementById('admin-notify');
                 if(snap.exists()) {
+                    if(!notify) {
+                        notify = document.createElement('div');
+                        notify.id = 'admin-notify';
+                        area.prepend(notify);
+                    }
                     const reqs = Object.values(snap.val());
-                    notifyArea.innerHTML = `${reqs[0].name}さんが入りたがっています <button onclick="window.openSettings()" style="color:white; font-weight:bold;">[確認]</button>`;
-                    notifyArea.style.display = "block";
-                    document.getElementById('chat-area').prepend(notifyArea);
-                } else if(document.getElementById('admin-notify')) {
-                    document.getElementById('admin-notify').style.display = "none";
-                }
+                    notify.innerHTML = `${reqs[0].name}さんが入りたがっています <button onclick="window.openSettings()" style="color:white; font-weight:bold; background:none; border:1px solid white; border-radius:4px; padding:2px 6px; margin-left:8px;">確認</button>`;
+                    notify.style.display = "block";
+                } else if(notify) notify.style.display = "none";
             });
         }
 
@@ -226,11 +229,11 @@
                     Object.entries(snap.val()).forEach(([rid, data]) => {
                         const div = document.createElement('div');
                         div.className = "card";
-                        div.style = "display:flex; justify-content:space-between; align-items:center; border:1px solid #eee;";
-                        div.innerHTML = `<span>${data.name}</span><div><button onclick="window.handleRequest('${rid}', '${data.uid}', true)" style="color:var(--success); font-weight:bold;">承認</button><button onclick="window.handleRequest('${rid}', '${data.uid}', false)" style="color:var(--danger); margin-left:15px; font-weight:bold;">拒否</button></div>`;
+                        div.style = "display:flex; justify-content:space-between; align-items:center; border:0.5px solid rgba(0,0,0,0.1);";
+                        div.innerHTML = `<span>${data.name}</span><div><button onclick="window.handleRequest('${rid}', '${data.uid}', true)" style="color:var(--success); font-weight:bold; background:none; border:none;">承認</button><button onclick="window.handleRequest('${rid}', '${data.uid}', false)" style="color:var(--danger); margin-left:15px; font-weight:bold; background:none; border:none;">拒否</button></div>`;
                         area.appendChild(div);
                     });
-                } else area.innerHTML += "<p style='opacity:0.5;'>現在リクエストはありません</p>";
+                } else area.innerHTML += "<p style='opacity:0.5; font-size:13px;'>現在リクエストはありません</p>";
             });
         }
     };
@@ -251,7 +254,7 @@
         const todayToken = new Date().toISOString().slice(0,10).replace(/-/g,"");
 
         if(window.pMode === 'create') {
-            // 新規作成時は文字列で保存（シンプル化）
+            // ホストをシンプルな文字列 "UID" で保存
             await set(ref(db, `v20_groups/${input}`), { host: myId, pw: pw });
             await update(ref(db, `v20_users/${myId}/myGroups`), { [input]: true });
             enterChat(input);
@@ -264,7 +267,10 @@
                 await set(reqRef, { uid: myId, name: myName });
                 alert("承認待ちです。ホストが承認するまでお待ちください。");
                 onValue(ref(db, `v20_users/${myId}/status/${input}`), (s) => {
-                    if(s.exists()) { alert(s.val()); if(s.val().includes("承認")) location.reload(); }
+                    if(s.exists()) {
+                        alert(s.val());
+                        if(s.val().includes("承認されました")) location.reload();
+                    }
                 });
             } else alert("パスワードが違います");
         }
@@ -273,18 +279,18 @@
     window.copyInviteToken = () => {
         const todayToken = new Date().toISOString().slice(0,10).replace(/-/g,"");
         const code = `${currentGid}_${todayToken}`;
-        navigator.clipboard.writeText(code).then(() => alert("招待コードをコピーしました"));
+        navigator.clipboard.writeText(code).then(() => alert("招待コードをコピーしました\n有効期限: 今日のみ"));
     };
 
     window.leaveGroup = async () => {
-        if(confirm("このグループを退会しますか？")) {
+        if(confirm("退会しますか？")) {
             await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
             location.reload();
         }
     };
 
     window.deleteGroup = async () => {
-        if(confirm("【警告】ホスト権限により、このグループの全データを削除します。よろしいですか？")) {
+        if(confirm("【警告】このグループを完全に削除します。復元できません。")) {
             await remove(ref(db, `v20_groups/${currentGid}`));
             location.reload();
         }
@@ -321,7 +327,7 @@
         if(window.tempIcon) {
             await update(ref(db, `v20_users/${myId}`), { icon: window.tempIcon });
             myIcon = window.tempIcon;
-            alert("アイコンを更新しました。");
+            alert("保存しました。");
         }
     };
 
