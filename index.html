@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.7.b</title>
+    <title>Chat-K | Ver 0.1.8.b</title>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30; --success: #34C759; }
         body.dark-mode { --bg: #1C1C1E; --card-bg: #2C2C2E; --text: #FFFFFF; --header-bg: rgba(28, 30, 32, 0.9); --bubble-me: #0A84FF; --bubble-other: #3A3A3C; }
@@ -12,11 +12,8 @@
         header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; z-index: 2000; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px 120px; display: flex; flex-direction: column; gap: 15px; height: calc(100% - 60px); }
-        
-        /* 通知バー */
-        #admin-notify { display:none; background: var(--accent); color: white; padding: 10px; font-size: 13px; text-align: center; position: sticky; top: 0; z-index: 100; border-radius: 0 0 12px 12px; }
-
+        #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px 120px; display: flex; flex-direction: column; gap: 15px; height: calc(100% - 60px); position: relative; }
+        #admin-notify { display:none; background: var(--accent); color: white; padding: 10px; font-size: 13px; text-align: center; border-radius: 12px; margin-bottom: 10px; z-index: 100; }
         .bubble-wrapper { display: flex; gap: 8px; max-width: 85%; align-items: flex-end; }
         .me { align-self: flex-end; flex-direction: row-reverse; }
         .other { align-self: flex-start; }
@@ -27,10 +24,8 @@
         .bubble { padding: 10px 16px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-break: break-all; }
         .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
-        
         .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; }
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 120px; resize: none; }
-        
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
         .modal.active { display: block; }
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
@@ -46,13 +41,24 @@
     <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
 </header>
 
-<div id="chat-area">
-    <div id="admin-notify"></div>
-</div>
+<div id="chat-area"></div>
 
 <div class="footer" id="chat-footer" style="display:none;">
     <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
     <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
+</div>
+
+<div id="settings-modal" class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
+    <div class="card">
+        <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 今日の招待コードをコピー</button>
+        <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
+    </div>
+    <div id="host-panel" style="display:none;" class="card">
+        <h3 style="color:var(--accent);">👑 管理者パネル (Host Mode)</h3>
+        <div id="request-list-area" style="margin-bottom:15px;"></div>
+        <button class="btn-main" onclick="window.deleteGroup()" style="background:#000;">🗑️ グループを完全に削除</button>
+    </div>
 </div>
 
 <div id="auth-modal" class="modal">
@@ -86,22 +92,9 @@
         </div>
         <div id="project-form" style="display:none; margin-top:20px;" class="card">
             <input type="text" id="p-id" class="input-box" placeholder="ID/コード">
-            <input type="password" id="p-pw" class="input-box" placeholder="パスワード(コード時は不要)">
+            <input type="password" id="p-pw" class="input-box" placeholder="パスワード">
             <button class="btn-main" onclick="window.execProjectAction()">実行</button>
         </div>
-    </div>
-</div>
-
-<div id="settings-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
-    <div class="card">
-        <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 今日の招待コードをコピー</button>
-        <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
-    </div>
-    <div id="host-panel" style="display:none;" class="card">
-        <h3 style="color:var(--accent);">👑 管理者パネル</h3>
-        <div id="request-list-area" style="margin-bottom:15px;"></div>
-        <button class="btn-main" onclick="window.deleteGroup()" style="background:#000;">🗑️ グループを完全に削除</button>
     </div>
 </div>
 
@@ -145,6 +138,15 @@
         else { el.innerText = name ? name[0] : "?"; el.style.background = "#007AFF"; }
     }
 
+    // ホスト判定の互換性関数
+    async function checkIsHost(gid) {
+        const snap = await get(ref(db, `v20_groups/${gid}/host`));
+        if(!snap.exists()) return false;
+        const hostData = snap.val();
+        // 昔の保存方法（文字列）か、新しい方法（オブジェクト内UID）かを判定
+        return (typeof hostData === 'string' ? hostData : hostData.uid) === myId;
+    }
+
     window.goHome = async () => {
         currentGid = null;
         document.getElementById('main-modal').classList.add('active');
@@ -176,23 +178,27 @@
         document.getElementById('header-set-btn').style.visibility = "visible";
         document.getElementById('chat-footer').style.display = "flex";
 
-        // ホスト用リアルタイム通知
-        const hostSnap = await get(ref(db, `v20_groups/${gid}/host`));
-        if(hostSnap.val() === myId) {
+        // ホスト用リアルタイム通知（修正版）
+        if(await checkIsHost(gid)) {
             onValue(ref(db, `v20_groups/${gid}/requests`), (snap) => {
-                const reqs = snap.val();
-                const notify = document.getElementById('admin-notify');
-                if(reqs) {
-                    const first = Object.values(reqs)[0];
-                    notify.innerHTML = `${first.name}さんが入りたがっています <button onclick="window.openSettings()" style="color:white; text-decoration:underline;">[確認]</button>`;
-                    notify.style.display = "block";
-                } else notify.style.display = "none";
+                const notifyArea = document.getElementById('admin-notify') || document.createElement('div');
+                notifyArea.id = 'admin-notify';
+                if(snap.exists()) {
+                    const reqs = Object.values(snap.val());
+                    notifyArea.innerHTML = `${reqs[0].name}さんが入りたがっています <button onclick="window.openSettings()" style="color:white; font-weight:bold;">[確認]</button>`;
+                    notifyArea.style.display = "block";
+                    document.getElementById('chat-area').prepend(notifyArea);
+                } else if(document.getElementById('admin-notify')) {
+                    document.getElementById('admin-notify').style.display = "none";
+                }
             });
         }
 
         onValue(ref(db, `v20_groups/${gid}/messages`), (snap) => {
             const area = document.getElementById('chat-area');
-            area.innerHTML = `<div id="admin-notify"></div>`; // 再描画
+            const notify = document.getElementById('admin-notify');
+            area.innerHTML = "";
+            if(notify) area.appendChild(notify);
             if(snap.exists()) {
                 Object.values(snap.val()).forEach(m => {
                     const wrap = document.createElement('div');
@@ -209,25 +215,22 @@
 
     window.openSettings = async () => {
         document.getElementById('settings-modal').classList.add('active');
-        const hSnap = await get(ref(db, `v20_groups/${currentGid}/host`));
-        const isHost = hSnap.val() === myId;
+        const isHost = await checkIsHost(currentGid);
         document.getElementById('host-panel').style.display = isHost ? "block" : "none";
         
         if(isHost) {
             onValue(ref(db, `v20_groups/${currentGid}/requests`), (snap) => {
                 const area = document.getElementById('request-list-area');
-                area.innerHTML = "<h4>承認待ち</h4>";
+                area.innerHTML = "<h4>承認待ちユーザー</h4>";
                 if(snap.exists()) {
                     Object.entries(snap.val()).forEach(([rid, data]) => {
-                        area.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>${data.name}</span>
-                            <div>
-                                <button onclick="window.handleRequest('${rid}', '${data.uid}', true)" style="color:var(--success);">承認</button>
-                                <button onclick="window.handleRequest('${rid}', '${data.uid}', false)" style="color:var(--danger); margin-left:10px;">拒否</button>
-                            </div>
-                        </div>`;
+                        const div = document.createElement('div');
+                        div.className = "card";
+                        div.style = "display:flex; justify-content:space-between; align-items:center; border:1px solid #eee;";
+                        div.innerHTML = `<span>${data.name}</span><div><button onclick="window.handleRequest('${rid}', '${data.uid}', true)" style="color:var(--success); font-weight:bold;">承認</button><button onclick="window.handleRequest('${rid}', '${data.uid}', false)" style="color:var(--danger); margin-left:15px; font-weight:bold;">拒否</button></div>`;
+                        area.appendChild(div);
                     });
-                } else area.innerHTML += "<p>なし</p>";
+                } else area.innerHTML += "<p style='opacity:0.5;'>現在リクエストはありません</p>";
             });
         }
     };
@@ -245,51 +248,48 @@
     window.execProjectAction = async () => {
         const input = document.getElementById('p-id').value.trim();
         const pw = document.getElementById('p-pw').value;
-        const todayToken = new Date().toISOString().slice(0,10).replace(/-/g,""); // YYYYMMDD
+        const todayToken = new Date().toISOString().slice(0,10).replace(/-/g,"");
 
         if(window.pMode === 'create') {
+            // 新規作成時は文字列で保存（シンプル化）
             await set(ref(db, `v20_groups/${input}`), { host: myId, pw: pw });
             await update(ref(db, `v20_users/${myId}/myGroups`), { [input]: true });
             enterChat(input);
         } else {
             const gSnap = await get(ref(db, `v20_groups/${input}`));
-            if(!gSnap.exists()) return alert("存在しません");
+            if(!gSnap.exists()) return alert("グループが見つかりません");
             
-            // パスワードまたは今日のコードが一致
             if(pw === gSnap.val().pw || input.includes(todayToken)) {
                 const reqRef = push(ref(db, `v20_groups/${input}/requests`));
                 await set(reqRef, { uid: myId, name: myName });
-                alert("参加リクエストを送信しました。承認をお待ちください。");
-                // リアルタイム承認監視
+                alert("承認待ちです。ホストが承認するまでお待ちください。");
                 onValue(ref(db, `v20_users/${myId}/status/${input}`), (s) => {
                     if(s.exists()) { alert(s.val()); if(s.val().includes("承認")) location.reload(); }
                 });
-            } else alert("不一致");
+            } else alert("パスワードが違います");
         }
     };
 
     window.copyInviteToken = () => {
         const todayToken = new Date().toISOString().slice(0,10).replace(/-/g,"");
         const code = `${currentGid}_${todayToken}`;
-        navigator.clipboard.writeText(code);
-        alert("今日のコードをコピーしました: " + code);
+        navigator.clipboard.writeText(code).then(() => alert("招待コードをコピーしました"));
     };
 
     window.leaveGroup = async () => {
-        if(confirm("退会しますか？")) {
+        if(confirm("このグループを退会しますか？")) {
             await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
             location.reload();
         }
     };
 
     window.deleteGroup = async () => {
-        if(confirm("【警告】グループを完全に削除しますか？")) {
+        if(confirm("【警告】ホスト権限により、このグループの全データを削除します。よろしいですか？")) {
             await remove(ref(db, `v20_groups/${currentGid}`));
             location.reload();
         }
     };
 
-    // 他のUI基本関数は 0.1.6 継承
     window.sendMessage = () => {
         const i = document.getElementById('msg-input');
         if(i.value && currentGid) {
@@ -297,6 +297,7 @@
             i.value = "";
         }
     };
+
     window.handleAuth = async (mode) => {
         const uid = document.getElementById('auth-uid').value.trim();
         const name = document.getElementById('auth-name').value.trim();
@@ -304,6 +305,26 @@
         if(mode === 'reg') await set(ref(db, `v20_users/${uid}`), { name, pw, icon: "" });
         localStorage.setItem('chat_uid', uid); localStorage.setItem('chat_name', name); location.reload();
     };
+
+    window.handleIconSelect = (input) => {
+        const file = input.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            renderIcon(document.getElementById('edit-icon-preview'), e.target.result, myName);
+            window.tempIcon = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.saveIcon = async () => {
+        if(window.tempIcon) {
+            await update(ref(db, `v20_users/${myId}`), { icon: window.tempIcon });
+            myIcon = window.tempIcon;
+            alert("アイコンを更新しました。");
+        }
+    };
+
     window.showProjectForm = (m) => { window.pMode = m; document.getElementById('project-form').style.display = "block"; };
     window.closeModal = (id) => document.getElementById(id).classList.remove('active');
     window.openUserCard = () => document.getElementById('user-card-modal').classList.add('active');
