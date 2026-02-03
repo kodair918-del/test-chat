@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.5.d</title>
+    <title>Chat-K | Ver 0.0.4.d</title>
     <style>
         /* --- [1] テーマ変数 --- */
         :root {
@@ -57,6 +57,7 @@
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
         
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+        .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; }
 
         /* チャットバブル */
         .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
@@ -67,9 +68,18 @@
         .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
 
-        /* 特殊バブル：ファイル・画像 */
-        .file-bubble { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; cursor: pointer; border: 1px solid var(--accent); margin-top: 5px; }
-        .img-preview { width: 100%; max-width: 250px; border-radius: 10px; margin-top: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
+        /* 特殊バブル：ファイル */
+        .file-bubble { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; cursor: pointer; border: 1px dashed var(--accent); }
+        .file-bubble:hover { background: rgba(255,255,255,0.2); }
+
+        /* ネオン・シート */
+        .neon-table { border-collapse: collapse; width: 100%; margin: 5px 0; font-size: 12px; border: 1px solid rgba(128,128,128,0.3); }
+        .neon-table th, .neon-table td { border: 1px solid rgba(128,128,128,0.3); padding: 6px; text-align: center; }
+        body.neon-mode .neon-table { border-color: var(--accent); }
+        body.neon-mode .neon-table th { background: rgba(0, 242, 255, 0.2); color: var(--accent); }
+        
+        .sheet-editor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 15px; }
+        .sheet-editor-grid input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: var(--card-bg); color: var(--text); font-size: 12px; }
 
         .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding: 12px; background: rgba(128,128,128,0.08); border-radius: 14px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
@@ -99,10 +109,66 @@
         <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
     </div>
 
-    <div id="main-modal" class="modal"><div style="padding-top:20px;"><div class="card" onclick="window.openUserCard()" style="cursor:pointer; display:flex; align-items:center; gap:15px;"><div id="home-icon-preview" class="u-icon"></div><div style="flex:1;"><b id="u-name-display">-</b><br><span id="u-id-display" style="opacity:0.5; font-size:12px;">@id</span></div><span>👤</span></div><h3>プロジェクト</h3><div id="project-list"></div><button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:10px;">＋ 新規作成</button><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;">ID参加</button><button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;">コード</button></div><div id="p-form" style="display:none;" class="card"><h4 id="p-form-title">-</h4><input type="text" id="p-id-input" style="width:100%; padding:10px; margin-bottom:10px;" placeholder="ID / コード"><input type="password" id="p-pw-input" style="width:100%; padding:10px; margin-bottom:10px;" placeholder="パスワード"><button class="btn-main" onclick="window.execAction()">実行</button></div></div></div>
-    <div id="user-modal" class="modal"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button onclick="window.closeModal('user-modal')" style="font-size:24px; border:none; background:none;">✕</button></div><div class="card" style="text-align:center;"><div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div><input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)"><button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()">写真を変更</button><input type="text" id="edit-name" style="width:100%; padding:10px; margin-bottom:10px;" placeholder="名前"><div class="switch-row"><span>Neon Mode</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div><button class="btn-main" onclick="window.updateUser()">保存する</button></div></div>
-    <div id="sheet-modal" class="modal"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>📊 簡易シート作成</h2><button onclick="window.closeModal('sheet-modal')" style="font-size:24px; border:none; background:none;">✕</button></div><div class="card"><div id="editor-inputs" style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:15px;"></div><button class="btn-main" onclick="window.sendSheet()">シートを送信</button></div></div>
-    <div id="settings-modal" class="modal"><div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:24px; border:none; background:none;">✕</button></div><div class="card"><button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 招待コードをコピー</button><button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button></div><div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div></div>
+    <div id="main-modal" class="modal">
+        <div style="padding-top:20px;">
+            <div class="card" onclick="window.openUserCard()" style="cursor:pointer; display:flex; align-items:center; gap:15px;">
+                <div id="home-icon-preview" class="u-icon"></div>
+                <div style="flex:1;"><b id="u-name-display">-</b><br><span id="u-id-display" style="opacity:0.5; font-size:12px;">@id</span></div>
+                <span>👤</span>
+            </div>
+            <h3>プロジェクト</h3>
+            <div id="project-list"></div>
+            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:10px;">＋ 新規作成</button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;">ID参加</button>
+                <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;">コード</button>
+            </div>
+            <div id="p-form" style="display:none;" class="card">
+                <h4 id="p-form-title">-</h4>
+                <input type="text" id="p-id-input" class="input-box" placeholder="ID / コード">
+                <input type="password" id="p-pw-input" class="input-box" placeholder="パスワード">
+                <button class="btn-main" onclick="window.execAction()">実行</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button onclick="window.closeModal('user-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div class="card" style="text-align:center;">
+            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
+            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
+            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()">写真を変更</button>
+            <input type="text" id="edit-name" class="input-box" placeholder="名前">
+            <input type="password" id="edit-pw" class="input-box" placeholder="新しいパスワード">
+            <div class="switch-row">
+                <span>Neon Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <button class="btn-main" onclick="window.updateUser()">保存する</button>
+            <button class="btn-main" style="background:var(--danger); margin-top:20px;" onclick="localStorage.clear(); location.reload();">ログアウト</button>
+        </div>
+    </div>
+
+    <div id="sheet-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>📊 簡易シート作成</h2><button onclick="window.closeModal('sheet-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div class="card">
+            <p style="font-size:12px; opacity:0.7;">3x3のデータを入力してください</p>
+            <div id="editor-inputs" class="sheet-editor-grid"></div>
+            <button class="btn-main" onclick="window.sendSheet()">シートを送信</button>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div class="card">
+            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 招待コードをコピー</button>
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
+        </div>
+        <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -112,79 +178,224 @@
         const app = initializeApp(config);
         const db = getDatabase(app);
 
-        const VER = "0.0.5.d";
-        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "", currentGid = null, iconCache = {}, sessionEntered = {};
+        const VER = "0.0.4.d";
+        let myId = localStorage.getItem('chat_uid');
+        let myName = localStorage.getItem('chat_name');
+        let myIcon = "";
+        let currentGid = null;
+        let iconCache = {};
+        let sessionEntered = {};
 
-        window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
-        const initTheme = () => { const isN = localStorage.getItem('neon_enabled') === 'true'; document.getElementById('neon-toggle').checked = isN; window.toggleNeon(isN); };
+        window.toggleNeon = (isOn) => {
+            if(isOn) document.body.classList.add('neon-mode');
+            else document.body.classList.remove('neon-mode');
+            localStorage.setItem('neon_enabled', isOn);
+        };
 
-        const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; border-radius:inherit;">`; else { el.innerHTML = ""; el.innerText = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
+        const initTheme = () => {
+            const isNeon = localStorage.getItem('neon_enabled') === 'true';
+            const toggle = document.getElementById('neon-toggle');
+            if(toggle) toggle.checked = isNeon;
+            window.toggleNeon(isNeon);
+        };
+
+        const drawIcon = (el, url, name) => {
+            if(!el) return;
+            if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; border-radius:inherit;">`;
+            else { el.innerHTML = ""; el.innerText = name ? name[0] : "?"; el.style.background = "var(--accent)"; }
+        };
 
         window.goHome = async () => {
-            currentGid = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById('main-modal').classList.add('active'); document.getElementById('chat-footer').style.display = "none";
+            currentGid = null;
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            document.getElementById('main-modal').classList.add('active');
+            document.getElementById('header-set-btn').style.visibility = "hidden";
+            document.getElementById('chat-footer').style.display = "none";
+            document.getElementById('head-title').innerText = "ホーム";
+
             const uSnap = await get(ref(db, `v20_users/${myId}`));
-            if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; localStorage.setItem('chat_name', myName); }
-            document.getElementById('u-name-display').innerText = myName; document.getElementById('u-id-display').innerText = "@" + myId;
+            if(uSnap.exists()) {
+                const d = uSnap.val();
+                myName = d.name; myIcon = d.icon || "";
+                localStorage.setItem('chat_name', myName);
+            }
+            document.getElementById('u-name-display').innerText = myName;
+            document.getElementById('u-id-display').innerText = "@" + myId;
             drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
+
             const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            const list = document.getElementById('project-list'); list.innerHTML = "";
-            if(listSnap.exists()) Object.keys(listSnap.val()).forEach(gid => {
-                const b = document.createElement('button'); b.className = "btn-main"; b.innerText = gid.split('_')[0]; b.onclick = () => enterChat(gid); list.appendChild(b);
-            });
+            const list = document.getElementById('project-list');
+            list.innerHTML = "";
+            if(listSnap.exists()) {
+                Object.keys(listSnap.val()).forEach(gid => {
+                    const b = document.createElement('button');
+                    b.className = "btn-main"; b.innerText = gid.split('_')[0]; 
+                    b.onclick = () => enterChat(gid);
+                    list.appendChild(b);
+                });
+            }
         };
 
         async function enterChat(gid) {
-            currentGid = gid; document.getElementById('main-modal').classList.remove('active');
-            document.getElementById('head-title').innerText = gid.split('_')[0]; document.getElementById('chat-footer').style.display = "flex";
-            if(!sessionEntered[gid]) { push(ref(db, `v20_groups/${gid}/messages`), { type: "system", text: `${myName}さんが入室しました` }); sessionEntered[gid] = true; }
+            currentGid = gid;
+            document.getElementById('main-modal').classList.remove('active');
+            document.getElementById('head-title').innerText = gid.split('_')[0];
+            document.getElementById('header-set-btn').style.visibility = "visible";
+            document.getElementById('chat-footer').style.display = "flex";
+
+            if(!sessionEntered[gid]) {
+                push(ref(db, `v20_groups/${gid}/messages`), { type: "system", text: `${myName}さんが入室しました` });
+                sessionEntered[gid] = true;
+            }
+
             onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
-                const area = document.getElementById('chat-area'); area.innerHTML = "";
-                if(snap.exists()) Object.values(snap.val()).forEach(m => {
-                    const d = document.createElement('div');
-                    if(m.type === "system") { d.className = "sys-msg"; d.innerText = m.text; } 
-                    else {
-                        const isMe = m.uid === myId; const mid = `icon-${Math.random().toString(36).substr(2, 5)}`;
-                        let content = m.text;
-                        if(m.type === "sheet") {
-                            content = `<table class="neon-table">` + JSON.parse(m.data).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') + `</table>`;
-                        } else if(m.type === "file") {
-                            const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName);
-                            const isExcel = /\.(xlsx|xls|csv)$/i.test(m.fileName);
-                            if(isImg) content = `<img src="${m.data}" class="img-preview" onclick="window.downloadFile('${m.data}','${m.fileName}')">`;
-                            else content = `<div class="file-bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">${isExcel ? '📊' : '📄'} ${m.fileName}</div>`;
+                const area = document.getElementById('chat-area');
+                area.innerHTML = "";
+                if(snap.exists()) {
+                    Object.values(snap.val()).forEach(m => {
+                        const d = document.createElement('div');
+                        if(m.type === "system") {
+                            d.className = "sys-msg"; d.innerText = m.text;
+                        } else {
+                            const isMe = m.uid === myId;
+                            const mid = `icon-${Math.random().toString(36).substr(2, 5)}`;
+                            let content = m.text;
+                            if(m.type === "sheet") {
+                                const rows = JSON.parse(m.data);
+                                content = `<table class="neon-table">` + rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') + `</table>`;
+                            } else if(m.type === "file") {
+                                content = `<div class="file-bubble" onclick="window.downloadFile('${m.data}', '${m.fileName}')">📄 ${m.fileName}<br><small style="opacity:0.6;">クリックしてDL</small></div>`;
+                            }
+                            d.className = `msg-row ${isMe ? 'me' : 'other'}`;
+                            d.innerHTML = `<div class="u-icon" id="${mid}"></div><div style="flex:1;"><div style="font-size:10px; opacity:0.5;">${m.name}</div><div class="bubble">${content}</div></div>`;
+                            if(iconCache[m.uid]) setTimeout(() => drawIcon(document.getElementById(mid), iconCache[m.uid], m.name), 0);
+                            else get(ref(db, `v20_users/${m.uid}/icon`)).then(s => { iconCache[m.uid] = s.val() || ""; drawIcon(document.getElementById(mid), iconCache[m.uid], m.name); });
                         }
-                        d.className = `msg-row ${isMe ? 'me' : 'other'}`;
-                        d.innerHTML = `<div class="u-icon" id="${mid}"></div><div style="flex:1;"><div style="font-size:10px; opacity:0.5;">${m.name}</div><div class="bubble">${content}</div></div>`;
                         area.appendChild(d);
-                        if(iconCache[m.uid]) drawIcon(document.getElementById(mid), iconCache[m.uid], m.name);
-                        else get(ref(db, `v20_users/${m.uid}/icon`)).then(s => { iconCache[m.uid] = s.val() || ""; drawIcon(document.getElementById(mid), iconCache[m.uid], m.name); });
-                    }
-                });
+                    });
+                }
                 area.scrollTop = area.scrollHeight;
             });
         }
 
-        window.sendMessage = () => { const i = document.getElementById('msg-input'); if(i.value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value, type: "text", time: serverTimestamp() }); i.value = ""; } };
-        window.sendFile = (input) => {
-            const f = input.files[0]; if(!f) return;
-            if(f.size > 800000) { alert("サイズが大きすぎます(約800KBまで)"); return; }
-            const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() });
-            r.readAsDataURL(f); input.value = "";
+        window.sendMessage = () => {
+            const i = document.getElementById('msg-input');
+            if(i.value && currentGid) {
+                push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value, time: serverTimestamp(), type: "text" });
+                i.value = "";
+            }
         };
-        window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
 
-        window.openSheetEditor = () => { const g = document.getElementById('editor-inputs'); g.innerHTML = ""; for(let i=0; i<9; i++) { const inp = document.createElement('input'); inp.placeholder = i<3 ? "項目" : "値"; inp.style.width="100%"; g.appendChild(inp); } document.getElementById('sheet-modal').classList.add('active'); };
-        window.sendSheet = () => { const inps = document.querySelectorAll('#editor-inputs input'); const d = [[inps[0].value, inps[1].value, inps[2].value], [inps[3].value, inps[4].value, inps[5].value], [inps[6].value, inps[7].value, inps[8].value]]; push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "sheet", data: JSON.stringify(d), time: serverTimestamp() }); window.closeModal('sheet-modal'); };
+        // --- ファイル送信機能（B案：Base64エンコード） ---
+        window.sendFile = (input) => {
+            const file = input.files[0];
+            if(!file) return;
+            if(file.size > 1024 * 1024) { alert("1MB以上のファイルは送信できません（無料プランの制限）"); return; }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                push(ref(db, `v20_groups/${currentGid}/messages`), { 
+                    uid: myId, name: myName, type: "file", data: e.target.result, fileName: file.name, time: serverTimestamp() 
+                });
+            };
+            reader.readAsDataURL(file);
+            input.value = ""; // クリア
+        };
 
-        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
+        window.downloadFile = (base64, name) => {
+            const link = document.createElement('a');
+            link.href = base64;
+            link.download = name;
+            link.click();
+        };
+
+        // --- シート機能 ---
+        window.openSheetEditor = () => {
+            const grid = document.getElementById('editor-inputs');
+            grid.innerHTML = "";
+            for(let i=0; i<9; i++) {
+                const input = document.createElement('input');
+                input.placeholder = i < 3 ? "見出し" : "データ";
+                grid.appendChild(input);
+            }
+            document.getElementById('sheet-modal').classList.add('active');
+        };
+
+        window.sendSheet = () => {
+            const inputs = document.querySelectorAll('#editor-inputs input');
+            const data = [[inputs[0].value, inputs[1].value, inputs[2].value], [inputs[3].value, inputs[4].value, inputs[5].value], [inputs[6].value, inputs[7].value, inputs[8].value]];
+            push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "sheet", data: JSON.stringify(data), time: serverTimestamp() });
+            window.closeModal('sheet-modal');
+        };
+
+        window.openSettings = async () => {
+            document.getElementById('settings-modal').classList.add('active');
+            const gSnap = await get(ref(db, `v20_groups/${currentGid}`));
+            if (gSnap.exists()) {
+                const data = gSnap.val();
+                const isHost = (data.host === myId || data.host?.uid === myId || !data.host);
+                document.getElementById('host-panel').style.display = isHost ? "block" : "none";
+                if (isHost) {
+                    onValue(ref(db, `v20_groups/${currentGid}/requests`), s => {
+                        const area = document.getElementById('req-list');
+                        area.innerHTML = "<h4>承認待ち:</h4>";
+                        if (s.exists()) {
+                            Object.entries(s.val()).forEach(([rid, r]) => {
+                                const d = document.createElement('div');
+                                d.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;";
+                                d.innerHTML = `<span>${r.name}</span><button onclick="window.approve('${rid}','${r.uid}')" style="background:var(--success); color:white; border:none; padding:5px 10px; border-radius:8px;">承認</button>`;
+                                area.appendChild(d);
+                            });
+                        }
+                    });
+                }
+            }
+        };
+
+        window.approve = async (rid, uid) => {
+            await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
+            await remove(ref(db, `v20_groups/${currentGid}/requests/${rid}`));
+        };
+
+        window.execAction = async () => {
+            const id = document.getElementById('p-id-input').value.trim();
+            const pw = document.getElementById('p-pw-input').value;
+            if(window.pMode === 'create') {
+                const uniqueId = id + "_" + Math.random().toString(36).substr(2, 6);
+                await set(ref(db, `v20_groups/${uniqueId}`), { host: myId, pw, ver: VER });
+                await update(ref(db, `v20_users/${myId}/myGroups`), { [uniqueId]: true });
+                location.reload();
+            } else {
+                await push(ref(db, `v20_groups/${id}/requests`), { uid: myId, name: myName });
+                alert("申請を送信しました。");
+            }
+        };
+
+        window.previewIcon = (input) => {
+            const reader = new FileReader();
+            reader.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, myName); };
+            reader.readAsDataURL(input.files[0]);
+        };
+
+        window.updateUser = async () => {
+            const updates = { name: document.getElementById('edit-name').value };
+            if(document.getElementById('edit-pw').value) updates.pw = document.getElementById('edit-pw').value;
+            if(window.tempIcon) updates.icon = window.tempIcon;
+            await update(ref(db, `v20_users/${myId}`), updates);
+            location.reload();
+        };
+
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
+        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m === 'create' ? "新規作成" : "参加申請"; };
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-        window.updateUser = async () => { const n = document.getElementById('edit-name').value; await update(ref(db, `v20_users/${myId}`), { name: n }); location.reload(); };
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; };
-        window.execAction = async () => { /* 簡易化のため前Ver同様のロジック */ };
+        window.copyInviteToken = () => { navigator.clipboard.writeText(currentGid).then(()=>alert("コピーしました")); };
+        window.leaveGroup = async () => { if(confirm("退会しますか？")) { await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`)); window.goHome(); } };
         
-        window.onload = () => { initTheme(); if(myId) window.goHome(); else location.reload(); };
+        window.onload = () => { 
+            initTheme(); 
+            if(!myId) location.reload(); 
+            else window.goHome(); 
+        };
     </script>
 </body>
 </html>
