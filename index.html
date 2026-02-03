@@ -76,6 +76,25 @@
 
         .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: rgba(128,128,128,0.8); font-size: 11px; padding: 4px 12px; border-radius: 10px; margin: 5px 0; }
         body.neon-mode .sys-msg { background: rgba(255,255,255,0.05); }
+
+        /* ネオンモード時の「✕」ボタンを光らせて見やすくする */
+        body.neon-mode .modal button {
+        color: var(--accent) !important;
+        text-shadow: 0 0 8px var(--accent);
+        opacity: 1;
+        font-weight: bold;
+    }
+
+        /* 閉じるボタン単体への装飾（もし必要なら） */
+        body.neon-mode .modal h2 + button {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
     </style>
 </head>
 <body>
@@ -331,3 +350,4 @@
 </script>
 </body>
 </html>
+
