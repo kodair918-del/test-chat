@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.1.b</title>
+    <title>Chat-K | Ver 0.2.2.b</title>
     <style>
         :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30; --success: #34C759; --warning: #FF9500; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
@@ -19,6 +19,17 @@
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; }
+        
+        /* チャット用スタイル拡張 */
+        .msg-wrap { display: flex; flex-direction: column; max-width: 80%; }
+        .msg-me { align-self: flex-end; }
+        .msg-other { align-self: flex-start; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 16px; position: relative; }
+        .msg-me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
+        .msg-other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
+        .msg-info { font-size: 10px; opacity: 0.5; margin: 2px 4px; }
+        .msg-me .msg-info { text-align: right; }
+        .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.4); font-size: 11px; padding: 4px 12px; border-radius: 10px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -38,21 +49,15 @@
 
 <div id="settings-modal" class="modal">
     <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロジェクト設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:28px; border:none; background:none;">×</button></div>
-    
-    <div id="recovery-area" style="display:none;" class="card">
-        <p style="color:var(--warning); font-weight:bold;">⚠️ 旧データ形式</p>
-        <button class="btn-main" style="background:var(--warning);" onclick="window.repairHost()">ホスト権限を修復する</button>
-    </div>
-
+    <div id="recovery-area" style="display:none;" class="card"><button class="btn-main" style="background:var(--warning);" onclick="window.repairHost()">ホスト権限を修復する</button></div>
     <div class="card">
         <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 招待コードをコピー</button>
         <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
     </div>
-
     <div id="host-panel" style="display:none;" class="card">
         <h3 style="color:var(--accent);">👑 管理者パネル</h3>
-        <div id="req-list" style="margin-bottom:15px;"></div>
-        <button class="btn-main" onclick="window.deleteGroup()" style="background:#000;">🗑️ グループを完全に削除</button>
+        <div id="req-list"></div>
+        <button class="btn-main" onclick="window.deleteGroup()" style="background:#000;">🗑️ 完全削除</button>
     </div>
 </div>
 
@@ -62,20 +67,17 @@
             <div><b id="u-name-display">-</b><br><span style="opacity:0.5; font-size:12px;" id="u-id-display">@id</span></div>
             <span>👤 設定</span>
         </div>
-
         <h3>プロジェクト</h3>
         <div id="project-list"></div>
-
         <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:10px;">＋ 新規作成</button>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;">IDで参加</button>
             <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;">コード入力</button>
         </div>
-
         <div id="p-form" style="display:none;" class="card">
             <h4 id="p-form-title">-</h4>
             <input type="text" id="p-id-input" class="input-box" placeholder="ID / コード">
-            <input type="password" id="p-pw-input" class="input-box" placeholder="パスワード（任意）">
+            <input type="password" id="p-pw-input" class="input-box" placeholder="パスワード">
             <button class="btn-main" onclick="window.execAction()">実行</button>
         </div>
     </div>
@@ -93,13 +95,13 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, get, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
     const app = initializeApp(config);
     const db = getDatabase(app);
 
-    const VER = "0.2.1";
+    const VER = "0.2.2";
     let myId = localStorage.getItem('chat_uid');
     let myName = localStorage.getItem('chat_name');
     let currentGid = null;
@@ -136,15 +138,33 @@
         document.getElementById('header-set-btn').style.visibility = "visible";
         document.getElementById('chat-footer').style.display = "flex";
 
+        // 入室通知を送信
+        push(ref(db, `v20_groups/${gid}/messages`), {
+            type: "system",
+            text: `${myName}さんが入室しました`,
+            time: serverTimestamp()
+        });
+
         onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
             const area = document.getElementById('chat-area');
             area.innerHTML = "";
             if(snap.exists()) {
                 Object.values(snap.val()).forEach(m => {
                     const d = document.createElement('div');
-                    const isMe = m.uid === myId;
-                    d.style = `padding:10px; border-radius:12px; max-width:80%; ${isMe ? 'align-self:flex-end; background:var(--bubble-me); color:white;' : 'align-self:flex-start; background:var(--bubble-other);'}`;
-                    d.innerHTML = `<div style="font-size:10px; opacity:0.6;">${m.name}</div>${m.text}`;
+                    if(m.type === "system") {
+                        d.className = "sys-msg";
+                        d.innerText = m.text;
+                    } else {
+                        const isMe = m.uid === myId;
+                        const date = m.time ? new Date(m.time) : new Date();
+                        const timeStr = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                        
+                        d.className = `msg-wrap ${isMe ? 'msg-me' : 'msg-other'}`;
+                        d.innerHTML = `
+                            <div class="msg-info">${m.name} • ${timeStr}</div>
+                            <div class="bubble">${m.text}</div>
+                        `;
+                    }
                     area.appendChild(d);
                 });
             }
@@ -186,7 +206,8 @@
                 if(s.exists()) {
                     Object.entries(s.val()).forEach(([rid, r]) => {
                         const d = document.createElement('div');
-                        d.innerHTML = `${r.name} <button onclick="window.approve('${rid}','${r.uid}')">承認</button>`;
+                        d.style = "display:flex; justify-content:space-between; margin-bottom:10px;";
+                        d.innerHTML = `<span>${r.name}</span><button onclick="window.approve('${rid}','${r.uid}')">承認</button>`;
                         area.appendChild(d);
                     });
                 }
@@ -205,23 +226,21 @@
     };
 
     window.leaveGroup = async () => {
-        if(confirm("このグループを退会しますか？")) {
+        if(confirm("退会しますか？")) {
             await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
-            window.goHome(); // ページリロードなしでホームへ
-        }
-    };
-
-    window.deleteGroup = async () => {
-        if(confirm("全消去しますか？")) {
-            await remove(ref(db, `v20_groups/${currentGid}`));
-            location.reload();
+            window.goHome();
         }
     };
 
     window.sendMessage = () => {
         const i = document.getElementById('msg-input');
         if(i.value && currentGid) {
-            push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value });
+            push(ref(db, `v20_groups/${currentGid}/messages`), { 
+                uid: myId, 
+                name: myName, 
+                text: i.value,
+                time: serverTimestamp() 
+            });
             i.value = "";
         }
     };
