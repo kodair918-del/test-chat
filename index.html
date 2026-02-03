@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.1.d</title>
+    <title>Chat-K | Ver 0.0.2.d</title>
     <style>
         /* --- [1] テーマ変数 --- */
         :root {
@@ -18,7 +18,7 @@
             --success: #34C759;
         }
 
-        /* --- [2] ネオンモード設定（徹底上書き） --- */
+        /* --- [2] ネオンモード設定 --- */
         body.neon-mode {
             --accent: #00f2ff;
             --bg: #0a0b10;
@@ -29,10 +29,25 @@
             --bubble-other: #252836;
         }
 
-        /* ネオンモード時の追加CSS */
-        body.neon-mode .card { border: 1px solid rgba(0, 242, 255, 0.2); box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); }
+        /* ネオンモード専用：スクロールバーのカスタマイズ */
+        body.neon-mode #chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        body.neon-mode #chat-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        body.neon-mode #chat-area::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* ネオンモード専用：UIパーツの徹底上書き */
+        body.neon-mode .card { 
+            border: 1px solid rgba(0, 242, 255, 0.2); 
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); 
+        }
         
-        /* 実行ボタンの視認性修正：背景を暗く透かし、枠を光らせる */
         body.neon-mode .btn-main {
             background: rgba(0, 242, 255, 0.1) !important;
             border: 2px solid var(--accent) !important;
@@ -41,12 +56,12 @@
             box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
             font-weight: 800;
         }
-        body.neon-mode .btn-main:active { background: var(--accent) !important; color: #000 !important; }
 
-        /* ✕ボタンの視認性修正 */
-        body.neon-mode .modal button { color: var(--accent) !important; text-shadow: 0 0 10px var(--accent); font-weight: bold; }
+        body.neon-mode .modal button { 
+            color: var(--accent) !important; 
+            text-shadow: 0 0 10px var(--accent); 
+        }
 
-        /* 入力欄の視認性修正 */
         body.neon-mode .input-box {
             background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(0, 242, 255, 0.3) !important;
@@ -82,7 +97,6 @@
         .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
 
-        /* スイッチ */
         .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding: 12px; background: rgba(128,128,128,0.08); border-radius: 14px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -96,252 +110,250 @@
 </head>
 <body>
 
-<header>
-    <button onclick="window.goHome()">🏠</button>
-    <div class="title" id="head-title">ホーム</div>
-    <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
-</header>
+    <header>
+        <button onclick="window.goHome()">🏠</button>
+        <div class="title" id="head-title">ホーム</div>
+        <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
+    </header>
 
-<div id="chat-area"></div>
+    <div id="chat-area"></div>
 
-<div class="footer" id="chat-footer">
-    <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
-    <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
-</div>
+    <div class="footer" id="chat-footer">
+        <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
+        <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
+    </div>
 
-<div id="main-modal" class="modal">
-    <div style="padding-top:20px;">
-        <div class="card" onclick="window.openUserCard()" style="cursor:pointer; display:flex; align-items:center; gap:15px;">
-            <div id="home-icon-preview" class="u-icon"></div>
-            <div style="flex:1;"><b id="u-name-display">-</b><br><span id="u-id-display" style="opacity:0.5; font-size:12px;">@id</span></div>
-            <span>👤</span>
-        </div>
-        <h3>プロジェクト</h3>
-        <div id="project-list"></div>
-        <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:10px;">＋ 新規作成</button>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;">ID参加</button>
-            <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;">コード</button>
-        </div>
-        <div id="p-form" style="display:none;" class="card">
-            <h4 id="p-form-title">-</h4>
-            <input type="text" id="p-id-input" class="input-box" placeholder="ID / コード">
-            <input type="password" id="p-pw-input" class="input-box" placeholder="パスワード">
-            <button class="btn-main" onclick="window.execAction()">実行</button>
+    <div id="main-modal" class="modal">
+        <div style="padding-top:20px;">
+            <div class="card" onclick="window.openUserCard()" style="cursor:pointer; display:flex; align-items:center; gap:15px;">
+                <div id="home-icon-preview" class="u-icon"></div>
+                <div style="flex:1;"><b id="u-name-display">-</b><br><span id="u-id-display" style="opacity:0.5; font-size:12px;">@id</span></div>
+                <span>👤</span>
+            </div>
+            <h3>プロジェクト</h3>
+            <div id="project-list"></div>
+            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:10px;">＋ 新規作成</button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;">ID参加</button>
+                <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;">コード</button>
+            </div>
+            <div id="p-form" style="display:none;" class="card">
+                <h4 id="p-form-title">-</h4>
+                <input type="text" id="p-id-input" class="input-box" placeholder="ID / コード">
+                <input type="password" id="p-pw-input" class="input-box" placeholder="パスワード">
+                <button class="btn-main" onclick="window.execAction()">実行</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="user-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button onclick="window.closeModal('user-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
-    <div class="card" style="text-align:center;">
-        <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
-        <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-        <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()">写真を変更</button>
-        <input type="text" id="edit-name" class="input-box" placeholder="名前">
-        <input type="password" id="edit-pw" class="input-box" placeholder="新しいパスワード">
-        
-        <div class="switch-row">
-            <span>Neon Mode</span>
-            <label class="switch">
-                <input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)">
-                <span class="slider"></span>
-            </label>
+    <div id="user-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button onclick="window.closeModal('user-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div class="card" style="text-align:center;">
+            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
+            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
+            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()">写真を変更</button>
+            <input type="text" id="edit-name" class="input-box" placeholder="名前">
+            <input type="password" id="edit-pw" class="input-box" placeholder="新しいパスワード">
+            <div class="switch-row">
+                <span>Neon Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <button class="btn-main" onclick="window.updateUser()">保存する</button>
+            <button class="btn-main" style="background:var(--danger); margin-top:20px;" onclick="localStorage.clear(); location.reload();">ログアウト</button>
         </div>
-
-        <button class="btn-main" onclick="window.updateUser()">保存する</button>
-        <button class="btn-main" style="background:var(--danger); margin-top:20px;" onclick="localStorage.clear(); location.reload();">ログアウト</button>
     </div>
-</div>
 
-<div id="settings-modal" class="modal">
-    <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
-    <div class="card">
-        <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 招待コードをコピー</button>
-        <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
+    <div id="settings-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div class="card">
+            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">🔗 招待コードをコピー</button>
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">🚪 退会する</button>
+        </div>
+        <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
     </div>
-    <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
-</div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
-    const app = initializeApp(config);
-    const db = getDatabase(app);
+        const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
+        const app = initializeApp(config);
+        const db = getDatabase(app);
 
-    const VER = "0.0.1.d";
-    let myId = localStorage.getItem('chat_uid');
-    let myName = localStorage.getItem('chat_name');
-    let myIcon = "";
-    let currentGid = null;
-    let iconCache = {};
-    let sessionEntered = {};
+        const VER = "0.0.2.d";
+        let myId = localStorage.getItem('chat_uid');
+        let myName = localStorage.getItem('chat_name');
+        let myIcon = "";
+        let currentGid = null;
+        let iconCache = {};
+        let sessionEntered = {};
 
-    window.toggleNeon = (isOn) => {
-        if(isOn) document.body.classList.add('neon-mode');
-        else document.body.classList.remove('neon-mode');
-        localStorage.setItem('neon_enabled', isOn);
-    };
+        window.toggleNeon = (isOn) => {
+            if(isOn) document.body.classList.add('neon-mode');
+            else document.body.classList.remove('neon-mode');
+            localStorage.setItem('neon_enabled', isOn);
+        };
 
-    const initTheme = () => {
-        const isNeon = localStorage.getItem('neon_enabled') === 'true';
-        const toggle = document.getElementById('neon-toggle');
-        if(toggle) toggle.checked = isNeon;
-        window.toggleNeon(isNeon);
-    };
+        const initTheme = () => {
+            const isNeon = localStorage.getItem('neon_enabled') === 'true';
+            const toggle = document.getElementById('neon-toggle');
+            if(toggle) toggle.checked = isNeon;
+            window.toggleNeon(isNeon);
+        };
 
-    const drawIcon = (el, url, name) => {
-        if(!el) return;
-        if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; border-radius:inherit;">`;
-        else { el.innerHTML = ""; el.innerText = name ? name[0] : "?"; el.style.background = "var(--accent)"; }
-    };
+        const drawIcon = (el, url, name) => {
+            if(!el) return;
+            if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; border-radius:inherit;">`;
+            else { el.innerHTML = ""; el.innerText = name ? name[0] : "?"; el.style.background = "var(--accent)"; }
+        };
 
-    window.goHome = async () => {
-        currentGid = null;
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        document.getElementById('main-modal').classList.add('active');
-        document.getElementById('header-set-btn').style.visibility = "hidden";
-        document.getElementById('chat-footer').style.display = "none";
-        document.getElementById('head-title').innerText = "ホーム";
+        window.goHome = async () => {
+            currentGid = null;
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            document.getElementById('main-modal').classList.add('active');
+            document.getElementById('header-set-btn').style.visibility = "hidden";
+            document.getElementById('chat-footer').style.display = "none";
+            document.getElementById('head-title').innerText = "ホーム";
 
-        const uSnap = await get(ref(db, `v20_users/${myId}`));
-        if(uSnap.exists()) {
-            const d = uSnap.val();
-            myName = d.name; myIcon = d.icon || "";
-            localStorage.setItem('chat_name', myName);
-        }
-        document.getElementById('u-name-display').innerText = myName;
-        document.getElementById('u-id-display').innerText = "@" + myId;
-        drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
+            const uSnap = await get(ref(db, `v20_users/${myId}`));
+            if(uSnap.exists()) {
+                const d = uSnap.val();
+                myName = d.name; myIcon = d.icon || "";
+                localStorage.setItem('chat_name', myName);
+            }
+            document.getElementById('u-name-display').innerText = myName;
+            document.getElementById('u-id-display').innerText = "@" + myId;
+            drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
 
-        const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-        const list = document.getElementById('project-list');
-        list.innerHTML = "";
-        if(listSnap.exists()) {
-            Object.keys(listSnap.val()).forEach(gid => {
-                const b = document.createElement('button');
-                b.className = "btn-main"; b.innerText = gid.split('_')[0]; 
-                b.onclick = () => enterChat(gid);
-                list.appendChild(b);
+            const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
+            const list = document.getElementById('project-list');
+            list.innerHTML = "";
+            if(listSnap.exists()) {
+                Object.keys(listSnap.val()).forEach(gid => {
+                    const b = document.createElement('button');
+                    b.className = "btn-main"; b.innerText = gid.split('_')[0]; 
+                    b.onclick = () => enterChat(gid);
+                    list.appendChild(b);
+                });
+            }
+        };
+
+        async function enterChat(gid) {
+            currentGid = gid;
+            document.getElementById('main-modal').classList.remove('active');
+            document.getElementById('head-title').innerText = gid.split('_')[0];
+            document.getElementById('header-set-btn').style.visibility = "visible";
+            document.getElementById('chat-footer').style.display = "flex";
+
+            if(!sessionEntered[gid]) {
+                push(ref(db, `v20_groups/${gid}/messages`), { type: "system", text: `${myName}さんが入室しました` });
+                sessionEntered[gid] = true;
+            }
+
+            onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
+                const area = document.getElementById('chat-area');
+                area.innerHTML = "";
+                if(snap.exists()) {
+                    Object.values(snap.val()).forEach(m => {
+                        const d = document.createElement('div');
+                        if(m.type === "system") {
+                            d.className = "sys-msg"; d.innerText = m.text;
+                        } else {
+                            const isMe = m.uid === myId;
+                            const date = m.time ? new Date(m.time) : new Date();
+                            const timeStr = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                            const mid = `icon-${Math.random().toString(36).substr(2, 5)}`;
+                            d.className = `msg-row ${isMe ? 'me' : 'other'}`;
+                            d.innerHTML = `<div class="u-icon" id="${mid}"></div><div style="flex:1; display:flex; flex-direction:column;"><div style="font-size:10px; opacity:0.5; margin-bottom:2px;">${m.name} • ${timeStr}</div><div class="bubble">${m.text}</div></div>`;
+                            if(iconCache[m.uid]) setTimeout(() => drawIcon(document.getElementById(mid), iconCache[m.uid], m.name), 0);
+                            else get(ref(db, `v20_users/${m.uid}/icon`)).then(s => { iconCache[m.uid] = s.val() || ""; drawIcon(document.getElementById(mid), iconCache[m.uid], m.name); });
+                        }
+                        area.appendChild(d);
+                    });
+                }
+                area.scrollTop = area.scrollHeight;
             });
         }
-    };
 
-    async function enterChat(gid) {
-        currentGid = gid;
-        document.getElementById('main-modal').classList.remove('active');
-        document.getElementById('head-title').innerText = gid.split('_')[0];
-        document.getElementById('header-set-btn').style.visibility = "visible";
-        document.getElementById('chat-footer').style.display = "flex";
-
-        if(!sessionEntered[gid]) {
-            push(ref(db, `v20_groups/${gid}/messages`), { type: "system", text: `${myName}さんが入室しました` });
-            sessionEntered[gid] = true;
-        }
-
-        onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
-            const area = document.getElementById('chat-area');
-            area.innerHTML = "";
-            if(snap.exists()) {
-                Object.values(snap.val()).forEach(m => {
-                    const d = document.createElement('div');
-                    if(m.type === "system") {
-                        d.className = "sys-msg"; d.innerText = m.text;
-                    } else {
-                        const isMe = m.uid === myId;
-                        const date = m.time ? new Date(m.time) : new Date();
-                        const timeStr = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-                        const mid = `icon-${Math.random().toString(36).substr(2, 5)}`;
-                        d.className = `msg-row ${isMe ? 'me' : 'other'}`;
-                        d.innerHTML = `<div class="u-icon" id="${mid}"></div><div style="flex:1; display:flex; flex-direction:column;"><div style="font-size:10px; opacity:0.5; margin-bottom:2px;">${m.name} • ${timeStr}</div><div class="bubble">${m.text}</div></div>`;
-                        if(iconCache[m.uid]) setTimeout(() => drawIcon(document.getElementById(mid), iconCache[m.uid], m.name), 0);
-                        else get(ref(db, `v20_users/${m.uid}/icon`)).then(s => { iconCache[m.uid] = s.val() || ""; drawIcon(document.getElementById(mid), iconCache[m.uid], m.name); });
-                    }
-                    area.appendChild(d);
-                });
+        window.sendMessage = () => {
+            const i = document.getElementById('msg-input');
+            if(i.value && currentGid) {
+                push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value, time: serverTimestamp() });
+                i.value = "";
             }
-            area.scrollTop = area.scrollHeight;
-        });
-    }
+        };
 
-    window.sendMessage = () => {
-        const i = document.getElementById('msg-input');
-        if(i.value && currentGid) {
-            push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value, time: serverTimestamp() });
-            i.value = "";
-        }
-    };
-
-    window.openSettings = async () => {
-        document.getElementById('settings-modal').classList.add('active');
-        const gSnap = await get(ref(db, `v20_groups/${currentGid}`));
-        if (gSnap.exists()) {
-            const data = gSnap.val();
-            const isHost = (data.host === myId || data.host?.uid === myId || !data.host);
-            document.getElementById('host-panel').style.display = isHost ? "block" : "none";
-            if (isHost) {
-                onValue(ref(db, `v20_groups/${currentGid}/requests`), s => {
-                    const area = document.getElementById('req-list');
-                    area.innerHTML = "<h4>承認待ち:</h4>";
-                    if (s.exists()) {
-                        Object.entries(s.val()).forEach(([rid, r]) => {
-                            const d = document.createElement('div');
-                            d.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;";
-                            d.innerHTML = `<span>${r.name}</span><button onclick="window.approve('${rid}','${r.uid}')" style="background:var(--success); color:white; border:none; padding:5px 10px; border-radius:8px;">承認</button>`;
-                            area.appendChild(d);
-                        });
-                    }
-                });
+        window.openSettings = async () => {
+            document.getElementById('settings-modal').classList.add('active');
+            const gSnap = await get(ref(db, `v20_groups/${currentGid}`));
+            if (gSnap.exists()) {
+                const data = gSnap.val();
+                const isHost = (data.host === myId || data.host?.uid === myId || !data.host);
+                document.getElementById('host-panel').style.display = isHost ? "block" : "none";
+                if (isHost) {
+                    onValue(ref(db, `v20_groups/${currentGid}/requests`), s => {
+                        const area = document.getElementById('req-list');
+                        area.innerHTML = "<h4>承認待ち:</h4>";
+                        if (s.exists()) {
+                            Object.entries(s.val()).forEach(([rid, r]) => {
+                                const d = document.createElement('div');
+                                d.style = "display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;";
+                                d.innerHTML = `<span>${r.name}</span><button onclick="window.approve('${rid}','${r.uid}')" style="background:var(--success); color:white; border:none; padding:5px 10px; border-radius:8px;">承認</button>`;
+                                area.appendChild(d);
+                            });
+                        }
+                    });
+                }
             }
-        }
-    };
+        };
 
-    window.approve = async (rid, uid) => {
-        await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
-        await remove(ref(db, `v20_groups/${currentGid}/requests/${rid}`));
-    };
+        window.approve = async (rid, uid) => {
+            await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
+            await remove(ref(db, `v20_groups/${currentGid}/requests/${rid}`));
+        };
 
-    window.execAction = async () => {
-        const id = document.getElementById('p-id-input').value.trim();
-        const pw = document.getElementById('p-pw-input').value;
-        if(window.pMode === 'create') {
-            const uniqueId = id + "_" + Math.random().toString(36).substr(2, 6);
-            await set(ref(db, `v20_groups/${uniqueId}`), { host: myId, pw, ver: VER });
-            await update(ref(db, `v20_users/${myId}/myGroups`), { [uniqueId]: true });
+        window.execAction = async () => {
+            const id = document.getElementById('p-id-input').value.trim();
+            const pw = document.getElementById('p-pw-input').value;
+            if(window.pMode === 'create') {
+                const uniqueId = id + "_" + Math.random().toString(36).substr(2, 6);
+                await set(ref(db, `v20_groups/${uniqueId}`), { host: myId, pw, ver: VER });
+                await update(ref(db, `v20_users/${myId}/myGroups`), { [uniqueId]: true });
+                location.reload();
+            } else {
+                await push(ref(db, `v20_groups/${id}/requests`), { uid: myId, name: myName });
+                alert("申請を送信しました。");
+            }
+        };
+
+        window.previewIcon = (input) => {
+            const reader = new FileReader();
+            reader.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, myName); };
+            reader.readAsDataURL(input.files[0]);
+        };
+
+        window.updateUser = async () => {
+            const updates = { name: document.getElementById('edit-name').value };
+            if(document.getElementById('edit-pw').value) updates.pw = document.getElementById('edit-pw').value;
+            if(window.tempIcon) updates.icon = window.tempIcon;
+            await update(ref(db, `v20_users/${myId}`), updates);
             location.reload();
-        } else {
-            await push(ref(db, `v20_groups/${id}/requests`), { uid: myId, name: myName });
-            alert("申請を送信しました。");
-        }
-    };
+        };
 
-    window.previewIcon = (input) => {
-        const reader = new FileReader();
-        reader.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, myName); };
-        reader.readAsDataURL(input.files[0]);
-    };
-
-    window.updateUser = async () => {
-        const updates = { name: document.getElementById('edit-name').value };
-        if(document.getElementById('edit-pw').value) updates.pw = document.getElementById('edit-pw').value;
-        if(window.tempIcon) updates.icon = window.tempIcon;
-        await update(ref(db, `v20_users/${myId}`), updates);
-        location.reload();
-    };
-
-    window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
-    window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m === 'create' ? "新規作成" : "参加申請"; };
-    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-    window.copyInviteToken = () => { navigator.clipboard.writeText(currentGid).then(()=>alert("コピーしました")); };
-    window.leaveGroup = async () => { if(confirm("退会しますか？")) { await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`)); window.goHome(); } };
-    
-    window.onload = () => { 
-        initTheme(); 
-        if(!myId) location.reload(); 
-        else window.goHome(); 
-    };
-</script>
+        window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
+        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m === 'create' ? "新規作成" : "参加申請"; };
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.copyInviteToken = () => { navigator.clipboard.writeText(currentGid).then(()=>alert("コピーしました")); };
+        window.leaveGroup = async () => { if(confirm("退会しますか？")) { await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`)); window.goHome(); } };
+        
+        window.onload = () => { 
+            initTheme(); 
+            if(!myId) location.reload(); 
+            else window.goHome(); 
+        };
+    </script>
 </body>
 </html>
