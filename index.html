@@ -135,6 +135,32 @@
         };
 
         async function enterChat(gid) {
+            currentGid = gid;
+            document.getElementById('main-modal').classList.remove('active');
+            document.getElementById('chat-footer').style.display = "flex";
+            
+            // --- 追加：設定ボタンを表示し、ホスト判定を行う ---
+            const setBtn = document.getElementById('header-set-btn');
+            setBtn.style.visibility = "visible"; // ⚙️ボタンを表示
+            
+            const gSnap = await get(ref(db, `v20_groups/${gid}`));
+            if (gSnap.exists()) {
+                const gData = gSnap.val();
+                document.getElementById('head-title').innerText = gData.name || gid.split('_')[0];
+        
+                // 自分がホストなら「管理者パネル」を表示
+                const hostPanel = document.getElementById('host-panel');
+                if (gData.host === myId) {
+                    hostPanel.style.display = "block";
+                    loadRequests(gid); // 参加申請を読み込む関数（後述）
+                } else {
+                    hostPanel.style.display = "none";
+                }
+            }
+            // ------------------------------------------
+            
+            // ...（以下、既存のメッセージ読み込み処理）
+}
             currentGid = gid; document.getElementById('main-modal').classList.remove('active');
             document.getElementById('head-title').innerText = gid.split('_')[0]; document.getElementById('chat-footer').style.display = "flex";
             if(!sessionEntered[gid]) { push(ref(db, `v20_groups/${gid}/messages`), { type: "system", text: `${myName}さんが入室しました` }); sessionEntered[gid] = true; }
@@ -194,6 +220,25 @@
             a.download = name;
             a.click();
         };
+        function loadRequests(gid) {
+            onValue(ref(db, `v20_groups/${gid}/requests`), (snap) => {
+                const div = document.getElementById('req-list');
+                div.innerHTML = "";
+                if (snap.exists()) {
+                    Object.entries(snap.val()).forEach(([rid, r]) => {
+                        const item = document.createElement('div');
+                        item.style = "display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding:10px; background:rgba(0,0,0,0.05); border-radius:10px;";
+                        item.innerHTML = `
+                        <span>${r.name}</span>
+                        <button onclick="window.approveReq('${rid}','${r.uid}')" style="background:var(--success); color:white; border:none; padding:5px 12px; border-radius:8px;">承認</button>
+                        `;
+                        div.appendChild(item);
+                    });
+                } else {
+                    div.innerText = "申請はありません";
+                }
+            });
+        }
         window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
 
         window.openSheetEditor = () => { const g = document.getElementById('editor-inputs'); g.innerHTML = ""; for(let i=0; i<9; i++) { const inp = document.createElement('input'); inp.placeholder = i<3 ? "項目" : "値"; inp.style.width="100%"; g.appendChild(inp); } document.getElementById('sheet-modal').classList.add('active'); };
@@ -217,4 +262,5 @@
     </div>
 </body>
 </html>
+
 
