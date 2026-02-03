@@ -3,39 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.6.d</title>
+    <title>Chat-K | Ver 0.0.7.d</title>
     <style>
-        :root { --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30; }
-        body.neon-mode { --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff; --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836; }
-        
+        /* --- テーマ設定 --- */
+        :root {
+            --accent: #007AFF;
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text: #000000;
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --bubble-me: #007AFF;
+            --bubble-other: #E9E9EB;
+            --danger: #FF3B30;
+        }
+
+        body.neon-mode {
+            --accent: #00f2ff;
+            --bg: #0a0b10;
+            --card-bg: #161821;
+            --text: #ffffff;
+            --header-bg: rgba(10, 11, 16, 0.85);
+            --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff);
+            --bubble-other: #252836;
+        }
+
+        /* --- 基本スタイル --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s; }
-        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; }
+        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; }
+
+        header {
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: var(--header-bg); height: 60px; display: flex; align-items: center;
+            padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000;
+        }
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
-        #chat-area { flex: 1; overflow-y: auto; padding: 20px 15px 120px; display: flex; flex-direction: column; gap: 15px; height: calc(100% - 60px); }
-        .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); display: none; gap: 8px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center; }
-        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; height: 40px; resize: none; }
+        #chat-area {
+            flex: 1; overflow-y: auto; padding: 20px 15px 120px;
+            display: flex; flex-direction: column; gap: 15px; height: calc(100% - 60px);
+        }
 
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
+        .footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--header-bg); backdrop-filter: blur(20px);
+            padding: 10px 15px calc(10px + env(safe-area-inset-bottom));
+            display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center;
+        }
+
+        #msg-input {
+            flex: 1; border: none; background: rgba(120, 120, 128, 0.12);
+            padding: 10px 15px; border-radius: 20px; color: var(--text);
+            outline: none; font-size: 16px; min-height: 40px; max-height: 120px; resize: none;
+        }
+
+        /* --- UIパーツ --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+            display: none; overflow-y: auto;
+        }
         .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; }
-        
-        .badge { background: var(--danger); color: white; font-size: 12px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
-        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .msg-row { display: flex; gap: 10px; max-width: 90%; }
-        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); }
-        .me .bubble { background: var(--bubble-me); color: white; }
-        .img-preview { width: 100%; max-width: 200px; border-radius: 12px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
 
-        /* 画像ビューアー */
-        #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 4000; display: none; align-items: center; justify-content: center; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
+        
+        .btn-main {
+            width: 100%; height: 50px; background: var(--accent); color: white;
+            border: none; border-radius: 14px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px;
+        }
+
+        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: bold; }
+
+        .u-icon {
+            width: 38px; height: 38px; border-radius: 50%; background: var(--accent);
+            flex-shrink: 0; overflow: hidden; display: flex; align-items: center;
+            justify-content: center; color: white; font-weight: bold; font-size: 14px;
+        }
+
+        .msg-row { display: flex; gap: 10px; max-width: 90%; align-items: flex-end; }
+        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
+        
+        .bubble {
+            padding: 10px 14px; border-radius: 18px; font-size: 16px;
+            background: var(--bubble-other); color: var(--text); line-height: 1.4;
+        }
+        .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
+        .other .bubble { border-bottom-left-radius: 4px; }
+
+        .img-preview {
+            width: 100%; max-width: 220px; border-radius: 12px;
+            cursor: pointer; border: 1px solid rgba(0,0,0,0.1); margin-top: 5px;
+            display: block;
+        }
+
+        /* --- 画像ビューアー --- */
+        #viewer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 5000; display: none;
+            align-items: center; justify-content: center;
+        }
         #viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .viewer-btns { position: absolute; top: 40px; left: 20px; right: 20px; display: flex; justify-content: space-between; }
-        .v-btn { background: rgba(255,255,255,0.2); color: white; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; backdrop-filter: blur(10px); }
+        
+        .viewer-header {
+            position: absolute; top: env(safe-area-inset-top); left: 0; width: 100%;
+            padding: 20px; display: flex; justify-content: space-between; z-index: 5001;
+        }
+        .v-btn {
+            background: rgba(255,255,255,0.2); color: white; border: none;
+            width: 44px; height: 44px; border-radius: 50%; font-size: 20px;
+            backdrop-filter: blur(10px); cursor: pointer;
+        }
+
+        .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: #888; font-size: 11px; padding: 4px 12px; border-radius: 10px; margin: 5px 0; }
     </style>
 </head>
 <body>
@@ -49,50 +129,87 @@
     <div id="chat-area"></div>
 
     <div class="footer" id="chat-footer">
-        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:24px; cursor:pointer;">📎</button>
+        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px; cursor:pointer;">📎</button>
         <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
-        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
+        <textarea id="msg-input" placeholder="メッセージを入力..."></textarea>
+        <button onclick="window.sendMessage()" id="send-btn" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0; cursor:pointer;">↑</button>
     </div>
 
     <div id="main-modal" class="modal">
         <div style="padding-top:20px;">
             <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
                 <div id="home-icon-preview" class="u-icon"></div>
-                <div style="flex:1;"><b id="u-name-display">-</b><br><small id="u-id-display" style="opacity:0.5;">@id</small></div>
+                <div style="flex:1;">
+                    <b id="u-name-display">読み込み中...</b><br>
+                    <small id="u-id-display" style="opacity:0.5;">@id</small>
+                </div>
                 <span>👤</span>
             </div>
+            
             <h3>プロジェクト</h3>
             <div id="project-list"></div>
-            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759;"><span>＋ 新規作成</span></button>
+            
+            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:20px;">
+                <span>＋ 新規プロジェクト作成</span>
+            </button>
+            <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;">
+                <span>IDで参加申請</span>
+            </button>
+
+            <div id="p-form" style="display:none; margin-top:15px;" class="card">
+                <h4 id="p-form-title">新規作成</h4>
+                <input type="text" id="p-id-input" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc;" placeholder="プロジェクト名 / ID">
+                <input type="password" id="p-pw-input" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc;" placeholder="パスワード">
+                <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
+            </div>
         </div>
     </div>
 
     <div id="viewer">
-        <div class="viewer-btns">
+        <div class="viewer-header">
             <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
             <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
         </div>
         <img id="viewer-img" src="">
     </div>
 
-    <div id="user-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button onclick="window.closeModal('user-modal')">✕</button></div>
-        <div class="card" style="text-align:center;">
-            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
-            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
-            <input type="text" id="edit-name" style="width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid #ccc;" placeholder="名前">
-            <div class="switch-row"><span>Neon Mode</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
-            <button class="btn-main" onclick="window.updateUser()"><span>保存する</span></button>
+    <div id="settings-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>設定</h2>
+            <button onclick="window.closeModal('settings-modal')" style="font-size:24px; border:none; background:none;">✕</button>
+        </div>
+        <div class="card">
+            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;">
+                <span>🔗 招待コードをコピー</span>
+            </button>
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
+                <span>🚪 退会する</span>
+            </button>
+        </div>
+        <div id="host-panel" style="display:none;" class="card">
+            <h3 style="color:var(--accent);">👑 ホスト用：参加申請</h3>
+            <div id="req-list"></div>
         </div>
     </div>
 
-    <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div class="card">
-            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button>
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会する</span></button>
+    <div id="user-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>プロフィール</h2>
+            <button onclick="window.closeModal('user-modal')" style="font-size:24px; border:none; background:none;">✕</button>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
+            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input-edit').click()"><span>写真を変更</span></button>
+            <input type="file" id="icon-input-edit" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
+            
+            <input type="text" id="edit-name" style="width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid #ccc;" placeholder="名前">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(0,0,0,0.05); border-radius:12px;">
+                <span>ネオンモード</span>
+                <input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)">
+            </div>
+            
+            <button class="btn-main" onclick="window.updateUser()" style="margin-top:20px;"><span>保存する</span></button>
         </div>
     </div>
 
@@ -100,114 +217,252 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
-        const app = initializeApp(config); const db = getDatabase(app);
+        const config = { 
+            apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", 
+            databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", 
+            projectId: "my-chat-1d626" 
+        };
+        const app = initializeApp(config);
+        const db = getDatabase(app);
 
-        const VER = "0.0.6.d";
-        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "", currentGid = null;
+        let myId = localStorage.getItem('chat_uid');
+        let myName = localStorage.getItem('chat_name');
+        let myIcon = "";
+        let currentGid = null;
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
 
-        window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
-        const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; border-radius:inherit;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
+        // --- 初期化 & テーマ ---
+        window.toggleNeon = (isOn) => {
+            document.body.classList.toggle('neon-mode', isOn);
+            localStorage.setItem('neon_enabled', isOn);
+        };
 
+        const drawIcon = (el, url, name) => {
+            if(!el) return;
+            if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
+            else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; }
+        };
+
+        // --- ホーム画面制御 ---
         window.goHome = async () => {
-            currentGid = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            currentGid = null;
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('main-modal').classList.add('active');
             document.getElementById('chat-footer').style.display = "none";
             document.getElementById('header-set-btn').style.visibility = "hidden";
             document.getElementById('head-title').innerText = "ホーム";
 
             const uSnap = await get(ref(db, `v20_users/${myId}`));
-            if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
-            document.getElementById('u-name-display').innerText = myName;
-            drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
+            if(uSnap.exists()) {
+                const d = uSnap.val();
+                myName = d.name; myIcon = d.icon || "";
+                document.getElementById('u-name-display').innerText = myName;
+                document.getElementById('u-id-display').innerText = "@" + myId;
+                drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
+            }
 
+            // プロジェクトリストの描画（未読バッジ付）
             const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            const list = document.getElementById('project-list'); list.innerHTML = "";
+            const listDiv = document.getElementById('project-list');
+            listDiv.innerHTML = "";
+            
             if(listSnap.exists()) {
-                for(let gid of Object.keys(listSnap.val())) {
-                    const b = document.createElement('button'); b.className = "btn-main";
-                    const unread = await getUnreadCount(gid);
-                    b.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">${unread}</span>` : ''}`;
-                    b.onclick = () => enterChat(gid);
-                    list.appendChild(b);
+                const groups = Object.keys(listSnap.val());
+                for(let gid of groups) {
+                    const unread = await calculateUnread(gid);
+                    const btn = document.createElement('button');
+                    btn.className = "btn-main";
+                    btn.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">${unread}</span>` : ''}`;
+                    btn.onclick = () => enterChat(gid);
+                    listDiv.appendChild(btn);
                 }
             }
         };
 
-        async function getUnreadCount(gid) {
+        async function calculateUnread(gid) {
             const snap = await get(ref(db, `v20_groups/${gid}/messages`));
             if(!snap.exists()) return 0;
-            const msgs = Object.values(snap.val());
             const lastTime = lastSeen[gid] || 0;
-            return msgs.filter(m => m.time > lastTime).length;
+            return Object.values(snap.val()).filter(m => m.time > lastTime && m.uid !== myId).length;
         }
 
+        // --- チャット入室 ---
         async function enterChat(gid) {
-            currentGid = gid; document.getElementById('main-modal').classList.remove('active');
+            currentGid = gid;
+            document.getElementById('main-modal').classList.remove('active');
             document.getElementById('chat-footer').style.display = "flex";
             document.getElementById('header-set-btn').style.visibility = "visible";
             document.getElementById('head-title').innerText = gid.split('_')[0];
 
-            onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
-                const area = document.getElementById('chat-area'); area.innerHTML = "";
+            // 既読時間を更新
+            lastSeen[gid] = Date.now();
+            localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
+
+            const msgRef = ref(db, `v20_groups/${gid}/messages`);
+            onValue(msgRef, (snap) => {
+                if(currentGid !== gid) return;
+                const area = document.getElementById('chat-area');
+                area.innerHTML = "";
                 if(snap.exists()) {
-                    const data = snap.val();
-                    Object.values(data).forEach(m => {
-                        const d = document.createElement('div');
-                        if(m.type === "system") { d.className = "sys-msg"; d.innerText = m.text; }
-                        else {
+                    Object.values(snap.val()).forEach(m => {
+                        const row = document.createElement('div');
+                        if(m.type === "system") {
+                            row.className = "sys-msg";
+                            row.innerText = m.text;
+                        } else {
                             const isMe = m.uid === myId;
-                            let content = m.text;
+                            row.className = `msg-row ${isMe ? 'me' : 'other'}`;
+                            
+                            let contentHTML = `<div>${m.text}</div>`;
                             if(m.type === "file") {
-                                if(/\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName)) content = `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">`;
-                                else content = `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
+                                if(/\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName)) {
+                                    contentHTML = `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">`;
+                                } else {
+                                    contentHTML = `<div class="bubble" style="cursor:pointer;" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
+                                }
                             }
-                            d.className = `msg-row ${isMe ? 'me' : 'other'}`;
-                            d.innerHTML = `<div class="u-icon">${m.name[0]}</div><div class="bubble">${content}</div>`;
+                            
+                            row.innerHTML = `
+                                <div class="u-icon">${m.name[0]}</div>
+                                <div class="${m.type === 'file' && /\.(jpg|png|gif|webp)$/i.test(m.fileName) ? '' : 'bubble'}">
+                                    <div style="font-size:10px; opacity:0.5; margin-bottom:2px;">${m.name}</div>
+                                    ${contentHTML}
+                                </div>
+                            `;
                         }
-                        area.appendChild(d);
+                        area.appendChild(row);
                     });
                     area.scrollTop = area.scrollHeight;
-                    lastSeen[gid] = Date.now();
-                    localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
                 }
             });
         }
 
-        window.openViewer = (url, name) => {
-            const v = document.getElementById('viewer');
-            const img = document.getElementById('viewer-img');
-            img.src = url; window.currentViewFile = { url, name };
-            v.style.display = 'flex';
-        };
-
-        window.downloadFromViewer = () => {
-            const { url, name } = window.currentViewFile;
-            const a = document.createElement('a'); a.href = url; a.download = name; a.click();
-        };
-
+        // --- メッセージ送信 ---
         window.sendMessage = () => {
-            const i = document.getElementById('msg-input');
-            if(i.value && currentGid) {
-                push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value, type: "text", time: serverTimestamp() });
-                i.value = "";
-            }
+            const input = document.getElementById('msg-input');
+            if(!input.value.trim() || !currentGid) return;
+            push(ref(db, `v20_groups/${currentGid}/messages`), {
+                uid: myId, name: myName, text: input.value, type: "text", time: serverTimestamp()
+            });
+            input.value = "";
         };
 
         window.sendFile = (input) => {
-            const f = input.files[0]; if(!f) return;
-            const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() });
-            r.readAsDataURL(f);
+            const file = input.files[0];
+            if(!file) return;
+            if(file.size > 800000) return alert("800KB以下のファイルにしてください");
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                push(ref(db, `v20_groups/${currentGid}/messages`), {
+                    uid: myId, name: myName, type: "file", data: e.target.result, fileName: file.name, time: serverTimestamp()
+                });
+            };
+            reader.readAsDataURL(file);
+            input.value = "";
         };
 
-        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
-        window.openUserCard = () => document.getElementById('user-modal').classList.add('active');
-        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-        window.updateUser = async () => { /* 保存処理 */ location.reload(); };
-        window.copyInviteToken = () => { navigator.clipboard.writeText(currentGid).then(()=>alert("コピーしました")); };
+        // --- ビューアー制御 ---
+        window.openViewer = (url, name) => {
+            document.getElementById('viewer-img').src = url;
+            window.currentViewFile = { url, name };
+            document.getElementById('viewer').style.display = 'flex';
+        };
 
-        window.onload = () => { window.toggleNeon(localStorage.getItem('neon_enabled') === 'true'); if(myId) window.goHome(); };
+        window.downloadFromViewer = () => {
+            const a = document.createElement('a');
+            a.href = window.currentViewFile.url;
+            a.download = window.currentViewFile.name;
+            a.click();
+        };
+
+        window.downloadFile = (data, name) => {
+            const a = document.createElement('a');
+            a.href = data; a.download = name; a.click();
+        };
+
+        // --- ホスト & 設定機能 ---
+        window.openSettings = async () => {
+            document.getElementById('settings-modal').classList.add('active');
+            const gSnap = await get(ref(db, `v20_groups/${currentGid}`));
+            if(gSnap.exists()) {
+                const gData = gSnap.val();
+                // ホスト判定: hostプロパティが自分のIDと一致するか
+                if(gData.host === myId) {
+                    document.getElementById('host-panel').style.display = "block";
+                    onValue(ref(db, `v20_groups/${currentGid}/requests`), (snap) => {
+                        const div = document.getElementById('req-list');
+                        div.innerHTML = "";
+                        if(snap.exists()) {
+                            Object.entries(snap.val()).forEach(([rid, r]) => {
+                                div.innerHTML += `<div style="display:flex; justify-content:space-between; margin-top:10px;">
+                                    <span>${r.name}</span>
+                                    <button onclick="window.approveReq('${rid}','${r.uid}')" style="background:var(--success); border:none; color:white; padding:5px 10px; border-radius:5px;">承認</button>
+                                </div>`;
+                            });
+                        } else { div.innerText = "申請はありません"; }
+                    });
+                } else {
+                    document.getElementById('host-panel').style.display = "none";
+                }
+            }
+        };
+
+        window.approveReq = async (rid, uid) => {
+            await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
+            await remove(ref(db, `v20_groups/${currentGid}/requests/${rid}`));
+        };
+
+        window.execAction = async () => {
+            const id = document.getElementById('p-id-input').value.trim();
+            const pw = document.getElementById('p-pw-input').value;
+            if(!id) return;
+
+            if(window.pMode === 'create') {
+                const gid = id + "_" + Math.random().toString(36).substr(2, 6);
+                await set(ref(db, `v20_groups/${gid}`), { host: myId, pw: pw, name: id });
+                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
+                window.goHome();
+            } else {
+                await push(ref(db, `v20_groups/${id}/requests`), { uid: myId, name: myName });
+                alert("参加申請を送りました！ホストの承認をお待ちください。");
+                window.goHome();
+            }
+        };
+
+        // --- その他 ---
+        window.openUserCard = () => {
+            document.getElementById('user-modal').classList.add('active');
+            document.getElementById('edit-name').value = myName;
+            document.getElementById('neon-toggle').checked = localStorage.getItem('neon_enabled') === 'true';
+        };
+        window.updateUser = async () => {
+            const newName = document.getElementById('edit-name').value;
+            await update(ref(db, `v20_users/${myId}`), { name: newName, icon: window.tempIcon || myIcon });
+            location.reload();
+        };
+        window.previewIcon = (input) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                window.tempIcon = e.target.result;
+                drawIcon(document.getElementById('edit-icon-preview'), e.target.result, "");
+            };
+            reader.readAsDataURL(input.files[0]);
+        };
+        window.showForm = (mode) => {
+            window.pMode = mode;
+            document.getElementById('p-form').style.display = "block";
+            document.getElementById('p-form-title').innerText = mode === 'create' ? "新規プロジェクト作成" : "プロジェクト参加申請";
+        };
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.copyInviteToken = () => { navigator.clipboard.writeText(currentGid); alert("招待コードをコピーしました！"); };
+        window.leaveGroup = async () => { if(confirm("退会しますか？")) { await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`)); window.goHome(); } };
+
+        window.onload = () => {
+            window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
+            if(myId) window.goHome();
+            else location.reload();
+        };
     </script>
 </body>
 </html>
