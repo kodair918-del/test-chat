@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.2.d</title>
+    <title>Chat-K | Ver 0.0.1.d</title>
     <style>
-        /* --- [1] テーマ変数定義 --- */
+        /* --- [1] テーマ変数 --- */
         :root {
             --accent: #007AFF;
             --bg: #F2F2F7;
@@ -18,22 +18,46 @@
             --success: #34C759;
         }
 
-        /* ネオンモード ON 時の上書き */
+        /* --- [2] ネオンモード設定（徹底上書き） --- */
         body.neon-mode {
             --accent: #00f2ff;
             --bg: #0a0b10;
             --card-bg: #161821;
             --text: #ffffff;
-            --header-bg: rgba(10, 11, 16, 0.8);
+            --header-bg: rgba(10, 11, 16, 0.85);
             --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff);
             --bubble-other: #252836;
         }
 
-        /* --- [2] ベーススタイル --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s, color 0.3s; }
+        /* ネオンモード時の追加CSS */
+        body.neon-mode .card { border: 1px solid rgba(0, 242, 255, 0.2); box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); }
         
-        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; transition: 0.3s; }
+        /* 実行ボタンの視認性修正：背景を暗く透かし、枠を光らせる */
+        body.neon-mode .btn-main {
+            background: rgba(0, 242, 255, 0.1) !important;
+            border: 2px solid var(--accent) !important;
+            color: var(--accent) !important;
+            text-shadow: 0 0 5px var(--accent);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+            font-weight: 800;
+        }
+        body.neon-mode .btn-main:active { background: var(--accent) !important; color: #000 !important; }
+
+        /* ✕ボタンの視認性修正 */
+        body.neon-mode .modal button { color: var(--accent) !important; text-shadow: 0 0 10px var(--accent); font-weight: bold; }
+
+        /* 入力欄の視認性修正 */
+        body.neon-mode .input-box {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(0, 242, 255, 0.3) !important;
+            color: #fff !important;
+        }
+
+        /* --- [3] ベーススタイル --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s; }
+        
+        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; }
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
@@ -42,30 +66,23 @@
         .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; }
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 120px; resize: none; }
 
-        /* --- [3] モーダル・カード --- */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
         .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; transition: 0.3s; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
         
-        /* ネオンモード時のカード装飾 */
-        body.neon-mode .card { border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; transition: 0.3s; }
-        body.neon-mode .btn-main { box-shadow: 0 0 15px var(--accent); }
-
+        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
         .input-box { width: 100%; height: 50px; padding: 0 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); background: var(--card-bg); color: var(--text); margin-bottom: 15px; font-size: 16px; }
 
-        /* --- [4] チャットパーツ --- */
-        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: 0.3s; }
-        body.neon-mode .u-icon { border: 2px solid var(--accent); box-shadow: 0 0 10px var(--accent); border-radius: 12px; }
-        
+        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        body.neon-mode .u-icon { border: 2px solid var(--accent); box-shadow: 0 0 10px var(--accent); }
+
         .msg-row { display: flex; gap: 10px; max-width: 85%; }
         .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-wrap: break-word; transition: 0.3s; }
+        .bubble { padding: 10px 14px; border-radius: 18px; font-size: 16px; line-height: 1.4; word-wrap: break-word; }
         .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
-        
-        /* --- [5] スイッチ (Neon Toggle) --- */
+
+        /* スイッチ */
         .switch-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding: 12px; background: rgba(128,128,128,0.08); border-radius: 14px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -75,39 +92,6 @@
         input:checked + .slider:before { transform: translateX(22px); }
 
         .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: rgba(128,128,128,0.8); font-size: 11px; padding: 4px 12px; border-radius: 10px; margin: 5px 0; }
-        body.neon-mode .sys-msg { background: rgba(255,255,255,0.05); }
-
-        /* ネオンモード時の「✕」ボタンを光らせて見やすくする */
-        body.neon-mode .modal button {
-        color: var(--accent) !important;
-        text-shadow: 0 0 8px var(--accent);
-        opacity: 1;
-        font-weight: bold;
-    }
-
-        /* 閉じるボタン単体への装飾（もし必要なら） */
-        body.neon-mode .modal h2 + button {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-        /* ネオンモード時の実行ボタン（btn-main）内の文字を見やすくする */
-        body.neon-mode .btn-main {
-        color: #000000 !important; /* 文字を思い切って「黒」にする */
-        text-shadow: none;         /* 文字の周りの光を消してクッキリさせる */
-        box-shadow: 0 0 15px var(--accent), inset 0 0 10px rgba(255,255,255,0.5); /* 内側にも光を入れて立体感を出す */
-    }
-
-    /* 入力欄（input-box）も同化しがちなので調整 */
-        body.neon-mode .input-box {
-        border: 1px solid var(--accent);
-        background: rgba(0, 0, 0, 0.4);
-        box-shadow: inset 0 0 5px var(--accent);
-    }
     </style>
 </head>
 <body>
@@ -122,7 +106,7 @@
 
 <div class="footer" id="chat-footer">
     <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
-    <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0; font-weight:bold;">↑</button>
+    <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
 </div>
 
 <div id="main-modal" class="modal">
@@ -187,7 +171,7 @@
     const app = initializeApp(config);
     const db = getDatabase(app);
 
-    const VER = "0.0.0.d";
+    const VER = "0.0.1.d";
     let myId = localStorage.getItem('chat_uid');
     let myName = localStorage.getItem('chat_name');
     let myIcon = "";
@@ -195,7 +179,6 @@
     let iconCache = {};
     let sessionEntered = {};
 
-    // --- テーマ制御 ---
     window.toggleNeon = (isOn) => {
         if(isOn) document.body.classList.add('neon-mode');
         else document.body.classList.remove('neon-mode');
@@ -239,8 +222,7 @@
         if(listSnap.exists()) {
             Object.keys(listSnap.val()).forEach(gid => {
                 const b = document.createElement('button');
-                b.className = "btn-main"; b.style = "background:var(--card-bg); color:var(--text); border:0.5px solid rgba(0,0,0,0.1);";
-                b.innerText = gid.split('_')[0]; 
+                b.className = "btn-main"; b.innerText = gid.split('_')[0]; 
                 b.onclick = () => enterChat(gid);
                 list.appendChild(b);
             });
@@ -259,7 +241,7 @@
             sessionEntered[gid] = true;
         }
 
-        onValue(ref(db, `v20_groups/${gid}/messages`), async snap => {
+        onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
             const area = document.getElementById('chat-area');
             area.innerHTML = "";
             if(snap.exists()) {
@@ -310,7 +292,7 @@
                             d.innerHTML = `<span>${r.name}</span><button onclick="window.approve('${rid}','${r.uid}')" style="background:var(--success); color:white; border:none; padding:5px 10px; border-radius:8px;">承認</button>`;
                             area.appendChild(d);
                         });
-                    } else area.innerHTML += "<p style='font-size:12px; opacity:0.5;'>申請はありません</p>";
+                    }
                 });
             }
         }
@@ -363,5 +345,3 @@
 </script>
 </body>
 </html>
-
-
