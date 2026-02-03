@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.9d</title>
+    <title>Chat-K | Ver 0.1.0d</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -25,25 +25,29 @@
 
         #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 1000; }
         .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center; }
+        
+        /* --- Inputs & Buttons --- */
+        .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; font-size: 16px; }
         #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; }
+        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; transition: opacity 0.2s; }
+        .btn-main:active { opacity: 0.7; }
+        
+        /* Close Button Visual Update */
+        .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; }
 
         /* --- UI Elements --- */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
         .modal.active { display: block; }
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; }
-        
         .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .msg-row { display: flex; gap: 10px; max-width: 90%; animation: fadeIn 0.2s ease-out; }
+        .msg-row { display: flex; gap: 10px; max-width: 90%; }
         .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
         .bubble { padding: 10px 15px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); line-height: 1.4; word-break: break-all; }
         .me .bubble { background: var(--bubble-me); color: white; }
         .img-preview { width: 100%; max-width: 250px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
         .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* --- Viewer & Settings --- */
+        /* --- Viewer & Extras --- */
         #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
         .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
@@ -71,7 +75,7 @@
         <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
     </div>
 
-    <div id="main-modal" class="modal">
+    <div id="main-modal" class="modal active">
         <div style="padding-top:20px;">
             <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
                 <div id="home-icon-preview" class="u-icon"></div>
@@ -86,16 +90,16 @@
                 <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;"><span>コード</span></button>
             </div>
             <div id="p-form" style="display:none; margin-top:15px;" class="card">
-                <h4 id="p-form-title">-</h4>
-                <input type="text" id="p-id-input" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc;" placeholder="名前 / ID">
-                <input type="password" id="p-pw-input" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc;" placeholder="パスワード">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
+                <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
+                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード / コード">
                 <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
             </div>
         </div>
     </div>
 
     <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button onclick="window.closeModal('settings-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
         <div class="card">
             <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button>
             <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会する</span></button>
@@ -104,12 +108,13 @@
     </div>
 
     <div id="user-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button onclick="window.closeModal('user-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button class="close-btn" onclick="window.closeModal('user-modal')">✕</button></div>
         <div class="card" style="text-align:center;">
             <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
             <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
             <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-            <input type="text" id="edit-name" style="width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid #ccc;" placeholder="名前">
+            <input type="text" id="edit-name" class="std-input" placeholder="名前">
+            <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード（任意）">
             <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
             <button class="btn-main" onclick="window.updateUser()"><span>保存する</span></button>
         </div>
@@ -170,20 +175,16 @@
         }
 
         window.enterChat = async (gid) => {
-            currentGid = gid;
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            currentGid = gid; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('chat-footer').style.display = "flex";
             document.getElementById('header-set-btn').style.visibility = "visible";
-            
-            lastSeen[gid] = Date.now();
-            localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
+            lastSeen[gid] = Date.now(); localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
 
             const gSnap = await get(ref(db, `v20_groups/${gid}`));
             if(gSnap.exists()) {
                 const gData = gSnap.val();
                 document.getElementById('head-title').innerText = gData.name || gid.split('_')[0];
                 document.getElementById('host-panel').style.display = (gData.host === myId) ? "block" : "none";
-                if(gData.host === myId) loadRequests(gid);
             }
 
             onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
@@ -192,8 +193,7 @@
                     Object.values(snap.val()).forEach(m => {
                         const row = document.createElement('div');
                         const isMe = m.uid === myId;
-                        let content = m.text;
-                        let isImg = false;
+                        let content = m.text, isImg = false;
                         if(m.type === "file") {
                             isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName);
                             content = isImg ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
@@ -207,25 +207,38 @@
             });
         };
 
-        window.sendMessage = () => {
-            const i = document.getElementById('msg-input');
-            if(i.value && currentGid) {
-                push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: i.value, type: "text", time: serverTimestamp() });
-                i.value = "";
+        window.execAction = async () => {
+            const id = document.getElementById('p-id-input').value, pw = document.getElementById('p-pw-input').value;
+            if(!id) return alert("入力してください");
+            if(window.pMode === 'create') {
+                const gid = id + "_" + Math.random().toString(36).substr(2, 6);
+                await set(ref(db, `v20_groups/${gid}`), { name: id, pw: pw, host: myId });
+                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
+                alert("作成しました！");
+            } else if(window.pMode === 'join') {
+                const snap = await get(ref(db, `v20_groups`));
+                let target = null;
+                snap.forEach(g => { if(g.val().name === id && g.val().pw === pw) target = g.key; });
+                if(target) { await update(ref(db, `v20_groups/${target}/requests/${myId}`), { uid: myId, name: myName }); alert("申請を送りました"); }
+                else alert("見つかりません");
             }
+            window.goHome();
         };
 
-        window.sendFile = (input) => {
-            const f = input.files[0]; if(!f || !currentGid) return;
-            const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() });
-            r.readAsDataURL(f);
+        window.updateUser = async () => {
+            const n = document.getElementById('edit-name').value, p = document.getElementById('edit-pw').value;
+            const up = { name: n, icon: window.tempIcon || myIcon };
+            if(p) up.pw = p;
+            await update(ref(db, `v20_users/${myId}`), up);
+            alert("更新しました"); location.reload();
         };
 
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
-        window.updateUser = async () => { await update(ref(db, `v20_users/${myId}`), { name: document.getElementById('edit-name').value, icon: window.tempIcon || myIcon }); location.reload(); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
         window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m==='create' ? '新規作成' : '参加・コード'; };
+        window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
+        window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
         window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.currentViewFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
         window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.currentViewFile.url; a.download = window.currentViewFile.name; a.click(); };
