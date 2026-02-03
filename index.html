@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.0.3.d</title>
+    <title>Chat-K | Ver 0.0.4.d</title>
     <style>
         /* --- [1] テーマ変数 --- */
         :root {
@@ -68,7 +68,11 @@
         .me .bubble { background: var(--bubble-me); color: white; border-bottom-right-radius: 4px; }
         .other .bubble { background: var(--bubble-other); color: var(--text); border-bottom-left-radius: 4px; }
 
-        /* --- [4] ネオン・シート（テーブル） --- */
+        /* 特殊バブル：ファイル */
+        .file-bubble { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; cursor: pointer; border: 1px dashed var(--accent); }
+        .file-bubble:hover { background: rgba(255,255,255,0.2); }
+
+        /* ネオン・シート */
         .neon-table { border-collapse: collapse; width: 100%; margin: 5px 0; font-size: 12px; border: 1px solid rgba(128,128,128,0.3); }
         .neon-table th, .neon-table td { border: 1px solid rgba(128,128,128,0.3); padding: 6px; text-align: center; }
         body.neon-mode .neon-table { border-color: var(--accent); }
@@ -99,6 +103,8 @@
 
     <div class="footer" id="chat-footer">
         <button onclick="window.openSheetEditor()" style="background:none; border:none; font-size:24px; cursor:pointer;">📊</button>
+        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:24px; cursor:pointer;">📎</button>
+        <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
         <textarea id="msg-input" rows="1" placeholder="メッセージ..."></textarea>
         <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
     </div>
@@ -150,8 +156,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center;"><h2>📊 簡易シート作成</h2><button onclick="window.closeModal('sheet-modal')" style="font-size:24px; border:none; background:none;">✕</button></div>
         <div class="card">
             <p style="font-size:12px; opacity:0.7;">3x3のデータを入力してください</p>
-            <div id="editor-inputs" class="sheet-editor-grid">
-                </div>
+            <div id="editor-inputs" class="sheet-editor-grid"></div>
             <button class="btn-main" onclick="window.sendSheet()">シートを送信</button>
         </div>
     </div>
@@ -173,7 +178,7 @@
         const app = initializeApp(config);
         const db = getDatabase(app);
 
-        const VER = "0.0.3.d";
+        const VER = "0.0.4.d";
         let myId = localStorage.getItem('chat_uid');
         let myName = localStorage.getItem('chat_name');
         let myIcon = "";
@@ -258,6 +263,8 @@
                             if(m.type === "sheet") {
                                 const rows = JSON.parse(m.data);
                                 content = `<table class="neon-table">` + rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('') + `</table>`;
+                            } else if(m.type === "file") {
+                                content = `<div class="file-bubble" onclick="window.downloadFile('${m.data}', '${m.fileName}')">📄 ${m.fileName}<br><small style="opacity:0.6;">クリックしてDL</small></div>`;
                             }
                             d.className = `msg-row ${isMe ? 'me' : 'other'}`;
                             d.innerHTML = `<div class="u-icon" id="${mid}"></div><div style="flex:1;"><div style="font-size:10px; opacity:0.5;">${m.name}</div><div class="bubble">${content}</div></div>`;
@@ -279,6 +286,29 @@
             }
         };
 
+        // --- ファイル送信機能（B案：Base64エンコード） ---
+        window.sendFile = (input) => {
+            const file = input.files[0];
+            if(!file) return;
+            if(file.size > 1024 * 1024) { alert("1MB以上のファイルは送信できません（無料プランの制限）"); return; }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                push(ref(db, `v20_groups/${currentGid}/messages`), { 
+                    uid: myId, name: myName, type: "file", data: e.target.result, fileName: file.name, time: serverTimestamp() 
+                });
+            };
+            reader.readAsDataURL(file);
+            input.value = ""; // クリア
+        };
+
+        window.downloadFile = (base64, name) => {
+            const link = document.createElement('a');
+            link.href = base64;
+            link.download = name;
+            link.click();
+        };
+
         // --- シート機能 ---
         window.openSheetEditor = () => {
             const grid = document.getElementById('editor-inputs');
@@ -293,14 +323,8 @@
 
         window.sendSheet = () => {
             const inputs = document.querySelectorAll('#editor-inputs input');
-            const data = [
-                [inputs[0].value, inputs[1].value, inputs[2].value],
-                [inputs[3].value, inputs[4].value, inputs[5].value],
-                [inputs[6].value, inputs[7].value, inputs[8].value]
-            ];
-            push(ref(db, `v20_groups/${currentGid}/messages`), { 
-                uid: myId, name: myName, type: "sheet", data: JSON.stringify(data), time: serverTimestamp() 
-            });
+            const data = [[inputs[0].value, inputs[1].value, inputs[2].value], [inputs[3].value, inputs[4].value, inputs[5].value], [inputs[6].value, inputs[7].value, inputs[8].value]];
+            push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "sheet", data: JSON.stringify(data), time: serverTimestamp() });
             window.closeModal('sheet-modal');
         };
 
