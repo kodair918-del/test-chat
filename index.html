@@ -1,28 +1,52 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8"><!DOCTYPE html>
-<html lang="ja">
-<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.1d</title>
+    <title>Chat-K | Ver 0.1.5d</title>
     <style>
         /* --- [1] Theme & Variables --- */
         :root {
             --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
             --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30;
-            --border: rgba(0,0,0,0.1); --neon-glow: transparent;
+            --border: rgba(0,0,0,0.1); --neon-glow: transparent; --neon-text-color: var(--text);
         }
         body.neon-mode {
-            --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff;
-            --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836;
-            --border: rgba(0, 242, 255, 0.3); --neon-glow: 0 0 10px rgba(0, 242, 255, 0.2);
+            --accent: #00f2ff; /* 青緑系のネオン */
+            --bg: #0a0b10;
+            --card-bg: #161821;
+            --text: #ffffff;
+            --header-bg: rgba(10, 11, 16, 0.85);
+            --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); /* 既存のグラデーション */
+            --bubble-other: #252836;
+            --danger: #FF3B30;
+            --border: rgba(0, 242, 255, 0.3);
+            --neon-glow: 0 0 10px rgba(0, 242, 255, 0.2), 0 0 20px rgba(0, 242, 255, 0.1); /* 強化 */
+            --neon-text-color: #00f2ff; /* ネオンモード専用の文字色 */
         }
+        body.neon-mode .title, body.neon-mode h2, body.neon-mode h3, body.neon-mode .badge {
+            color: var(--neon-text-color);
+        }
+        body.neon-mode .card, body.neon-mode .btn-main {
+            border: 1px solid var(--border);
+            box-shadow: var(--neon-glow);
+        }
+        body.neon-mode .close-btn {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(0, 242, 255, 0.1); /* 強化 */
+        }
+        body.neon-mode .std-input, body.neon-mode #msg-input {
+            border: 1px solid var(--border);
+            box-shadow: 0 0 5px rgba(0, 242, 255, 0.1);
+        }
+        body.neon-mode #chat-area::-webkit-scrollbar-thumb, body.neon-mode .modal::-webkit-scrollbar-thumb {
+            background: rgba(0, 242, 255, 0.2); /* ネオンカラーに合わせる */
+        }
+
 
         /* --- [2] Layout & Scrollbar (溶け込む設定) --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: 0.3s; }
+        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s, color 0.3s; }
         
         /* スクロールバーを隠す/溶け込ませる */
         #chat-area, .modal {
@@ -44,37 +68,42 @@
             background: var(--header-bg); height: 60px; display: flex; align-items: center; 
             padding: env(safe-area-inset-top) 15px 0; border-bottom: 1px solid var(--border); 
             z-index: 2000; position: relative;
-            box-shadow: var(--neon-glow);
         }
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
-        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; }
+        #chat-area { height: calc(100% - 60px - 70px); /* フッターと入力インジケータ分を確保 */ overflow-y: auto; padding: 20px 15px 15px; display: flex; flex-direction: column; gap: 15px; }
         .footer { 
             position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); 
             backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); 
             display: none; gap: 10px; border-top: 1px solid var(--border); z-index: 2500; align-items: center; 
         }
 
-        /* --- [4] UI Components (Neon Mode Specific) --- */
+        /* --- [4] UI Components --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
+        .modal.active { display: block; }
         .card { 
             background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; 
-            border: 1px solid var(--border); box-shadow: var(--neon-glow);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* 基本のシャドウ */
         }
         .btn-main { 
             width: 100%; height: 50px; background: var(--accent); color: white; border: none; 
             border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; 
             align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px;
-            box-shadow: var(--neon-glow);
+            transition: opacity 0.2s, box-shadow 0.3s;
         }
+        .btn-main:active { opacity: 0.7; }
         .close-btn { 
             width: 34px; height: 34px; border-radius: 50%; background: var(--accent); 
             color: white; border: none; font-size: 18px; font-weight: bold; 
             display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 0 10px var(--accent); cursor: pointer; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; 
+            transition: background 0.3s, box-shadow 0.3s;
         }
 
-        /* --- [5] Bubble & Others --- */
+        .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; font-size: 16px; transition: border 0.3s, box-shadow 0.3s; }
+        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; transition: background 0.3s; }
+
         .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
         .msg-row { display: flex; gap: 10px; max-width: 90%; }
         .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
@@ -84,223 +113,17 @@
         }
         .me .bubble { background: var(--bubble-me); color: white; border: none; }
         
-        /* Switch */
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(22px); }
-    </style>
-</head>
-<body>
-
-    <header>
-        <button onclick="window.goHome()">🏠</button>
-        <div class="title" id="head-title">ホーム</div>
-        <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
-    </header>
-
-    <div id="chat-area"></div>
-
-    <div class="footer" id="chat-footer">
-        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
-        <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
-        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
-    </div>
-
-    <div id="main-modal" class="modal active">
-        <div style="padding-top:20px;">
-            <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
-                <div id="home-icon-preview" class="u-icon"></div>
-                <div style="flex:1;"><b id="u-name-display">-</b><br><small id="u-id-display" style="opacity:0.5;">@id</small></div>
-                <span>👤</span>
-            </div>
-            <h3>プロジェクト</h3>
-            <div id="project-list"></div>
-            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ 新規作成</span></button>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
-                <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;"><span>コード</span></button>
-            </div>
-            <div id="p-form" style="display:none; margin-top:15px;" class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
-                <input type="text" id="p-id-input" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px;" placeholder="名前 / ID">
-                <input type="password" id="p-pw-input" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px;" placeholder="パスワード">
-                <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
-            </div>
-        </div>
-    </div>
-
-    <div id="user-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button class="close-btn" onclick="window.closeModal('user-modal')">✕</button></div>
-        <div class="card" style="text-align:center;">
-            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
-            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
-            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-            <input type="text" id="edit-name" style="width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid #ccc;" placeholder="名前">
-            <input type="password" id="edit-pw" style="width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid #ccc;" placeholder="新パスワード">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
-            <button class="btn-main" onclick="window.updateUser()"><span>保存</span></button>
-        </div>
-    </div>
-
-    <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div class="card">
-            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 コードをコピー</span></button>
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会</span></button>
-        </div>
-    </div>
-
-    <div id="viewer">
-        <div style="position:absolute; top:40px; left:20px; right:20px; display:flex; justify-content:space-between;">
-            <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
-            <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
-        </div>
-        <img id="viewer-img" src="" style="max-width:100%; max-height:100%; object-fit:contain;">
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
-        const app = initializeApp(config); const db = getDatabase(app);
-
-        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "", currentGid = null;
-        let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
-
-        window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
-        const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
-
-        window.goHome = async () => {
-            currentGid = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById('main-modal').classList.add('active');
-            document.getElementById('chat-footer').style.display = "none";
-            document.getElementById('header-set-btn').style.visibility = "hidden";
-            document.getElementById('head-title').innerText = "ホーム";
-
-            const uSnap = await get(ref(db, `v20_users/${myId}`));
-            if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
-            document.getElementById('u-name-display').innerText = myName;
-            document.getElementById('u-id-display').innerText = "@" + myId;
-            drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
-
-            const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            const list = document.getElementById('project-list'); list.innerHTML = "";
-            if(listSnap.exists()) {
-                for(let gid of Object.keys(listSnap.val())) {
-                    const snap = await get(ref(db, `v20_groups/${gid}/messages`));
-                    let unread = 0; if(snap.exists()){ const last = lastSeen[gid]||0; unread = Object.values(snap.val()).filter(m=>m.time > last && m.uid !== myId).length; }
-                    const b = document.createElement('button'); b.className = "btn-main";
-                    b.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">🔴 ${unread}</span>` : ''}`;
-                    b.onclick = () => window.enterChat(gid); list.appendChild(b);
-                }
-            }
-        };
-
-        window.enterChat = async (gid) => {
-            currentGid = gid; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById('chat-footer').style.display = "flex";
-            document.getElementById('header-set-btn').style.visibility = "visible";
-            lastSeen[gid] = Date.now(); localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
-            const gSnap = await get(ref(db, `v20_groups/${gid}`));
-            if(gSnap.exists()) document.getElementById('head-title').innerText = gSnap.val().name || gid.split('_')[0];
-            onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
-                const area = document.getElementById('chat-area'); area.innerHTML = "";
-                if(snap.exists()) Object.values(snap.val()).forEach(m => {
-                    const row = document.createElement('div'); const isMe = m.uid === myId;
-                    let content = m.text, isImg = false;
-                    if(m.type === "file") { isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName); content = isImg ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`; }
-                    row.className = `msg-row ${isMe ? 'me' : 'other'}`;
-                    row.innerHTML = `<div class="u-icon">${(m.name||"?")[0]}</div><div class="${isImg?'':'bubble'}">${content}</div>`;
-                    area.appendChild(row);
-                });
-                area.scrollTop = area.scrollHeight;
-            });
-        };
-
-        window.execAction = async () => {
-            const id = document.getElementById('p-id-input').value, pw = document.getElementById('p-pw-input').value; if(!id) return;
-            if(window.pMode === 'create') {
-                const gid = id + "_" + Math.random().toString(36).substr(2,6);
-                await set(ref(db, `v20_groups/${gid}`), { name: id, pw: pw, host: myId });
-                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
-            } else {
-                const snap = await get(ref(db, `v20_groups`)); let target = null;
-                snap.forEach(g => { if(g.val().name === id && g.val().pw === pw) target = g.key; });
-                if(target) await update(ref(db, `v20_users/${myId}/myGroups`), { [target]: true }); else alert("不明");
-            }
-            window.goHome();
-        };
-
-        window.updateUser = async () => {
-            const n = document.getElementById('edit-name').value, p = document.getElementById('edit-pw').value;
-            const up = { name: n, icon: window.tempIcon || myIcon }; if(p) up.pw = p;
-            await update(ref(db, `v20_users/${myId}`), up); location.reload();
-        };
-
-        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
-        window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
-        window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m==='create' ? '新規' : '参加'; };
-        window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
-        window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
-        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-        window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.currentViewFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
-        window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.currentViewFile.url; a.download = window.currentViewFile.name; a.click(); };
-        window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
-
-        window.onload = () => { window.toggleNeon(localStorage.getItem('neon_enabled') === 'true'); if(myId) window.goHome(); };
-    </script>
-</body>
-</html>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.0d</title>
-    <style>
-        /* --- Theme --- */
-        :root {
-            --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
-            --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30;
+        /* Typing Indicator */
+        #typing-indicator-wrapper {
+            position: fixed; bottom: 70px; left: 0; width: 100%; 
+            background: var(--header-bg); backdrop-filter: blur(15px);
+            padding: 8px 15px; display: none; align-items: center; gap: 10px;
+            border-top: 1px solid var(--border); z-index: 2400;
+            color: var(--text); font-size: 14px;
         }
-        body.neon-mode {
-            --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff;
-            --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836;
-        }
+        #typing-indicator-wrapper.active { display: flex; }
+        #typing-user-name { font-weight: bold; color: var(--neon-text-color); } /* ネオンモードで強調 */
 
-        /* --- Layout --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s; }
-        
-        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; position: relative; }
-        header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
-        .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
-
-        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 1000; }
-        .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center; }
-        
-        /* --- Inputs & Buttons --- */
-        .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; font-size: 16px; }
-        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; }
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; transition: opacity 0.2s; }
-        .btn-main:active { opacity: 0.7; }
-        
-        /* Close Button Visual Update */
-        .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; }
-
-        /* --- UI Elements --- */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
-        .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .msg-row { display: flex; gap: 10px; max-width: 90%; }
-        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .bubble { padding: 10px 15px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); line-height: 1.4; word-break: break-all; }
-        .me .bubble { background: var(--bubble-me); color: white; }
-        .img-preview { width: 100%; max-width: 250px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
-        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
 
         /* --- Viewer & Extras --- */
         #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
@@ -323,6 +146,11 @@
 
     <div id="chat-area"></div>
 
+    <div id="typing-indicator-wrapper">
+        <span id="typing-user-name"></span>
+        <span id="typing-text"></span>
+    </div>
+
     <div class="footer" id="chat-footer">
         <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
         <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
@@ -337,29 +165,20 @@
                 <div style="flex:1;"><b id="u-name-display">-</b><br><small id="u-id-display" style="opacity:0.5;">@id</small></div>
                 <span>👤</span>
             </div>
-            <h3>プロジェクト</h3>
+            
+            <h3>フレンド & チーム</h3>
             <div id="project-list"></div>
-            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ 新規作成</span></button>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
-                <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;"><span>コード</span></button>
-            </div>
-            <div id="p-form" style="display:none; margin-top:15px;" class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
-                <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
-                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード / コード">
-                <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
-            </div>
-        </div>
-    </div>
+            <button onclick="window.showFriendAddForm()" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ Add User</span></button>
 
-    <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div class="card">
-            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button>
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会する</span></button>
+            <div id="friend-add-form" style="display:none; margin-top:15px;" class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 style="margin:0;">ユーザー追加</h4><button class="close-btn" onclick="document.getElementById('friend-add-form').style.display='none'">✕</button></div>
+                <input type="text" id="add-user-id-input" class="std-input" placeholder="相手のID">
+                <input type="text" id="add-user-name-input" class="std-input" placeholder="相手の表示名（確認用）">
+                <button class="btn-main" onclick="window.sendFriendRequest()"><span>申請を送る</span></button>
+            </div>
+
+            <div id="friend-request-list"></div>
         </div>
-        <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
     </div>
 
     <div id="user-modal" class="modal">
@@ -371,16 +190,38 @@
             <input type="text" id="edit-name" class="std-input" placeholder="名前">
             <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード（任意）">
             <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
-            <button class="btn-main" onclick="window.updateUser()"><span>保存する</span></button>
+            <button class="btn-main" onclick="window.updateUser()"><span>保存</span></button>
         </div>
     </div>
 
-    <div id="viewer">
+    <div id="friend-request-detail-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>フレンド申請</h2><button class="close-btn" onclick="window.closeModal('friend-request-detail-modal')">✕</button></div>
+        <div class="card" style="text-align:center;">
+            <div id="request-user-icon" class="u-icon" style="width:80px; height:80px; margin:0 auto 15px; font-size:30px;">?</div>
+            <p style="font-size:18px; font-weight:bold;"><span id="request-user-name"></span></p>
+            <p style="opacity:0.6;">ID: <span id="request-user-id"></span></p>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn-main" style="flex:1; background:var(--danger);" onclick="window.respondToFriendRequest(false)"><span>Reject</span></button>
+                <button class="btn-main" style="flex:1; background:#34C759;" onclick="window.respondToFriendRequest(true)"><span>Approve</span></button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="settings-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
+        <div class="card">
+            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 コードをコピー</span></button>
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会</span></button>
+        </div>
+    </div>
+
+    <div id="viewer" style="z-index: 5000;">
         <div style="position:absolute; top:40px; left:20px; right:20px; display:flex; justify-content:space-between;">
             <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
             <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
         </div>
-        <img id="viewer-img" src="">
+        <img id="viewer-img" src="" style="max-width:100%; max-height:100%; object-fit:contain;">
     </div>
 
     <script type="module">
@@ -390,18 +231,22 @@
         const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
         const app = initializeApp(config); const db = getDatabase(app);
 
-        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "", currentGid = null;
+        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "";
+        let currentChatPartnerId = null; // 現在チャットしているフレンドのID
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
+        let currentRequestId = null; // 現在開いている申請の詳細ID
 
         window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
-        const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
+        const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
 
         window.goHome = async () => {
-            currentGid = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            currentChatPartnerId = null; // ホームに戻ったらチャット相手をリセット
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('main-modal').classList.add('active');
             document.getElementById('chat-footer').style.display = "none";
             document.getElementById('header-set-btn').style.visibility = "hidden";
             document.getElementById('head-title').innerText = "ホーム";
+            document.getElementById('typing-indicator-wrapper').classList.remove('active'); // 入力中表示も非表示に
 
             const uSnap = await get(ref(db, `v20_users/${myId}`));
             if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
@@ -409,50 +254,75 @@
             document.getElementById('u-id-display').innerText = "@" + myId;
             drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
 
-            const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            const list = document.getElementById('project-list'); list.innerHTML = "";
-            if(listSnap.exists()) {
-                for(let gid of Object.keys(listSnap.val())) {
-                    const unread = await calculateUnread(gid);
-                    const b = document.createElement('button'); b.className = "btn-main";
-                    b.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">🔴 ${unread}</span>` : ''}`;
-                    b.onclick = () => window.enterChat(gid);
-                    list.appendChild(b);
+            // フレンドリストの表示
+            const friendsList = document.getElementById('project-list'); // ここをフレンドリストとして使う
+            friendsList.innerHTML = "";
+            const friendSnap = await get(ref(db, `v20_users/${myId}/friends`));
+            if(friendSnap.exists()){
+                for(let friendUid of Object.keys(friendSnap.val())){
+                    const friendInfoSnap = await get(ref(db, `v20_users/${friendUid}`));
+                    if(friendInfoSnap.exists()){
+                        const friendData = friendInfoSnap.val();
+                        const b = document.createElement('button'); b.className = "btn-main";
+                        b.innerHTML = `<span>${friendData.name}</span>`;
+                        b.onclick = () => window.enterChat(friendUid, friendData.name); // フレンドとのチャットを開始
+                        friendsList.appendChild(b);
+                    }
                 }
             }
+
+            // フレンド申請リストの表示 (リアルタイム監視)
+            const reqListDiv = document.getElementById('friend-request-list');
+            reqListDiv.innerHTML = '<h4>受信した申請</h4>';
+            onValue(ref(db, `v20_users/${myId}/friendRequests`), snap => {
+                reqListDiv.innerHTML = '<h4>受信した申請</h4>';
+                if(snap.exists()){
+                    Object.keys(snap.val()).forEach(reqUid => {
+                        const reqData = snap.val()[reqUid];
+                        const requestButton = document.createElement('button');
+                        requestButton.className = "btn-main";
+                        requestButton.innerHTML = `<span>Friend Request? ${reqData.name}</span> <span class="badge">New</span>`;
+                        requestButton.onclick = () => window.openFriendRequestDetail(reqUid, reqData.name);
+                        reqListDiv.appendChild(requestButton);
+                    });
+                } else {
+                    reqListDiv.innerHTML += '<p style="opacity:0.6;">新しい申請はありません</p>';
+                }
+            });
         };
 
-        async function calculateUnread(gid) {
-            const snap = await get(ref(db, `v20_groups/${gid}/messages`));
-            if(!snap.exists()) return 0;
-            const lastTime = lastSeen[gid] || 0;
-            return Object.values(snap.val()).filter(m => m.time > lastTime && m.uid !== myId).length;
-        }
-
-        window.enterChat = async (gid) => {
-            currentGid = gid; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        // フレンドチャットの開始
+        window.enterChat = async (friendUid, friendName) => {
+            currentChatPartnerId = friendUid;
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('chat-footer').style.display = "flex";
             document.getElementById('header-set-btn').style.visibility = "visible";
-            lastSeen[gid] = Date.now(); localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
+            document.getElementById('head-title').innerText = friendName; // ヘッダーに相手の名前
+            
+            // リアルタイム入力状況の監視
+            onValue(ref(db, `v20_users/${friendUid}/typingStatus`), snap => {
+                const typingWrapper = document.getElementById('typing-indicator-wrapper');
+                const typingUserName = document.getElementById('typing-user-name');
+                const typingText = document.getElementById('typing-text');
+                
+                if(snap.exists() && snap.val().isTyping && snap.val().currentText) {
+                    typingUserName.innerText = `${friendName}:`;
+                    typingText.innerText = snap.val().currentText;
+                    typingWrapper.classList.add('active');
+                } else {
+                    typingWrapper.classList.remove('active');
+                }
+            });
 
-            const gSnap = await get(ref(db, `v20_groups/${gid}`));
-            if(gSnap.exists()) {
-                const gData = gSnap.val();
-                document.getElementById('head-title').innerText = gData.name || gid.split('_')[0];
-                document.getElementById('host-panel').style.display = (gData.host === myId) ? "block" : "none";
-            }
-
-            onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
+            // チャット履歴の表示
+            const chatKey = getChatKey(myId, friendUid);
+            onValue(ref(db, `v20_chats/${chatKey}/messages`), snap => {
                 const area = document.getElementById('chat-area'); area.innerHTML = "";
                 if(snap.exists()) {
                     Object.values(snap.val()).forEach(m => {
-                        const row = document.createElement('div');
-                        const isMe = m.uid === myId;
+                        const row = document.createElement('div'); const isMe = m.uid === myId;
                         let content = m.text, isImg = false;
-                        if(m.type === "file") {
-                            isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName);
-                            content = isImg ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
-                        }
+                        if(m.type === "file") { isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName); content = isImg ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`; }
                         row.className = `msg-row ${isMe ? 'me' : 'other'}`;
                         row.innerHTML = `<div class="u-icon">${(m.name||"?")[0]}</div><div class="${isImg?'':'bubble'}">${content}</div>`;
                         area.appendChild(row);
@@ -460,47 +330,93 @@
                     area.scrollTop = area.scrollHeight;
                 }
             });
+
+            // 既読時間の更新は不要（フレンドチャットでは未読表示はしない方針）
         };
 
-        window.execAction = async () => {
-            const id = document.getElementById('p-id-input').value, pw = document.getElementById('p-pw-input').value;
-            if(!id) return alert("入力してください");
-            if(window.pMode === 'create') {
-                const gid = id + "_" + Math.random().toString(36).substr(2, 6);
-                await set(ref(db, `v20_groups/${gid}`), { name: id, pw: pw, host: myId });
-                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
-                alert("作成しました！");
-            } else if(window.pMode === 'join') {
-                const snap = await get(ref(db, `v20_groups`));
-                let target = null;
-                snap.forEach(g => { if(g.val().name === id && g.val().pw === pw) target = g.key; });
-                if(target) { await update(ref(db, `v20_groups/${target}/requests/${myId}`), { uid: myId, name: myName }); alert("申請を送りました"); }
-                else alert("見つかりません");
+        // チャットキーを生成 (常に同じ順序になるようにソート)
+        function getChatKey(uid1, uid2) {
+            return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
+        }
+
+        // メッセージ送信
+        window.sendMessage = () => {
+            const i = document.getElementById('msg-input');
+            if(i.value && currentChatPartnerId) {
+                const chatKey = getChatKey(myId, currentChatPartnerId);
+                push(ref(db, `v20_chats/${chatKey}/messages`), { uid: myId, name: myName, text: i.value, type: "text", time: serverTimestamp() });
+                i.value = "";
             }
-            window.goHome();
+            // 入力状態もクリア
+            update(ref(db, `v20_users/${myId}/typingStatus`), { isTyping: false, currentText: '' });
         };
 
-        window.updateUser = async () => {
-            const n = document.getElementById('edit-name').value, p = document.getElementById('edit-pw').value;
-            const up = { name: n, icon: window.tempIcon || myIcon };
-            if(p) up.pw = p;
-            await update(ref(db, `v20_users/${myId}`), up);
-            alert("更新しました"); location.reload();
+        // ファイル送信
+        window.sendFile = (input) => {
+            const f = input.files[0]; if(!f || !currentChatPartnerId) return;
+            const r = new FileReader(); r.onload = (e) => {
+                const chatKey = getChatKey(myId, currentChatPartnerId);
+                push(ref(db, `v20_chats/${chatKey}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() });
+            };
+            r.readAsDataURL(f);
         };
 
-        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
-        window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
-        window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m==='create' ? '新規作成' : '参加・コード'; };
-        window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
-        window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
-        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-        window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.currentViewFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
-        window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.currentViewFile.url; a.download = window.currentViewFile.name; a.click(); };
-        window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
+        // 入力中の文字をリアルタイムで送信 (debounceで負荷軽減)
+        let typingTimeout;
+        document.getElementById('msg-input').addEventListener('input', () => {
+            const text = document.getElementById('msg-input').value;
+            if (currentChatPartnerId) {
+                update(ref(db, `v20_users/${myId}/typingStatus`), { isTyping: true, currentText: text });
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    update(ref(db, `v20_users/${myId}/typingStatus`), { isTyping: false, currentText: '' });
+                }, 1500); // 1.5秒入力がなければ停止
+            }
+        });
+        document.getElementById('msg-input').addEventListener('blur', () => {
+             if (currentChatPartnerId) {
+                clearTimeout(typingTimeout);
+                update(ref(db, `v20_users/${myId}/typingStatus`), { isTyping: false, currentText: '' });
+            }
+        });
 
-        window.onload = () => { window.toggleNeon(localStorage.getItem('neon_enabled') === 'true'); if(myId) window.goHome(); };
-    </script>
-</body>
-</html>
+        // ユーザー追加フォーム表示
+        window.showFriendAddForm = () => {
+            document.getElementById('friend-add-form').style.display = 'block';
+            document.getElementById('add-user-id-input').value = '';
+            document.getElementById('add-user-name-input').value = '';
+        };
 
+        // フレンド申請送信
+        window.sendFriendRequest = async () => {
+            const targetId = document.getElementById('add-user-id-input').value;
+            const targetName = document.getElementById('add-user-name-input').value;
+            if (!targetId || !targetName) return alert("IDと表示名を入力してください。");
+            if (targetId === myId) return alert("自分自身には申請できません。");
+
+            // 相手が存在するか確認
+            const targetUserSnap = await get(ref(db, `v20_users/${targetId}`));
+            if (!targetUserSnap.exists()) {
+                return alert("指定されたIDのユーザーは見つかりませんでした。");
+            }
+
+            // 相手のフレンド申請リストに自分の情報を追加
+            await set(ref(db, `v20_users/${targetId}/friendRequests/${myId}`), {
+                uid: myId,
+                name: myName,
+                timestamp: serverTimestamp()
+            });
+            alert(`${targetName} (${targetId}) にフレンド申請を送りました。`);
+            document.getElementById('friend-add-form').style.display = 'none';
+        };
+
+        // フレンド申請詳細モーダルを開く
+        window.openFriendRequestDetail = async (requesterUid, requesterName) => {
+            currentRequestId = requesterUid;
+            document.getElementById('request-user-id').innerText = requesterUid;
+            document.getElementById('request-user-name').innerText = requesterName;
+            
+            // 相手のアイコンを取得 (もしあれば)
+            const requesterSnap = await get(ref(db, `v20_users/${requesterUid}`));
+            if(requesterSnap.exists() && requesterSnap.val().icon) {
+                drawIcon(document.getElementById('request-user-icon'), requesterSnap.val().icon, requesterName);
