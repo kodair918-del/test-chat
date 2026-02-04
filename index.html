@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.6d</title>
+    <title>Chat-K | Ver 0.1.6.1d</title>
     <style>
+        /* --- [1] Theme & Variables --- */
         :root {
             --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
             --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30;
@@ -13,37 +14,76 @@
         body.neon-mode {
             --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff;
             --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836;
-            --border: rgba(0, 242, 255, 0.3); --neon-glow: 0 0 15px rgba(0, 242, 255, 0.3);
+            --border: rgba(0, 242, 255, 0.3); --neon-glow: 0 0 15px rgba(0, 242, 255, 0.4);
         }
 
+        /* --- [2] Layout & Scrollbar (溶け込む設定) --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: 0.3s; }
-        #chat-area, .modal { scrollbar-width: none; }
-        #chat-area::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 0; }
+        
+        #chat-area, .modal { scrollbar-width: none; -ms-overflow-style: none; }
+        #chat-area::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 0; background: transparent; }
 
-        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 1px solid var(--border); z-index: 2000; position: relative; }
+        header { 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+            background: var(--header-bg); height: 60px; display: flex; align-items: center; 
+            padding: env(safe-area-inset-top) 15px 0; border-bottom: 1px solid var(--border); 
+            z-index: 2000; position: relative; box-shadow: var(--neon-glow);
+        }
         header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
-        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; }
-        .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 1px solid var(--border); z-index: 2500; align-items: center; }
+        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 160px; display: flex; flex-direction: column; gap: 15px; }
+        .footer { 
+            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); 
+            backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); 
+            display: none; gap: 10px; border-top: 1px solid var(--border); z-index: 2500; align-items: center; 
+        }
 
+        /* --- [3] UI Components --- */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
         .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: var(--neon-glow); }
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; }
-        .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        
+        .card { 
+            background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; 
+            border: 1px solid var(--border); box-shadow: var(--neon-glow);
+        }
+        .btn-main { 
+            width: 100%; height: 50px; background: var(--accent); color: white; border: none; 
+            border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; 
+            align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px;
+        }
+        .close-btn { 
+            width: 34px; height: 34px; border-radius: 50%; background: var(--accent); 
+            color: white; border: none; font-size: 18px; font-weight: bold; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+        }
         .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; }
-        #typing-box { padding: 5px 15px; font-size: 13px; color: var(--accent); font-weight: bold; height: 20px; opacity: 0; transition: 0.3s; }
+        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.1); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; }
+
+        /* Typing Display */
+        #typing-box { padding: 5px 15px; font-size: 13px; color: var(--accent); font-weight: bold; height: 20px; opacity: 0; transition: 0.3s; margin-bottom: 5px; }
         #typing-box.active { opacity: 1; }
 
+        /* Bubbles & Icons */
         .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
         .msg-row { display: flex; gap: 10px; max-width: 90%; }
         .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
         .bubble { padding: 10px 15px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); border: 0.5px solid var(--border); }
         .me .bubble { background: var(--bubble-me); color: white; border: none; }
-        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+        .img-preview { max-width: 200px; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+
+        /* Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* Viewer */
+        #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
+        .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
     </style>
 </head>
 <body>
@@ -85,8 +125,8 @@
             </div>
 
             <div id="p-form" style="display:none; margin-top:15px;" class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title">フォーム</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
-                <input type="text" id="p-id-input" class="std-input" placeholder="ID / 名前">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
+                <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
                 <input type="text" id="p-pw-input" class="std-input" placeholder="パスワード / メモ">
                 <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
             </div>
@@ -96,6 +136,7 @@
     <div id="request-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center;"><h2>フレンド申請</h2><button class="close-btn" onclick="window.closeModal('request-modal')">✕</button></div>
         <div class="card" style="text-align:center;">
+            <div id="req-icon" class="u-icon" style="width:80px; height:80px; margin:0 auto 15px; font-size:30px;"></div>
             <h2 id="req-user-name">-</h2>
             <p id="req-user-id" style="opacity:0.5;">@id</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
@@ -119,11 +160,19 @@
     </div>
 
     <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>チーム設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
         <div class="card">
-            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 コードをコピー</span></button>
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会</span></button>
+            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button>
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 チームを抜ける</span></button>
         </div>
+    </div>
+
+    <div id="viewer">
+        <div style="position:absolute; top:40px; left:20px; right:20px; display:flex; justify-content:space-between;">
+            <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
+            <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
+        </div>
+        <img id="viewer-img" src="" style="max-width:100%; max-height:100%; object-fit:contain;">
     </div>
 
     <script type="module">
@@ -133,14 +182,14 @@
         const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
         const app = initializeApp(config); const db = getDatabase(app);
 
-        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "", currentTargetId = null;
-        let typingTimeout;
+        let myId = localStorage.getItem('chat_uid'), myName = localStorage.getItem('chat_name'), myIcon = "", currentTid = null;
+        let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}"), typingTimeout;
 
         window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
         const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
 
         window.goHome = async () => {
-            currentTargetId = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            currentTid = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('main-modal').classList.add('active');
             document.getElementById('chat-footer').style.display = "none";
             document.getElementById('header-set-btn').style.visibility = "hidden";
@@ -152,7 +201,7 @@
             document.getElementById('u-id-display').innerText = "@" + myId;
             drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
 
-            // チームリスト表示
+            // チームリスト
             const pList = document.getElementById('project-list'); pList.innerHTML = "";
             const gSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
             if(gSnap.exists()) Object.keys(gSnap.val()).forEach(gid => {
@@ -162,7 +211,7 @@
                 pList.appendChild(b);
             });
 
-            // フレンドリスト表示
+            // フレンドリスト
             const fList = document.getElementById('friend-list'); fList.innerHTML = "";
             const fSnap = await get(ref(db, `v20_users/${myId}/friends`));
             if(fSnap.exists()) {
@@ -175,7 +224,7 @@
                 }
             }
 
-            // 申請通知
+            // 申請監視
             onValue(ref(db, `v20_users/${myId}/friendRequests`), snap => {
                 const rDiv = document.getElementById('request-list'); rDiv.innerHTML = "";
                 if(snap.exists()) Object.keys(snap.val()).forEach(rid => {
@@ -188,39 +237,37 @@
         };
 
         window.enterChat = (id, title, isGroup) => {
-            currentTargetId = id;
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            currentTid = id; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('chat-footer').style.display = "flex";
             document.getElementById('header-set-btn').style.visibility = isGroup ? "visible" : "hidden";
             document.getElementById('head-title').innerText = title;
 
             const chatPath = isGroup ? `v20_groups/${id}/messages` : `v20_chats/${myId < id ? myId+'_'+id : id+'_'+myId}/messages`;
-            const typePath = isGroup ? `v20_groups/${id}/typing/${myId}` : `v20_chats/${myId < id ? myId+'_'+id : id+'_'+myId}/typing/${myId}`;
             const watchTypePath = isGroup ? `v20_groups/${id}/typing` : `v20_chats/${myId < id ? myId+'_'+id : id+'_'+myId}/typing`;
 
             onValue(ref(db, chatPath), snap => {
                 const area = document.getElementById('chat-area'); area.innerHTML = "";
                 if(snap.exists()) Object.values(snap.val()).forEach(m => {
                     const row = document.createElement('div'); row.className = `msg-row ${m.uid === myId ? 'me' : 'other'}`;
-                    row.innerHTML = `<div class="u-icon">${m.name[0]}</div><div class="bubble">${m.text}</div>`;
+                    let content = m.text;
+                    if(m.type === "file") content = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName) ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
+                    row.innerHTML = `<div class="u-icon">${m.name[0]}</div><div class="${m.type==='file'&&content.includes('img')?'':'bubble'}">${content}</div>`;
                     area.appendChild(row);
                 });
                 area.scrollTop = area.scrollHeight;
             });
 
             onValue(ref(db, watchTypePath), snap => {
-                const box = document.getElementById('typing-box'); let someoneTyping = false;
-                if(snap.exists()) Object.keys(snap.val()).forEach(uid => { if(uid !== myId && snap.val()[uid]) someoneTyping = true; });
-                box.classList.toggle('active', someoneTyping);
+                const box = document.getElementById('typing-box'); let someone = false;
+                if(snap.exists()) Object.keys(snap.val()).forEach(uid => { if(uid !== myId && snap.val()[uid]) someone = true; });
+                box.classList.toggle('active', someone);
             });
         };
 
         window.execAction = async () => {
             const id = document.getElementById('p-id-input').value, pw = document.getElementById('p-pw-input').value;
-            if(window.pMode === 'friend') {
-                await set(ref(db, `v20_users/${id}/friendRequests/${myId}`), { name: myName });
-                alert("申請送信");
-            } else if(window.pMode === 'create') {
+            if(window.pMode === 'friend') await set(ref(db, `v20_users/${id}/friendRequests/${myId}`), { name: myName });
+            else if(window.pMode === 'create') {
                 const gid = id + "_" + Math.random().toString(36).substr(2,6);
                 await set(ref(db, `v20_groups/${gid}`), { name: id, pw: pw, host: myId });
                 await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
@@ -228,11 +275,39 @@
                 const snap = await get(ref(db, `v20_groups`)); let target = null;
                 snap.forEach(g => { if(g.val().name === id && g.val().pw === pw) target = g.key; });
                 if(target) await update(ref(db, `v20_users/${myId}/myGroups`), { [target]: true });
+            } else if(window.pMode === 'token') {
+                const snap = await get(ref(db, `v20_groups/${id}`));
+                if(snap.exists()) await update(ref(db, `v20_users/${myId}/myGroups`), { [id]: true });
             }
             window.goHome();
         };
 
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m; };
+        window.sendMessage = () => {
+            const i = document.getElementById('msg-input'); if(!i.value || !currentTid) return;
+            const isGroup = currentTid.includes('_');
+            const path = isGroup ? `v20_groups/${currentTid}/messages` : `v20_chats/${myId < currentTid ? myId+'_'+currentTid : currentTid+'_'+myId}/messages`;
+            push(ref(db, path), { uid: myId, name: myName, text: i.value, time: serverTimestamp(), type: "text" });
+            i.value = "";
+        };
+
+        window.sendFile = (input) => {
+            const f = input.files[0]; if(!f || !currentTid) return;
+            const r = new FileReader(); r.onload = (e) => {
+                const isGroup = currentTid.includes('_');
+                const path = isGroup ? `v20_groups/${currentTid}/messages` : `v20_chats/${myId < currentTid ? myId+'_'+currentTid : currentTid+'_'+myId}/messages`;
+                push(ref(db, path), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() });
+            }; r.readAsDataURL(f);
+        };
+
+        window.handleTyping = () => {
+            if(!currentTid) return;
+            const isGroup = currentTid.includes('_');
+            const path = isGroup ? `v20_groups/${currentTid}/typing/${myId}` : `v20_chats/${myId < currentTid ? myId+'_'+currentTid : currentTid+'_'+myId}/typing/${myId}`;
+            set(ref(db, path), true);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => { set(ref(db, path), false); }, 2000);
+        };
+
         window.answerRequest = async (isApprove) => {
             const rid = window.activeReqId;
             if(isApprove) {
@@ -243,27 +318,18 @@
             window.closeModal('request-modal'); window.goHome();
         };
 
-        window.handleTyping = () => {
-            if(!currentTargetId) return;
-            const isGroup = currentTargetId.includes('_');
-            const chatID = isGroup ? currentTargetId : (myId < currentTargetId ? `${myId}_${currentTargetId}` : `${currentTargetId}_${myId}`);
-            const path = isGroup ? `v20_groups/${chatID}/typing/${myId}` : `v20_chats/${chatID}/typing/${myId}`;
-            set(ref(db, path), true);
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => { set(ref(db, path), false); }, 2000);
-        };
-
-        window.sendMessage = () => {
-            const i = document.getElementById('msg-input'); if(!i.value || !currentTargetId) return;
-            const isGroup = currentTargetId.includes('_');
-            const path = isGroup ? `v20_groups/${currentTargetId}/messages` : `v20_chats/${myId < currentTargetId ? myId+'_'+currentTargetId : currentTargetId+'_'+myId}/messages`;
-            push(ref(db, path), { uid: myId, name: myName, text: i.value, time: serverTimestamp() });
-            i.value = "";
-        };
-
-        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
+        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m; };
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
+        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.vFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
+        window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.vFile.url; a.download = window.vFile.name; a.click(); };
+        window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
+        window.copyInviteToken = () => { navigator.clipboard.writeText(currentTid); alert("コードをコピーしました"); };
+        window.leaveGroup = async () => { if(confirm("退出しますか？")) { await remove(ref(db, `v20_users/${myId}/myGroups/${currentTid}`)); window.goHome(); } };
+        window.previewIcon = (i) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(i.files[0]); };
+        window.updateUser = async () => { const n = document.getElementById('edit-name').value; await update(ref(db, `v20_users/${myId}`), { name: n, icon: window.tempIcon || myIcon }); location.reload(); };
+
         window.onload = () => { window.toggleNeon(localStorage.getItem('neon_enabled') === 'true'); if(myId) window.goHome(); };
     </script>
 </body>
