@@ -381,15 +381,49 @@
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
         window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m==='create' ? '新規' : '参加'; };
-        window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
+        // --- [修正版] メッセージ送信関数 ---
+        window.sendMessage = () => {
+            const i = document.getElementById('msg-input'); 
+            if(!i.value || !currentGid) return;
+
+            // 1. 送信先のパス（住所）を決定する
+            // IDに "_direct_" が含まれているか、"_" が一つもない場合は個人チャットと判定
+            const isGroup = currentGid.includes('_') && !currentGid.includes('_direct_');
+            
+            let sendPath = "";
+            if (isGroup) {
+                sendPath = `v20_groups/${currentGid}/messages`;
+            } else {
+                // 個人チャットの場合。IDが未結合（UIDのみ）なら結合する
+                const cid = currentGid.includes('_direct_') ? currentGid : getChatId(myId, currentGid);
+                sendPath = `v20_chats/${cid}/messages`;
+            }
+
+            // 2. 決定したパス（sendPath）に対して書き込む
+            push(ref(db, sendPath), { 
+                uid: myId, 
+                name: myName, 
+                text: i.value, 
+                type: "text", 
+                time: serverTimestamp() 
+            });
+
+            i.value = ""; // 入力欄を空にする
+        };
         window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
         window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.currentViewFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
         window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.currentViewFile.url; a.download = window.currentViewFile.name; a.click(); };
         window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
 
-        window.onload = () => { window.toggleNeon(localStorage.getItem('neon_enabled') === 'true'); if(myId) window.goHome(); };
-        startFriendMonitors();
+        window.onload = () => { 
+            window.toggleNeon(localStorage.getItem('neon_enabled') === 'true'); 
+            if(myId) {
+                window.goHome();
+                // ログインしている場合のみ、フレンド監視を開始する
+                startFriendMonitors(); 
+            }
+        };
     </script>
 </body>
 </html>
