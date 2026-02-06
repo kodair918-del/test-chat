@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Veああr 0.1.1d</title>
+    <title>Chat-K | Ver 0.2.0</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -32,7 +32,6 @@
         .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; transition: opacity 0.2s; }
         .btn-main:active { opacity: 0.7; }
         
-        /* Close Button Visual Update */
         .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; }
 
         /* --- UI Elements --- */
@@ -47,7 +46,6 @@
         .img-preview { width: 100%; max-width: 250px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
         .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
 
-        /* --- Viewer & Extras --- */
         #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
         .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
@@ -75,7 +73,7 @@
         <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
     </div>
 
-    <div id="main-modal" class="modal active">
+    <div id="main-modal" class="modal">
         <div style="padding-top:20px;">
             <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
                 <div id="home-icon-preview" class="u-icon"></div>
@@ -98,12 +96,22 @@
         </div>
     </div>
 
+    <div id="auth-overlay" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
+        <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
+            <h1 style="margin-bottom:20px;">Chat-K</h1>
+            <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
+            <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
+                <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;"><span>新規登録</span></button>
+                <button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);"><span>ログイン</span></button>
+            </div>
+            <p style="font-size:11px; opacity:0.4; margin-top:20px;">※保存（実行）はボタン操作のみ。Enterキーは無効です。</p>
+        </div>
+    </div>
+
     <div id="settings-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div class="card">
-            <button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button>
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会する</span></button>
-        </div>
+        <div class="card"><button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button><button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会する</span></button></div>
         <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
     </div>
 
@@ -125,7 +133,7 @@
             <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
             <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
         </div>
-        <img id="viewer-img" src="">
+        <img id="viewer-img" src="" style="max-width:90%; max-height:80%;">
     </div>
 
     <script type="module">
@@ -136,144 +144,68 @@
         const app = initializeApp(config); const db = getDatabase(app);
 
         let myId = localStorage.getItem('chat_uid');
-        // --- ログイン認証処理 ---
-// --- 修正版：ログイン認証処理 ---
-// --- 最終修正版：パスワード不要の認証処理 ---
-// --- 新規登録とログインを分離した認証システム ---
-
-// 1. 新規登録：世界に一つだけのIDなら作成可能
-// --- 確実にボタンが反応するように window に登録する ---
-
-window.execRegister = async () => {
-    const id = document.getElementById('auth-id').value;
-    const pw = document.getElementById('auth-pw').value;
-    if (!id) return alert("ユーザーIDを入力してください");
-
-    try {
-        const userRef = ref(db, `v20_users/${id}`);
-        const snap = await get(userRef);
-
-        if (snap.exists()) {
-            alert("そのIDはすでに存在します。");
-        } else {
-            await set(userRef, { name: id, pw: pw, icon: "" });
-            window.saveSession(id, id);
-        }
-    } catch (e) { alert("エラーが発生しました: " + e.message); }
-};
-
-window.execLogin = async () => {
-    const id = document.getElementById('auth-id').value;
-    const pw = document.getElementById('auth-pw').value;
-    if (!id) return alert("ユーザーIDを入力してください");
-
-    try {
-        const userRef = ref(db, `v20_users/${id}`);
-        const snap = await get(userRef);
-
-        if (!snap.exists()) {
-            alert("IDが見つかりません。新規登録してください。");
-        } else {
-            if (snap.val().pw === pw) {
-                window.saveSession(id, snap.val().name);
-            } else {
-                alert("パスワードが違います。");
-            }
-        }
-    } catch (e) { alert("エラーが発生しました: " + e.message); }
-};
-
-window.saveSession = (id, name) => {
-    localStorage.setItem('chat_uid', id);
-    localStorage.setItem('chat_name', name);
-    document.getElementById('auth-overlay').style.display = 'none';
-    window.goHome();
-};
-
-// 2. ログイン：既存のIDとパスワードが一致するか確認
-window.execLogin = async () => {
-    const id = document.getElementById('auth-id').value;
-    const pw = document.getElementById('auth-pw').value;
-    if (!id) return alert("ユーザーIDを入力してください");
-
-    const userRef = ref(db, `v20_users/${id}`);
-    const snap = await get(userRef);
-
-    if (!snap.exists()) {
-        alert("そのIDは登録されていません。新規登録してください。");
-    } else {
-        const userData = snap.val();
-        if (userData.pw === pw) {
-            saveSession(id, userData.name);
-        } else {
-            alert("パスワードが違います。");
-        }
-    }
-};
-
-function saveSession(id, name) {
-    localStorage.setItem('chat_uid', id);
-    localStorage.setItem('chat_name', name);
-    document.getElementById('auth-overlay').style.display = 'none';
-    window.goHome();
-}
-
-function saveSession(id, name) {
-    // ローカルストレージにデータを物理保存
-    localStorage.setItem('chat_uid', id);
-    localStorage.setItem('chat_name', name);
-    myId = id;
-    myName = name;
-    
-    document.getElementById('auth-overlay').style.display = 'none';
-    window.goHome(); // メイン画面へ
-}
-
-// キーボード操作（Enterなど）による意図しない送信を無効化
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        return false;
-    }
-});
+        let myName = localStorage.getItem('chat_name');
+        let myIcon = "";
+        let currentGid = null;
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
-        // --- ログイン・登録処理 ---
-    window.execLogin = async () => {
-        const id = document.getElementById('login-id').value;
-        const pw = document.getElementById('login-pw').value;
-        if (!id || !pw) return alert("IDとパスワードを入力してください");
 
-        const userRef = ref(db, `v20_users/${id}`);
-        const snap = await get(userRef);
+        // --- 認証システム（ここに整理して一本化） ---
+        window.saveSession = (id, name) => {
+            localStorage.setItem('chat_uid', id);
+            localStorage.setItem('chat_name', name);
+            myId = id; myName = name;
+            document.getElementById('auth-overlay').style.display = 'none';
+            window.goHome();
+        };
 
-        if (snap.exists()) {
-            // 既存ユーザー：パスワード確認
-            if (snap.val().pw === pw) {
-                loginSuccess(id, snap.val().name);
-            } else {
-                alert("パスワードが違います");
-            }
-        } else {
-            // 新規ユーザー：登録
-            await set(userRef, { name: id, pw: pw, icon: "" });
-            loginSuccess(id, id);
-            alert("新規登録しました");
-        }
-    };
-    
-    function loginSuccess(id, name) {
-        myId = id;
-        myName = name;
-        localStorage.setItem('chat_uid', id);
-        localStorage.setItem('chat_name', name);
-    document.getElementById('login-modal').style.display = 'none';
-    window.goHome();
-    }
+        window.execRegister = async () => {
+            const id = document.getElementById('auth-id').value;
+            const pw = document.getElementById('auth-pw').value;
+            if (!id || !pw) return alert("IDとパスワードを入力してください");
+            try {
+                const userRef = ref(db, `v20_users/${id}`);
+                const snap = await get(userRef);
+                if (snap.exists()) {
+                    alert("そのIDはすでに存在します。別のIDにするかログインしてください。");
+                } else {
+                    await set(userRef, { name: id, pw: pw, icon: "" });
+                    window.saveSession(id, id);
+                    alert("新規登録が完了しました！");
+                }
+            } catch (e) { alert("エラー: " + e.message); }
+        };
+
+        window.execLogin = async () => {
+            const id = document.getElementById('auth-id').value;
+            const pw = document.getElementById('auth-pw').value;
+            if (!id || !pw) return alert("IDとパスワードを入力してください");
+            try {
+                const userRef = ref(db, `v20_users/${id}`);
+                const snap = await get(userRef);
+                if (!snap.exists()) {
+                    alert("IDが見つかりません。新規登録してください。");
+                } else {
+                    if (snap.val().pw === pw) {
+                        window.saveSession(id, snap.val().name);
+                    } else {
+                        alert("パスワードが違います。");
+                    }
+                }
+            } catch (e) { alert("エラー: " + e.message); }
+        };
+
+        // Enterキーを無効化（ご指示通り）
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); return false; }
+        });
+
+        // --- アプリ機能 ---
         window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
         const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
 
         window.goHome = async () => {
-            currentGid = null; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            currentGid = null; 
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
             document.getElementById('main-modal').classList.add('active');
             document.getElementById('chat-footer').style.display = "none";
             document.getElementById('header-set-btn').style.visibility = "hidden";
@@ -376,70 +308,14 @@ document.addEventListener('keydown', (e) => {
         window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
 
         window.onload = () => {
-    window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
-    
-    // localStorageにデータがない（ログインしていない）場合
-    if (!localStorage.getItem('chat_uid')) {
-        document.getElementById('auth-overlay').style.display = 'flex';
-        document.getElementById('main-modal').classList.remove('active'); // メインを隠す
-    } else {
-        window.goHome();
-    }
-};
+            window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
+            if (!localStorage.getItem('chat_uid')) {
+                document.getElementById('auth-overlay').style.display = 'flex';
+                document.getElementById('main-modal').classList.remove('active');
+            } else {
+                window.goHome();
+            }
+        };
     </script>
-<div id="login-modal" class="modal" style="display:block; background:var(--bg); z-index:9999;">
-    <div style="padding: 100px 20px;">
-        <h2 style="text-align:center;">Chat-K Login</h2>
-        <div class="card">
-            <input type="text" id="login-id" class="std-input" placeholder="ユーザーID">
-            <input type="password" id="login-pw" class="std-input" placeholder="パスワード">
-            <button class="btn-main" onclick="window.execLogin()"><span>ログイン / 新規登録</span></button>
-        </div>
-    </div>
-</div>
-<div id="auth-overlay" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
-    <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
-        <h1 style="margin-bottom:10px; font-size:24px;">Chat-K Login</h1>
-        <p style="opacity:0.6; margin-bottom:30px; font-size:14px;">ユーザーデータが見つかりません</p>
-        
-        <div style="text-align:left;">
-            <label style="font-size:12px; font-weight:bold; margin-left:5px;">USER ID</label>
-            <input type="text" id="auth-id" class="std-input" placeholder="IDを入力..." autocomplete="off">
-            
-            <label style="font-size:12px; font-weight:bold; margin-left:5px;">PASSWORD</label>
-            <input type="password" id="auth-pw" class="std-input" placeholder="パスワードを入力..." autocomplete="off">
-        </div>
-
-        <button class="btn-main" onclick="window.execAuth()" style="margin-top:20px; background:var(--accent);">
-            <span>認証して開始</span>
-            <span>→</span>
-        </button>
-        <p style="font-size:11px; opacity:0.4; margin-top:20px;">※キーボードのEnterは無効です。ボタンを押してください。</p>
-    </div>
-</div>
-<div id="auth-overlay" class="modal" style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
-    <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
-        <h1 style="margin-bottom:20px;">Chat-K</h1>
-        
-        <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
-        <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
-            <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;">
-                <span>新規登録</span>
-            </button>
-            <button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);">
-                <span>ログイン</span>
-            </button>
-        </div>
-        
-        <p style="font-size:11px; opacity:0.4; margin-top:20px;">※キーボードのEnterは無効です。ボタンを操作してください。</p>
-    </div>
-</div>
 </body>
 </html>
-
-
-
-
-
