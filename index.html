@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.0d</title>
+    <title>Chat-K | Ver 0.1.1d</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -139,25 +139,54 @@
         // --- ログイン認証処理 ---
 // --- 修正版：ログイン認証処理 ---
 // --- 最終修正版：パスワード不要の認証処理 ---
-window.execAuth = async () => {
-    const id = document.getElementById('auth-id').value;
-    // pw入力欄は無視、または空として扱う
+// --- 新規登録とログインを分離した認証システム ---
 
+// 1. 新規登録：世界に一つだけのIDなら作成可能
+window.execRegister = async () => {
+    const id = document.getElementById('auth-id').value;
+    const pw = document.getElementById('auth-pw').value;
     if (!id) return alert("ユーザーIDを入力してください");
 
     const userRef = ref(db, `v20_users/${id}`);
     const snap = await get(userRef);
 
     if (snap.exists()) {
-        // IDが存在すれば、パスワード不問でログイン
-        saveSession(id, snap.val().name);
+        alert("そのIDはすでに世界に存在します。別のIDにするか、ログインしてください。");
     } else {
-        // 存在しなければ新規作成（パスワードは空で登録）
-        await set(userRef, { name: id, pw: "", icon: "" });
+        // 世界に一つだけなので登録実行
+        await set(userRef, { name: id, pw: pw, icon: "" });
         saveSession(id, id);
-        alert("新規ユーザーとして開始します");
+        alert("世界に一つだけのIDで登録完了しました。");
     }
 };
+
+// 2. ログイン：既存のIDとパスワードが一致するか確認
+window.execLogin = async () => {
+    const id = document.getElementById('auth-id').value;
+    const pw = document.getElementById('auth-pw').value;
+    if (!id) return alert("ユーザーIDを入力してください");
+
+    const userRef = ref(db, `v20_users/${id}`);
+    const snap = await get(userRef);
+
+    if (!snap.exists()) {
+        alert("そのIDは登録されていません。新規登録してください。");
+    } else {
+        const userData = snap.val();
+        if (userData.pw === pw) {
+            saveSession(id, userData.name);
+        } else {
+            alert("パスワードが違います。");
+        }
+    }
+};
+
+function saveSession(id, name) {
+    localStorage.setItem('chat_uid', id);
+    localStorage.setItem('chat_name', name);
+    document.getElementById('auth-overlay').style.display = 'none';
+    window.goHome();
+}
 
 function saveSession(id, name) {
     // ローカルストレージにデータを物理保存
@@ -358,7 +387,27 @@ document.addEventListener('keydown', (e) => {
         <p style="font-size:11px; opacity:0.4; margin-top:20px;">※キーボードのEnterは無効です。ボタンを押してください。</p>
     </div>
 </div>
+<div id="auth-overlay" class="modal" style="display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
+    <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
+        <h1 style="margin-bottom:20px;">Chat-K</h1>
+        
+        <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
+        <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
+            <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;">
+                <span>新規登録</span>
+            </button>
+            <button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);">
+                <span>ログイン</span>
+            </button>
+        </div>
+        
+        <p style="font-size:11px; opacity:0.4; margin-top:20px;">※キーボードのEnterは無効です。ボタンを操作してください。</p>
+    </div>
+</div>
 </body>
 </html>
+
 
 
