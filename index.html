@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.1.0d</title>
+    <title>Chat-K | Ver 0.0.0d</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -140,25 +140,23 @@
 // --- 修正版：ログイン認証処理 ---
 // --- 最終修正版：パスワード不要の認証処理 ---
 window.execAuth = async () => {
-    const id = document.getElementById('auth-id').value;
-    // pw入力欄は無視、または空として扱う
-
+    const id = document.getElementById('auth-id').value; // IDだけ取得
     if (!id) return alert("ユーザーIDを入力してください");
 
     const userRef = ref(db, `v20_users/${id}`);
     const snap = await get(userRef);
 
     if (snap.exists()) {
-        // IDが存在すれば、パスワード不問でログイン
+        // すでにデータがある場合：パスワードを確認せずにログイン
         saveSession(id, snap.val().name);
     } else {
-        // 存在しなければ新規作成（パスワードは空で登録）
+        // データがない場合：新しく作る
         await set(userRef, { name: id, pw: "", icon: "" });
         saveSession(id, id);
-        alert("新規ユーザーとして開始します");
     }
 };
-
+// キーボードのEnterキーを物理的に無効化する
+document.addEventListener('keydown', e => { if(e.key==='Enter') e.preventDefault(); });
 function saveSession(id, name) {
     // ローカルストレージにデータを物理保存
     localStorage.setItem('chat_uid', id);
@@ -281,7 +279,7 @@ document.addEventListener('keydown', (e) => {
 
         window.execAction = async () => {
             const id = document.getElementById('p-id-input').value, pw = document.getElementById('p-pw-input').value;
-            if(!id) return alert("入力してください");
+            if(!id) return alert("名前（ID）を入力してください");
             if(window.pMode === 'create') {
                 const gid = id + "_" + Math.random().toString(36).substr(2, 6);
                 await set(ref(db, `v20_groups/${gid}`), { name: id, pw: pw, host: myId });
@@ -360,5 +358,6 @@ document.addEventListener('keydown', (e) => {
 </div>
 </body>
 </html>
+
 
 
