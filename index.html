@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.0</title>
+    <title>Chat-K | Ver 0.2.1</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -121,10 +121,18 @@
             <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
             <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
             <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
+            
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">表示名</label>
             <input type="text" id="edit-name" class="std-input" placeholder="名前">
-            <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード（任意）">
+            
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">パスワード変更（任意）</label>
+            <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード">
+            
             <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
-            <button class="btn-main" onclick="window.updateUser()"><span>保存する</span></button>
+            
+            <button class="btn-main" onclick="window.updateUser()"><span>設定を保存する</span></button>
+            <button class="btn-main" style="background:#8E8E93; margin-top:20px;" onclick="window.logout()"><span>ログアウト</span></button>
+            <button class="btn-main" style="background:var(--danger); margin-top:10px;" onclick="window.deleteAccount()"><span>アカウントを完全に削除</span></button>
         </div>
     </div>
 
@@ -295,7 +303,43 @@
             await update(ref(db, `v20_users/${myId}`), up);
             alert("更新しました"); location.reload();
         };
+        // --- ログアウト処理 ---
+window.logout = () => {
+    if (!confirm("ログアウトしますか？")) return;
+    localStorage.clear();
+    location.reload();
+};
 
+// --- アカウント削除（全チーム脱退後に削除）処理 ---
+window.deleteAccount = async () => {
+        const check = confirm("本当にアカウントを削除しますか？\nこの操作は取り消せません。");
+        if (!check) return;
+
+        try {
+            // 1. 参加中のグループ一覧を取得
+            const myGroupsSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
+        
+            if (myGroupsSnap.exists()) {
+                const groups = Object.keys(myGroupsSnap.val());
+                // 2. 各グループのデータから自分の形跡（リクエスト等）を削除
+                for (const gid of groups) {
+                    await remove(ref(db, `v20_groups/${gid}/requests/${myId}`));
+                }
+            }
+
+            // 3. ユーザーデータ本体を削除（IDを実質NULLにする処理）
+            await remove(ref(db, `v20_users/${myId}`));
+
+            alert("すべてのアカウントデータを削除しました。");
+        
+            // 4. ローカルストレージを掃除してリロード
+            localStorage.clear();
+            location.reload();
+    
+        } catch (e) {
+            alert("削除中にエラーが発生しました: " + e.message);
+        }
+    };
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
@@ -319,3 +363,4 @@
     </script>
 </body>
 </html>
+
