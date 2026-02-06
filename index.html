@@ -12,6 +12,37 @@
 
     // --- 修正：IDがない場合に新規発行する処理を追加 ---
     let myId = localStorage.getItem('chat_uid');
+    // --- ログイン・登録処理 ---
+    window.execLogin = async () => {
+        const id = document.getElementById('login-id').value;
+        const pw = document.getElementById('login-pw').value;
+        if (!id || !pw) return alert("IDとパスワードを入力してください");
+        const userRef = ref(db, `v20_users/${id}`);
+        const snap = await get(userRef);
+
+        if (snap.exists()) {
+            // 既存ユーザー：パスワード確認
+            if (snap.val().pw === pw) {
+                loginSuccess(id, snap.val().name);
+            } else {
+                alert("パスワードが違います");
+            }
+        } else {
+            // 新規ユーザー：登録
+            await set(userRef, { name: id, pw: pw, icon: "" });
+            loginSuccess(id, id);
+            alert("新規登録しました");
+        }
+    };
+
+    function loginSuccess(id, name) {
+        myId = id;
+        myName = name;
+        localStorage.setItem('chat_uid', id);
+        localStorage.setItem('chat_name', name);
+        document.getElementById('login-modal').style.display = 'none';
+        window.goHome();
+    }
     let myName = localStorage.getItem('chat_name') || "新規ユーザー";
     let myIcon = "", currentGid = null;
     let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
@@ -72,3 +103,4 @@
         checkUserAuth(); // window.goHomeの代わりにこれを呼ぶ
     };
 </script>
+
