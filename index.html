@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.2</title>
+    <title>Chat-K | Ver 0.2.3</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -86,11 +86,11 @@
             <div style="margin-top:10px;">
                 <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
             </div>
-            </div>
+            
             <div id="p-form" style="display:none; margin-top:15px;" class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
                 <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
-                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード / コード">
+                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード">
                 <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
             </div>
         </div>
@@ -111,7 +111,17 @@
 
     <div id="settings-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
+        
+        <div class="card">
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
+                <span>🚪 グループを退会する</span>
+            </button>
+        </div>
+
+        <div id="host-panel" style="display:none;" class="card">
+            <h3 style="color:var(--accent);">👑 管理者パネル</h3>
+            <div id="req-list"></div>
+        </div>
     </div>
 
     <div id="user-modal" class="modal">
@@ -156,7 +166,7 @@
         let currentGid = null;
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
 
-        // --- 認証システム（ここに整理して一本化） ---
+        // --- 認証システム ---
         window.saveSession = (id, name) => {
             localStorage.setItem('chat_uid', id);
             localStorage.setItem('chat_name', name);
@@ -201,7 +211,7 @@
             } catch (e) { alert("エラー: " + e.message); }
         };
 
-        // Enterキーを無効化（ご指示通り）
+        // Enterキーを無効化
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); return false; }
         });
@@ -302,52 +312,62 @@
             await update(ref(db, `v20_users/${myId}`), up);
             alert("更新しました"); location.reload();
         };
+
         // --- ログアウト処理 ---
-window.logout = () => {
-    if (!confirm("ログアウトしますか？")) return;
-    localStorage.clear();
-    location.reload();
-};
-
-// --- アカウント削除（全チーム脱退後に削除）処理 ---
-window.deleteAccount = async () => {
-        const check = confirm("本当にアカウントを削除しますか？\nこの操作は取り消せません。");
-        if (!check) return;
-
-        try {
-            // 1. 参加中のグループ一覧を取得
-            const myGroupsSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-        
-            if (myGroupsSnap.exists()) {
-                const groups = Object.keys(myGroupsSnap.val());
-                // 2. 各グループのデータから自分の形跡（リクエスト等）を削除
-                for (const gid of groups) {
-                    await remove(ref(db, `v20_groups/${gid}/requests/${myId}`));
-                }
-            }
-
-            // 3. ユーザーデータ本体を削除（IDを実質NULLにする処理）
-            await remove(ref(db, `v20_users/${myId}`));
-
-            alert("すべてのアカウントデータを削除しました。");
-        
-            // 4. ローカルストレージを掃除してリロード
+        window.logout = () => {
+            if (!confirm("ログアウトしますか？")) return;
             localStorage.clear();
             location.reload();
-    
-        } catch (e) {
-            alert("削除中にエラーが発生しました: " + e.message);
-        }
-    };
+        };
+
+        // --- 退会処理（復活！） ---
+        window.leaveGroup = async () => {
+            if(!currentGid) return;
+            if(!confirm("このグループを退会しますか？\n（メッセージ履歴は見られなくなります）")) return;
+
+            try {
+                // 自分の参加リストから削除
+                await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
+                // グループ側のリクエスト/メンバーからも自分を削除
+                await remove(ref(db, `v20_groups/${currentGid}/requests/${myId}`));
+
+                alert("退会しました");
+                window.goHome();
+            } catch (e) {
+                alert("エラーが発生しました: " + e.message);
+            }
+        };
+
+        // --- アカウント削除 ---
+        window.deleteAccount = async () => {
+            const check = confirm("本当にアカウントを削除しますか？\nこの操作は取り消せません。");
+            if (!check) return;
+
+            try {
+                const myGroupsSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
+                if (myGroupsSnap.exists()) {
+                    const groups = Object.keys(myGroupsSnap.val());
+                    for (const gid of groups) {
+                        await remove(ref(db, `v20_groups/${gid}/requests/${myId}`));
+                    }
+                }
+                await remove(ref(db, `v20_users/${myId}`));
+                alert("すべてのアカウントデータを削除しました。");
+                localStorage.clear();
+                location.reload();
+            } catch (e) { alert("削除中にエラーが発生しました: " + e.message); }
+        };
+
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        // tokenの条件分岐を消してスッキリさせます
+        
         window.showForm = (m) => { 
             window.pMode = m; 
             document.getElementById('p-form').style.display = "block"; 
             document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; 
         };
+
         window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
         window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
@@ -367,5 +387,3 @@ window.deleteAccount = async () => {
     </script>
 </body>
 </html>
-
-
