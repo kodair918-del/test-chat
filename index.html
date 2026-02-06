@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.1</title>
+    <title>Chat-K | Ver 0.2.2</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -83,9 +83,9 @@
             <h3>プロジェクト</h3>
             <div id="project-list"></div>
             <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ 新規作成</span></button>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="margin-top:10px;">
                 <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
-                <button onclick="window.showForm('token')" class="btn-main" style="background:#5856D6;"><span>コード</span></button>
+            </div>
             </div>
             <div id="p-form" style="display:none; margin-top:15px;" class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
@@ -111,7 +111,6 @@
 
     <div id="settings-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div class="card"><button class="btn-main" onclick="window.copyInviteToken()" style="background:#5856D6;"><span>🔗 招待コードをコピー</span></button><button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);"><span>🚪 退会する</span></button></div>
         <div id="host-panel" style="display:none;" class="card"><h3 style="color:var(--accent);">👑 管理者パネル</h3><div id="req-list"></div></div>
     </div>
 
@@ -343,7 +342,12 @@ window.deleteAccount = async () => {
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = m==='create' ? '新規作成' : '参加・コード'; };
+        // tokenの条件分岐を消してスッキリさせます
+        window.showForm = (m) => { 
+            window.pMode = m; 
+            document.getElementById('p-form').style.display = "block"; 
+            document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; 
+        };
         window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
         window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
@@ -363,4 +367,5 @@ window.deleteAccount = async () => {
     </script>
 </body>
 </html>
+
 
