@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.6 (Fixed)</title>
+    <title>Chat-K | Ver 0.2.7 (Fixed)</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -477,7 +477,14 @@
                 window.goHome();
             }
         };
+        document.getElementById('msg-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { // Shift+Enterなら改行、Enterだけなら送信
+        e.preventDefault();
+        window.sendMessage();
+    }
+});
     </script>
 </body>
 </html>
+
 
