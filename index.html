@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.7 (Fixed)</title>
+    <title>Chat-K | Ver 0.2.8 (Fixed)</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -308,26 +308,84 @@
         };
 
         // --- Chat with Read Receipts ---
-        window.enterChat = async (gid) => {
-            currentGid = gid; 
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById('chat-footer').style.display = "flex";
-            document.getElementById('header-set-btn').style.visibility = "visible";
-            lastSeen[gid] = Date.now(); localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
+        let currentListener = null; // 現在の監視役を保存する変数
 
-            const gSnap = await get(ref(db, `v20_groups/${gid}`));
-            if(gSnap.exists()) {
-                const gData = gSnap.val();
-                document.getElementById('head-title').innerText = gData.name || gid.split('_')[0];
+window.enterChat = async (gid) => {
+    // 1. 前のチャットの監視役がいたらクビにする（これが連投バグを防ぐコツ！）
+    if (currentListener) {
+        currentListener(); // 前のリスナーを解除
+    }
+
+    currentGid = gid; 
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('chat-footer').style.display = "flex";
+    document.getElementById('header-set-btn').style.visibility = "visible";
+    
+    // 既読用の時間を更新
+    lastSeen[gid] = Date.now(); 
+    localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
+
+    const gSnap = await get(ref(db, `v20_groups/${gid}`));
+    if(gSnap.exists()) {
+        const gData = gSnap.val();
+        document.getElementById('head-title').innerText = gData.name || gid.split('_')[0];
+        
+        if (gData.host === myId) {
+            document.getElementById('host-panel').style.display = "block";
+            watchRequests(gid);
+        } else {
+            document.getElementById('host-panel').style.display = "none";
+        }
+    }
+
+    // 2. 新しい監視役をセットし、解除用の関数を保存しておく
+    const msgRef = ref(db, `v20_groups/${gid}/messages`);
+    currentListener = onValue(msgRef, snap => {
+        const area = document.getElementById('chat-area');
+        area.innerHTML = ""; // 画面を一旦空にする
+        
+        if(snap.exists()) {
+            Object.entries(snap.val()).forEach(([key, m]) => {
+                const isMe = m.uid === myId;
                 
-                // HOST CHECK & WATCH START
-                if (gData.host === myId) {
-                    document.getElementById('host-panel').style.display = "block";
-                    watchRequests(gid);
-                } else {
-                    document.getElementById('host-panel').style.display = "none";
+                // 既読処理（自分以外かつ未読なら既読をつける）
+                if (!isMe && (!m.readBy || !m.readBy[myId])) {
+                    update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), { 
+                        [myId]: { name: myName, time: Date.now() } 
+                    });
                 }
-            }
+
+                const readCount = m.readBy ? Object.keys(m.readBy).length : 0;
+                let content = "";
+                
+                if(m.type === "file") {
+                    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName);
+                    content = isImg 
+                        ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` 
+                        : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
+                } else {
+                    content = `<div class="bubble" onclick="window.checkReadStatus('${key}')">${m.text}</div>`;
+                }
+
+                const row = document.createElement('div');
+                row.className = `msg-row ${isMe ? 'me' : 'other'}`;
+                const readHtml = readCount > 0 
+                    ? `<span class="read-badge" onclick="window.checkReadStatus('${key}')">既読 ${readCount}</span>` 
+                    : `<span style="opacity:0.3;">未読</span>`;
+
+                row.innerHTML = `
+                    <div class="u-icon">${(m.name||"?")[0]}</div>
+                    <div style="max-width:80%;">
+                        <div style="font-size:10px; opacity:0.5; margin-bottom:2px;">${m.name}</div>
+                        ${content}
+                        <div class="msg-meta">${readHtml}</div>
+                    </div>`;
+                area.appendChild(row);
+            });
+            area.scrollTop = area.scrollHeight; // 一番下までスクロール
+        }
+    });
+};
 
             onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
                 const area = document.getElementById('chat-area'); area.innerHTML = "";
@@ -486,5 +544,6 @@
     </script>
 </body>
 </html>
+
 
 
