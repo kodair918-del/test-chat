@@ -443,8 +443,25 @@
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; };
-        window.sendMessage = () => { if(document.getElementById('msg-input').value && currentGid) { push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, text: document.getElementById('msg-input').value, type: "text", time: serverTimestamp() }); document.getElementById('msg-input').value = ""; } };
+        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; };window.sendMessage = async () => {
+    const input = document.getElementById('msg-input');
+    if(input.value && currentGid) {
+        // ボタンを一時的に無効化して連打を防ぐ
+        try {
+            await push(ref(db, `v20_groups/${currentGid}/messages`), { 
+                uid: myId, 
+                name: myName, 
+                text: input.value, 
+                type: "text", 
+                time: serverTimestamp() 
+            });
+            input.value = ""; 
+        } catch (e) {
+            console.error("送信エラー:", e);
+            alert("送信失敗！理由: " + e.message); // ← これで原因がわかります
+        }
+    }
+};
         window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
         window.closeModal = (id) => document.getElementById(id).classList.remove('active');
         window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.currentViewFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
@@ -463,3 +480,4 @@
     </script>
 </body>
 </html>
+
