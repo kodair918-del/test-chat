@@ -183,6 +183,7 @@
         let myIcon = "";
         let currentGid = null;
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
+        let currentListener = null;
 
         // --- Auth ---
         window.saveSession = (id, name) => {
@@ -310,10 +311,11 @@
         // --- Chat with Read Receipts ---
         let currentListener = null; // 現在の監視役を保存する変数
 
-window.enterChat = async (gid) => {
-    // 1. 前のチャットの監視役がいたらクビにする（これが連投バグを防ぐコツ！）
+        window.enterChat = async (gid) => {
+    // 前の監視役がいたら解除する（連投バグ防止）
     if (currentListener) {
-        currentListener(); // 前のリスナーを解除
+        currentListener();
+        currentListener = null;
     }
 
     currentGid = gid; 
@@ -321,7 +323,6 @@ window.enterChat = async (gid) => {
     document.getElementById('chat-footer').style.display = "flex";
     document.getElementById('header-set-btn').style.visibility = "visible";
     
-    // 既読用の時間を更新
     lastSeen[gid] = Date.now(); 
     localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
 
@@ -338,17 +339,16 @@ window.enterChat = async (gid) => {
         }
     }
 
-    // 2. 新しい監視役をセットし、解除用の関数を保存しておく
+    // 新しい監視役をセット
     const msgRef = ref(db, `v20_groups/${gid}/messages`);
     currentListener = onValue(msgRef, snap => {
         const area = document.getElementById('chat-area');
-        area.innerHTML = ""; // 画面を一旦空にする
+        area.innerHTML = "";
         
         if(snap.exists()) {
             Object.entries(snap.val()).forEach(([key, m]) => {
                 const isMe = m.uid === myId;
                 
-                // 既読処理（自分以外かつ未読なら既読をつける）
                 if (!isMe && (!m.readBy || !m.readBy[myId])) {
                     update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), { 
                         [myId]: { name: myName, time: Date.now() } 
@@ -382,7 +382,7 @@ window.enterChat = async (gid) => {
                     </div>`;
                 area.appendChild(row);
             });
-            area.scrollTop = area.scrollHeight; // 一番下までスクロール
+            area.scrollTop = area.scrollHeight;
         }
     });
 };
@@ -544,6 +544,7 @@ window.enterChat = async (gid) => {
     </script>
 </body>
 </html>
+
 
 
 
