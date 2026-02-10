@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.9 (Fixed)</title>
+    <title>Chat-K | Ver 0.3.0 (Fixed)</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -392,29 +392,6 @@
     });
 };
 
-            onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
-                const area = document.getElementById('chat-area'); area.innerHTML = "";
-                if(snap.exists()) {
-                    Object.entries(snap.val()).forEach(([key, m]) => {
-                        const isMe = m.uid === myId;
-                        
-                        // 既読付け
-                        if (!isMe && !m.readBy?.[myId]) {
-                            update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), { [myId]: { name: myName, time: Date.now() } });
-                        }
-                        const readCount = m.readBy ? Object.keys(m.readBy).length : 0;
-                        
-                        let content = m.text;
-                        let isImg = false;
-                        if(m.type === "file") {
-                            isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName);
-                            content = isImg 
-                                ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` 
-                                : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
-                        } else {
-                            content = `<div class="bubble" onclick="window.checkReadStatus('${key}')">${m.text}</div>`;
-                        }
-
                         const row = document.createElement('div');
                         row.className = `msg-row ${isMe ? 'me' : 'other'}`;
                         const readHtml = readCount > 0 
@@ -506,7 +483,11 @@
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        window.showForm = (m) => { window.pMode = m; document.getElementById('p-form').style.display = "block"; document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; };window.sendMessage = async () => {
+        window.showForm = (m) => { 
+    window.pMode = m; 
+    document.getElementById('p-form').style.display = "block"; 
+    document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; 
+    window.sendMessage = async () => {
     const input = document.getElementById('msg-input');
     if(input.value && currentGid) {
         // ボタンを一時的に無効化して連打を防ぐ
@@ -549,6 +530,7 @@
     </script>
 </body>
 </html>
+
 
 
 
