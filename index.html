@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.2.8 (Fixed)</title>
+    <title>Chat-K | Ver 0.2.9 (Fixed)</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -234,31 +234,36 @@
         const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
 
         window.goHome = async () => {
-            currentGid = null; 
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById('main-modal').classList.add('active');
-            document.getElementById('chat-footer').style.display = "none";
-            document.getElementById('header-set-btn').style.visibility = "hidden";
-            document.getElementById('head-title').innerText = "ホーム";
+    if (currentListener) {
+        currentListener();
+        currentListener = null;
+    }
+    currentGid = null; 
+    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    document.getElementById('main-modal').classList.add('active');
+    document.getElementById('chat-footer').style.display = "none";
+    document.getElementById('header-set-btn').style.visibility = "hidden";
+    document.getElementById('head-title').innerText = "ホーム";
 
-            const uSnap = await get(ref(db, `v20_users/${myId}`));
-            if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
-            document.getElementById('u-name-display').innerText = myName;
-            document.getElementById('u-id-display').innerText = "@" + myId;
-            drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
+    const uSnap = await get(ref(db, `v20_users/${myId}`));
+    if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
+    document.getElementById('u-name-display').innerText = myName;
+    document.getElementById('u-id-display').innerText = "@" + myId;
+    drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
 
-            const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            const list = document.getElementById('project-list'); list.innerHTML = "";
-            if(listSnap.exists()) {
-                for(let gid of Object.keys(listSnap.val())) {
-                    const unread = await calculateUnread(gid);
-                    const b = document.createElement('button'); b.className = "btn-main";
-                    b.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">🔴 ${unread}</span>` : ''}`;
-                    b.onclick = () => window.enterChat(gid);
-                    list.appendChild(b);
-                }
-            }
-        };
+    const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
+    const list = document.getElementById('project-list'); 
+    list.innerHTML = "";
+    if(listSnap.exists()) {
+        for(let gid of Object.keys(listSnap.val())) {
+            const unread = await calculateUnread(gid);
+            const b = document.createElement('button'); b.className = "btn-main";
+            b.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">🔴 ${unread}</span>` : ''}`;
+            b.onclick = () => window.enterChat(gid);
+            list.appendChild(b);
+        }
+    }
+}; // ← ここも最後にこれがあるか確認
 
         async function calculateUnread(gid) {
             const snap = await get(ref(db, `v20_groups/${gid}/messages`));
@@ -544,6 +549,7 @@
     </script>
 </body>
 </html>
+
 
 
 
