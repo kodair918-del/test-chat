@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.3.0 (Fixed)</title>
+    <title>Chat-K |The best Ver</title>
     <style>
         /* --- Theme --- */
         :root {
@@ -85,7 +85,7 @@
         <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
         <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
         <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
+        <button id="send-btn" onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
     </div>
 
     <div id="main-modal" class="modal">
@@ -125,7 +125,7 @@
     </div>
 
     <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeSettingsToChat()">✕</button></div>
         <div class="card">
             <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
                 <span>🚪 グループを退会する</span>
@@ -187,6 +187,9 @@
         let currentGid = null;
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
         let currentListener = null;
+        let isSendingMessage = false;
+        let lastMessageSignature = "";
+        let lastMessageAt = 0;
 
         // --- Auth ---
         window.saveSession = (id, name) => {
@@ -455,7 +458,7 @@
         };
 
         window.deleteAccount = async () => {
-            if (!confirm("本当に削除しますか？\n復元できません。")) return;
+            if (!confirm("本当に除しますか？\n復元できません。")) return;
             try {
                 const myGroupsSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
                 if (myGroupsSnap.exists()) {
@@ -469,6 +472,13 @@
         };
 
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
+        window.closeSettingsToChat = () => {
+            document.getElementById('settings-modal').classList.remove('active');
+            if (currentGid) {
+                document.getElementById('chat-footer').style.display = "flex";
+                document.getElementById('header-set-btn').style.visibility = "visible";
+            }
+        };
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
         window.showForm = (m) => { 
@@ -479,21 +489,39 @@
 
     window.sendMessage = async () => {
     const input = document.getElementById('msg-input');
-    if(input.value && currentGid) {
-        // ボタンを一時的に無効化して連打を防ぐ
-        try {
-            await push(ref(db, `v20_groups/${currentGid}/messages`), { 
-                uid: myId, 
-                name: myName, 
-                text: input.value, 
-                type: "text", 
-                time: serverTimestamp() 
-            });
-            input.value = ""; 
-        } catch (e) {
-            console.error("送信エラー:", e);
-            alert("送信失敗！理由: " + e.message); // ← これで原因がわかります
-        }
+    if (!input || !currentGid) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    const signature = `${currentGid}::${text}`;
+    const now = Date.now();
+    if (isSendingMessage || (signature === lastMessageSignature && now - lastMessageAt < 1200)) {
+        return;
+    }
+
+    isSendingMessage = true;
+    lastMessageSignature = signature;
+    lastMessageAt = now;
+
+    const sendBtn = document.getElementById('send-btn');
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+        await push(ref(db, `v20_groups/${currentGid}/messages`), {
+            uid: myId,
+            name: myName,
+            text,
+            type: "text",
+            time: serverTimestamp()
+        });
+        input.value = "";
+    } catch (e) {
+        console.error("送信エラー:", e);
+        alert("送信失敗！理由: " + e.message);
+    } finally {
+        isSendingMessage = false;
+        if (sendBtn) sendBtn.disabled = false;
     }
 };
         window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
@@ -524,10 +552,7 @@
     </script>
 </body>
 </html>
-/workspace/test-chat$ /bin/bash -lc 'python - <<'"'"'PY'"'"'
-from pathlib import Path
-print(Path('"'"'index.html'"'"').read_text())
-PY'
+/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'1,200p'"'"' index.html'
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -615,7 +640,7 @@ PY'
         <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
         <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
         <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
+        <button id="send-btn" onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
     </div>
 
     <div id="main-modal" class="modal">
@@ -655,7 +680,7 @@ PY'
     </div>
 
     <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeSettingsToChat()">✕</button></div>
         <div class="card">
             <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
                 <span>🚪 グループを退会する</span>
@@ -717,6 +742,211 @@ PY'
         let currentGid = null;
         let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
         let currentListener = null;
+        let isSendingMessage = false;
+        let lastMessageSignature = "";
+        let lastMessageAt = 0;
+
+        // --- Auth ---
+        window.saveSession = (id, name) => {
+            localStorage.setItem('chat_uid', id);
+            localStorage.setItem('chat_name', name);
+            myId = id; myName = name;
+            document.getElementById('auth-overlay').style.display = 'none';
+            window.goHome();
+/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'1,120p'"'"' index.html'
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Chat-K | Ver 0.3.0 (Fixed)</title>
+    <style>
+        /* --- Theme --- */
+        :root {
+            --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
+            --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30;
+        }
+        body.neon-mode {
+            --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff;
+            --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836;
+        }
+
+        /* --- Layout --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s; }
+        
+        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; position: relative; }
+        header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
+        .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
+
+        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 1000; }
+        .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center; }
+        
+        /* --- Inputs & Buttons --- */
+        .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; font-size: 16px; }
+        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; }
+        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; transition: opacity 0.2s; }
+        .btn-main:active { opacity: 0.7; }
+        
+        .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; }
+
+        /* --- UI Elements --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
+        .modal.active { display: block; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .msg-row { display: flex; gap: 10px; max-width: 90%; }
+        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
+        .bubble { padding: 10px 15px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); line-height: 1.4; word-break: break-all; cursor: pointer; }
+        .me .bubble { background: var(--bubble-me); color: white; }
+        .img-preview { width: 100%; max-width: 250px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
+        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+
+        #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
+        .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* --- Stylish Scrollbar --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 10px; transition: background 0.3s; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
+        body.neon-mode ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
+        body.neon-mode ::-webkit-scrollbar-thumb:hover { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+        /* --- Read Receipt & Status --- */
+        .msg-meta { font-size: 11px; color: #888; text-align: right; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+        .read-badge { color: var(--accent); font-weight: bold; cursor: pointer; }
+        .read-badge:hover { text-decoration: underline; }
+        .reader-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .reader-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button onclick="window.goHome()">🏠</button>
+        <div class="title" id="head-title">ホーム</div>
+        <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
+    </header>
+
+    <div id="chat-area"></div>
+
+    <div class="footer" id="chat-footer">
+        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
+        <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
+        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
+        <button id="send-btn" onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
+    </div>
+
+    <div id="main-modal" class="modal">
+        <div style="padding-top:20px;">
+            <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
+                <div id="home-icon-preview" class="u-icon"></div>
+                <div style="flex:1;"><b id="u-name-display">-</b><br><small id="u-id-display" style="opacity:0.5;">@id</small></div>
+                <span>👤</span>
+            </div>
+            <h3>プロジェクト</h3>
+            <div id="project-list"></div>
+            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ 新規作成</span></button>
+            <div style="margin-top:10px;">
+                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
+            </div>
+            
+            <div id="p-form" style="display:none; margin-top:15px;" class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
+                <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
+                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワー">
+                <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-overlay" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
+        <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
+            <h1 style="margin-bottom:20px;">Chat-K</h1>
+            <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
+            <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
+                <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;"><span>新規登録</span></button>
+/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'121,240p'"'"' index.html'
+<button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);"><span>ログイン</span></button>
+            </div>
+            <p style="font-size:11px; opacity:0.4; margin-top:20px;">※保存（実行）はボタン操作のみ。Enterキーは無効です。</p>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeSettingsToChat()">✕</button></div>
+        <div class="card">
+            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
+                <span>🚪 グループを退会する</span>
+            </button>
+        </div>
+        <div id="host-panel" style="display:none;" class="card">
+            <h3 style="color:var(--accent);">👑 管理者パネル</h3>
+            <p style="font-size:12px; color:#888;">参加申請が届くとここに表示されます</p>
+            <div id="req-list" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <div id="user-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button class="close-btn" onclick="window.closeModal('user-modal')">✕</button></div>
+        <div class="card" style="text-align:center;">
+            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
+            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
+            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">表示名</label>
+            <input type="text" id="edit-name" class="std-input" placeholder="名前">
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">パスワード変更（任意）</label>
+            <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
+            <button class="btn-main" onclick="window.updateUser()"><span>設定を保存する</span></button>
+            <button class="btn-main" style="background:#8E8E93; margin-top:20px;" onclick="window.logout()"><span>ログアウト</span></button>
+            <button class="btn-main" style="background:var(--danger); margin-top:10px;" onclick="window.deleteAccount()"><span>アカウントを完全に削除</span></button>
+        </div>
+    </div>
+
+    <div id="read-modal" class="modal">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>既読したユーザー</h3>
+            <button class="close-btn" onclick="document.getElementById('read-modal').classList.remove('active')">✕</button>
+        </div>
+        <div class="card" id="reader-list-content"></div>
+    </div>
+
+    <div id="viewer">
+        <div style="position:absolute; top:40px; left:20px; right:20px; display:flex; justify-content:space-between;">
+            <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
+            <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
+        </div>
+        <img id="viewer-img" src="" style="max-width:90%; max-height:80%;">
+    </div>
+
+    <script>
+        (async () => {
+            const [{ initializeApp }, { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp }] = await Promise.all([
+                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"),
+                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js")
+            ]);
+
+            const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
+            const app = initializeApp(config); const db = getDatabase(app);
+
+        let myId = localStorage.getItem('chat_uid');
+        let myName = localStorage.getItem('chat_name');
+        let myIcon = "";
+        let currentGid = null;
+        let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
+        let currentListener = null;
+        let isSendingMessage = false;
+        let lastMessageSignature = "";
+        let lastMessageAt = 0;
 
         // --- Auth ---
         window.saveSession = (id, name) => {
@@ -765,8 +995,8 @@ PY'
         // --- UI Logic ---
         window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
         const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
-
-        window.goHome = async () => {
+/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'241,360p'"'"' index.html'
+window.goHome = async () => {
     if (currentListener) {
         currentListener();
         currentListener = null;
@@ -885,8 +1115,8 @@ PY'
         if(snap.exists()) {
             Object.entries(snap.val()).forEach(([key, m]) => {
                 const isMe = m.uid === myId;
-                
-                if (!isMe && (!m.readBy || !m.readBy[myId])) {
+/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'361,480p'"'"' index.html'
+if (!isMe && (!m.readBy || !m.readBy[myId])) {
                     update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), { 
                         [myId]: { name: myName, time: Date.now() } 
                     });
@@ -999,6 +1229,14 @@ PY'
         };
 
         window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
+        window.closeSettingsToChat = () => {
+            document.getElementById('settings-modal').classList.remove('active');
+            if (currentGid) {
+                document.getElementById('chat-footer').style.display = "flex";
+                document.getElementById('header-set-btn').style.visibility = "visible";
+            }
+/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'481,560p'"'"' index.html'
+};
         window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
         window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
         window.showForm = (m) => { 
@@ -1009,21 +1247,39 @@ PY'
 
     window.sendMessage = async () => {
     const input = document.getElementById('msg-input');
-    if(input.value && currentGid) {
-        // ボタンを一時的に無効化して連打を防ぐ
-        try {
-            await push(ref(db, `v20_groups/${currentGid}/messages`), { 
-                uid: myId, 
-                name: myName, 
-                text: input.value, 
-                type: "text", 
-                time: serverTimestamp() 
-            });
-            input.value = ""; 
-        } catch (e) {
-            console.error("送信エラー:", e);
-            alert("送信失敗！理由: " + e.message); // ← これで原因がわかります
-        }
+    if (!input || !currentGid) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    const signature = `${currentGid}::${text}`;
+    const now = Date.now();
+    if (isSendingMessage || (signature === lastMessageSignature && now - lastMessageAt < 1200)) {
+        return;
+    }
+
+    isSendingMessage = true;
+    lastMessageSignature = signature;
+    lastMessageAt = now;
+
+    const sendBtn = document.getElementById('send-btn');
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+        await push(ref(db, `v20_groups/${currentGid}/messages`), {
+            uid: myId,
+            name: myName,
+            text,
+            type: "text",
+            time: serverTimestamp()
+        });
+        input.value = "";
+    } catch (e) {
+        console.error("送信エラー:", e);
+        alert("送信失敗！理由: " + e.message);
+    } finally {
+        isSendingMessage = false;
+        if (sendBtn) sendBtn.disabled = false;
     }
 };
         window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
@@ -1054,183 +1310,3 @@ PY'
     </script>
 </body>
 </html>
-/workspace/test-chat$ /bin/bash -lc 'sed -n '"'"'1,180p'"'"' index.html'
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.3.0 (Fixed)</title>
-    <style>
-        /* --- Theme --- */
-        :root {
-            --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
-            --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30;
-        }
-        body.neon-mode {
-            --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff;
-            --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836;
-        }
-
-        /* --- Layout --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s; }
-        
-        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; position: relative; }
-        header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
-        .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
-
-        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 1000; }
-        .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center; }
-        
-        /* --- Inputs & Buttons --- */
-        .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; font-size: 16px; }
-        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; }
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; transition: opacity 0.2s; }
-        .btn-main:active { opacity: 0.7; }
-        
-        .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; }
-
-        /* --- UI Elements --- */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
-        .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .msg-row { display: flex; gap: 10px; max-width: 90%; }
-        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .bubble { padding: 10px 15px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); line-height: 1.4; word-break: break-all; cursor: pointer; }
-        .me .bubble { background: var(--bubble-me); color: white; }
-        .img-preview { width: 100%; max-width: 250px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
-        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
-
-        #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
-        .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(22px); }
-
-        /* --- Stylish Scrollbar --- */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 10px; transition: background 0.3s; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
-        body.neon-mode ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
-        body.neon-mode ::-webkit-scrollbar-thumb:hover { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-
-        /* --- Read Receipt & Status --- */
-        .msg-meta { font-size: 11px; color: #888; text-align: right; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
-        .read-badge { color: var(--accent); font-weight: bold; cursor: pointer; }
-        .read-badge:hover { text-decoration: underline; }
-        .reader-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .reader-item:last-child { border-bottom: none; }
-    </style>
-</head>
-<body>
-
-    <header>
-        <button onclick="window.goHome()">🏠</button>
-        <div class="title" id="head-title">ホーム</div>
-        <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
-    </header>
-
-    <div id="chat-area"></div>
-
-    <div class="footer" id="chat-footer">
-        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
-        <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
-        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
-    </div>
-
-    <div id="main-modal" class="modal">
-        <div style="padding-top:20px;">
-            <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
-                <div id="home-icon-preview" class="u-icon"></div>
-                <div style="flex:1;"><b id="u-name-display">-</b><br><small id="u-id-display" style="opacity:0.5;">@id</small></div>
-                <span>👤</span>
-            </div>
-            <h3>プロジェクト</h3>
-            <div id="project-list"></div>
-            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ 新規作成</span></button>
-            <div style="margin-top:10px;">
-                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
-            </div>
-            
-            <div id="p-form" style="display:none; margin-top:15px;" class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
-                <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
-                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード">
-                <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
-            </div>
-        </div>
-    </div>
-
-    <div id="auth-overlay" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
-        <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
-            <h1 style="margin-bottom:20px;">Chat-K</h1>
-            <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
-            <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
-                <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;"><span>新規登録</span></button>
-                <button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);"><span>ログイン</span></button>
-            </div>
-            <p style="font-size:11px; opacity:0.4; margin-top:20px;">※保存（実行）はボタン操作のみ。Enterキーは無効です。</p>
-        </div>
-    </div>
-
-    <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeModal('settings-modal')">✕</button></div>
-        <div class="card">
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
-                <span>🚪 グループを退会する</span>
-            </button>
-        </div>
-        <div id="host-panel" style="display:none;" class="card">
-            <h3 style="color:var(--accent);">👑 管理者パネル</h3>
-            <p style="font-size:12px; color:#888;">参加申請が届くとここに表示されます</p>
-            <div id="req-list" style="margin-top:10px;"></div>
-        </div>
-    </div>
-
-    <div id="user-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button class="close-btn" onclick="window.closeModal('user-modal')">✕</button></div>
-        <div class="card" style="text-align:center;">
-            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
-            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
-            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">表示名</label>
-            <input type="text" id="edit-name" class="std-input" placeholder="名前">
-            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">パスワード変更（任意）</label>
-            <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
-            <button class="btn-main" onclick="window.updateUser()"><span>設定を保存する</span></button>
-            <button class="btn-main" style="background:#8E8E93; margin-top:20px;" onclick="window.logout()"><span>ログアウト</span></button>
-            <button class="btn-main" style="background:var(--danger); margin-top:10px;" onclick="window.deleteAccount()"><span>アカウントを完全に削除</span></button>
-        </div>
-    </div>
-
-    <div id="read-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>既読したユーザー</h3>
-            <button class="close-btn" onclick="document.getElementById('read-modal').classList.remove('active')">✕</button>
-        </div>
-        <div class="card" id="reader-list-content"></div>
-    </div>
-
-    <div id="viewer">
-        <div style="position:absolute; top:40px; left:20px; right:20px; display:flex; justify-content:space-between;">
-            <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
-            <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
-        </div>
-        <img id="viewer-img" src="" style="max-width:90%; max-height:80%;">
-    </div>
-
-    <script>
-        (async () => {
-            const [{ initializeApp }, { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp }] = await Promise.all([
-                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"),
-                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js")
-            ]);
