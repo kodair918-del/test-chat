@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.3.0 (Fixed)</title>
+    <title>Chat-K | Ver 0.444.0 (Fixed)</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007AFF">
     <style>
@@ -730,46 +730,45 @@ function saveDatabaseChanges() {
     const dbTextarea = document.getElementById('debug-db-textarea');
     const toggleBtn = document.getElementById('debug-toggle-btn');
 
-    // 【ここを修正】あなたのアプリでIDを保存している変数やlocalStorageから取得
-    // 例： localStorage.getItem('userId') など
+    // 1. あなたのアプリでIDを保存している「正確な名前」を確認してください
+    // ここでは例として 'chat_user_id' としていますが、実際の保存名に合わせてください
     const myId = localStorage.getItem('chat_user_id'); 
 
+    console.log("【診断】取得したID:", myId);
+
     if (myId) {
-        // データベースの users/自分のID/kannri を見に行く
-        firebase.database().ref('users/' + myId + '/kannri').on('value', (snapshot) => {
-            if (snapshot.val() === true) {
-                console.log("管理者権限を確認しました");
+        // 2. データベースの参照先をログに出す
+        const adminRef = firebase.database().ref('users/' + myId + '/kannri');
+        console.log("【診断】参照パス:", 'users/' + myId + '/kannri');
+
+        adminRef.on('value', (snapshot) => {
+            const isAdmin = snapshot.val();
+            console.log("【診断】取得した値:", isAdmin);
+
+            if (isAdmin === true) {
+                console.log("【診断】管理者一致！ボタンを表示します。");
                 toggleBtn.style.display = 'inline-block';
                 loadDatabaseToTextarea();
             } else {
+                console.log("【診断】管理者ではありません（値がtrueではない、または存在しない）");
                 toggleBtn.style.display = 'none';
             }
+        }, (error) => {
+            console.error("【診断】Firebase読み取りエラー:", error.message);
         });
+    } else {
+        console.warn("【診断】IDがlocalStorageから取得できませんでした。");
     }
 
     function loadDatabaseToTextarea() {
-        firebase.database().ref('users/' + myId + '/kannri').on('value', (snapshot) => {
-    const isAdmin = snapshot.val();
-
-    // 厳格に「true」である時だけ表示する
-    if (isAdmin === true) {
-        console.log("管理者認証：成功");
-        document.getElementById('debug-toggle-btn').style.display = 'inline-block';
-        loadDatabaseToTextarea();
-    } else {
-        // それ以外（false, null, undefined）は絶対に隠す
-        console.log("管理者認証：失敗。ボタンを非表示にします。");
-        document.getElementById('debug-toggle-btn').style.display = 'none';
-        
-        // もし既にパネルが開いていたら強制的に閉じる
-        document.getElementById('debug-admin-panel').style.display = 'none';
-    }
-});
+        firebase.database().ref('/').on('value', (snapshot) => {
+            dbTextarea.value = JSON.stringify(snapshot.val(), null, 2);
+        });
     }
 
-    // 表示・非表示の切り替え
     toggleBtn.onclick = function() {
         adminPanel.style.display = (adminPanel.style.display === 'none') ? 'block' : 'none';
     };
 </script>
 </html>
+
