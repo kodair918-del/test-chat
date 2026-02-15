@@ -534,7 +534,7 @@
         };
 
         window.deleteAccount = async () => {
-            if (!confirm("当に削除しますか？\n復元できません。")) return;
+            if (!confirm("本当に削除しますか？\n復元できません。")) return;
             try {
                 const myGroupsSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
                 if (myGroupsSnap.exists()) {
