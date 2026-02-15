@@ -103,7 +103,24 @@
             <div style="margin-top:10px;">
                 <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
             </div>
-            
+          <div style="margin: 20px 0; text-align: center;">
+    <button id="debug-toggle-btn" style="display: none; padding: 10px 20px; background: #333; color: white;">
+    管理画面を表示
+</button>
+</div>
+
+<div id="debug-admin-panel" style="display: none; border: 3px solid #ff4444; padding: 15px; margin: 10px; background: #fff;">
+    <h3 style="color: #ff4444; margin-top: 0;">🛠 データベース管理（仮）</h3>
+    <p style="color: #666; font-size: 0.8em;">※ここにFirebaseのデータが表示される予定です</p>
+    
+    <textarea id="debug-db-textarea" style="width: 100%; height: 200px; font-family: monospace;" placeholder="読み込み中..."></textarea>
+    
+    <div style="margin-top: 10px;">
+        <button style="background: #ff4444; color: white; border: none; padding: 5px 15px; cursor: pointer;">
+            データを更新する
+        </button>
+    </div>
+</div>
             <div id="p-form" style="display:none; margin-top:15px;" class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
                 <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
@@ -708,4 +725,51 @@ function saveDatabaseChanges() {
     </script>
 
 </body>
+<script>
+    const adminPanel = document.getElementById('debug-admin-panel');
+    const dbTextarea = document.getElementById('debug-db-textarea');
+    const toggleBtn = document.getElementById('debug-toggle-btn');
+
+    // 【ここを修正】あなたのアプリでIDを保存している変数やlocalStorageから取得
+    // 例： localStorage.getItem('userId') など
+    const myId = localStorage.getItem('chat_user_id'); 
+
+    if (myId) {
+        // データベースの users/自分のID/kannri を見に行く
+        firebase.database().ref('users/' + myId + '/kannri').on('value', (snapshot) => {
+            if (snapshot.val() === true) {
+                console.log("管理者権限を確認しました");
+                toggleBtn.style.display = 'inline-block';
+                loadDatabaseToTextarea();
+            } else {
+                toggleBtn.style.display = 'none';
+            }
+        });
+    }
+
+    function loadDatabaseToTextarea() {
+        firebase.database().ref('users/' + myId + '/kannri').on('value', (snapshot) => {
+    const isAdmin = snapshot.val();
+
+    // 厳格に「true」である時だけ表示する
+    if (isAdmin === true) {
+        console.log("管理者認証：成功");
+        document.getElementById('debug-toggle-btn').style.display = 'inline-block';
+        loadDatabaseToTextarea();
+    } else {
+        // それ以外（false, null, undefined）は絶対に隠す
+        console.log("管理者認証：失敗。ボタンを非表示にします。");
+        document.getElementById('debug-toggle-btn').style.display = 'none';
+        
+        // もし既にパネルが開いていたら強制的に閉じる
+        document.getElementById('debug-admin-panel').style.display = 'none';
+    }
+});
+    }
+
+    // 表示・非表示の切り替え
+    toggleBtn.onclick = function() {
+        adminPanel.style.display = (adminPanel.style.display === 'none') ? 'block' : 'none';
+    };
+</script>
 </html>
