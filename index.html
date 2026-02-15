@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 0.444.0 (Fixed)</title>
+    <title>Chat-K | Ver 4.444.4 (Fixed)</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#007AFF">
     <style>
@@ -732,7 +732,7 @@ function saveDatabaseChanges() {
 
     // 1. あなたのアプリでIDを保存している「正確な名前」を確認してください
     // ここでは例として 'chat_user_id' としていますが、実際の保存名に合わせてください
-    const myId = localStorage.getItem('chat_user_id'); 
+    const v20_users = localStorage.getItem('chat_user_id'); 
 
     console.log("【診断】取得したID:", myId);
 
@@ -771,4 +771,5 @@ function saveDatabaseChanges() {
     };
 </script>
 </html>
+
 
