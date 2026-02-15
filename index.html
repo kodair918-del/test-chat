@@ -119,7 +119,7 @@
             <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
             <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
-                <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;"><span>新規登</span></button>
+                <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;"><span>新規登録</span></button>
                 <button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);"><span>ログイン</span></button>
             </div>
             <p style="font-size:11px; opacity:0.4; margin-top:20px;">※保存（実行）はボタン操作のみ。Enterキーは無効です。</p>
@@ -129,6 +129,13 @@
     <div id="settings-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeSettingsToChat()">✕</button></div>
         <div class="card">
+            <h3 style="margin-top:0;">チーム情報</h3>
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">チームID</label>
+            <input type="text" id="team-id-input" class="std-input" placeholder="チームID">
+            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">チームPASS</label>
+            <input type="text" id="team-pass-input" class="std-input" placeholder="チームPASS">
+            <p id="team-settings-note" style="font-size:12px; opacity:0.6; margin:6px 2px 12px;">※ホストのみ変更できます。</p>
+            <button id="team-settings-save" class="btn-main" onclick="window.updateTeamSettings()" style="display:none;"><span>チーム情報を保存</span></button>
             <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
                 <span>🚪 グループを退会する</span>
             </button>
@@ -320,6 +327,30 @@
         }
 
         // --- Host: Handle Requests (New Logic) ---
+        const loadTeamSettings = async () => {
+            if (!currentGid) return;
+            try {
+                const snap = await get(ref(db, `v20_groups/${currentGid}`));
+                if (!snap.exists()) return;
+                const g = snap.val();
+                const isHost = g.host === myId;
+
+                const teamIdInput = document.getElementById('team-id-input');
+                const teamPassInput = document.getElementById('team-pass-input');
+                const saveBtn = document.getElementById('team-settings-save');
+                const note = document.getElementById('team-settings-note');
+
+                teamIdInput.value = g.name || currentGid.split('_')[0];
+                teamPassInput.value = g.pw || "";
+                teamIdInput.readOnly = !isHost;
+                teamPassInput.readOnly = !isHost;
+                saveBtn.style.display = isHost ? 'flex' : 'none';
+                note.innerText = isHost ? '※ホストはチームID / PASSを変更できます。' : '※閲覧のみ（変更はホストのみ）。';
+            } catch (e) {
+                console.error('チーム情報読み込みエラー:', e);
+            }
+        };
+
         const watchRequests = (gid) => {
             onValue(ref(db, `v20_groups/${gid}/requests`), (snap) => {
                 const reqList = document.getElementById('req-list');
@@ -518,7 +549,27 @@
             } catch (e) { alert("エラー: " + e.message); }
         };
 
-        window.openSettings = () => document.getElementById('settings-modal').classList.add('active');
+        window.openSettings = async () => {
+            await loadTeamSettings();
+            document.getElementById('settings-modal').classList.add('active');
+        };
+        window.updateTeamSettings = async () => {
+            if (!currentGid) return;
+            const nextName = document.getElementById('team-id-input').value.trim();
+            const nextPw = document.getElementById('team-pass-input').value;
+            if (!nextName || !nextPw) return alert('チームIDとPASSを入力してください');
+            try {
+                const gRef = ref(db, `v20_groups/${currentGid}`);
+                const snap = await get(gRef);
+                if (!snap.exists()) return alert('チーム情報が見つかりません。');
+                if (snap.val().host !== myId) return alert('ホストのみ変更できます。');
+                await update(gRef, { name: nextName, pw: nextPw });
+                document.getElementById('head-title').innerText = nextName;
+                alert('チーム情報を更新しました。');
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        };
         window.closeSettingsToChat = () => {
             document.getElementById('settings-modal').classList.remove('active');
             if (currentGid) {
