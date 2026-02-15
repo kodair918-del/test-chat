@@ -112,7 +112,16 @@
             </div>
         </div>
     </div>
-
+  <div id="admin-panel" style="display: none; margin-top: 20px; border: 2px solid #ff4444; padding: 10px;">
+  <h3>🛠 管理者専用：データベース一括表示</h3>
+  <div id="db-content" style="background: #f0f0f0; color: #333; padding: 10px; max-height: 400px; overflow-y: auto;">
+    読み込み中...
+  </div>
+  <hr>
+  <p>※データを直接編集して更新する（簡易実装例）</p>
+  <textarea id="db-edit-area" style="width: 100%; height: 150px;"></textarea>
+  <button onclick="saveDatabaseChanges()">データベースを更新（保存）</button>
+</div>
     <div id="auth-overlay" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
         <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
             <h1 style="margin-bottom:20px;">Chat-K</h1>
@@ -654,6 +663,48 @@
           });
         });
       }
+      // ユーザーがログインした直後、または初期化時に実行
+function checkAdminStatus(uid) {
+  const userRef = firebase.database().ref('users/' + uid);
+  
+  userRef.on('value', (snapshot) => {
+    const userData = snapshot.val();
+    
+    // 「最高権限」が true かチェック
+    if (userData && userData.最高権限 === true) {
+      document.getElementById('admin-panel').style.display = 'block';
+      loadFullDatabase(); // データベース全取得関数へ
+    }
+  });
+}
+
+// データベース全体を読み込んで表示する
+function loadFullDatabase() {
+  const rootRef = firebase.database().ref('/');
+  
+  rootRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    const jsonStr = JSON.stringify(data, null, 2);
+    
+    // 表示用と編集用テキストエリアにセット
+    document.getElementById('db-content').innerText = jsonStr;
+    document.getElementById('db-edit-area').value = jsonStr;
+  });
+}
+
+// 編集した内容をデータベースに書き戻す（注意！）
+function saveDatabaseChanges() {
+  if (!confirm("本当にデータベース全体を上書きしますか？")) return;
+  
+  try {
+    const newData = JSON.parse(document.getElementById('db-edit-area').value);
+    firebase.database().ref('/').set(newData)
+      .then(() => alert("更新完了！"))
+      .catch((err) => alert("エラー: " + err.message));
+  } catch (e) {
+    alert("JSONの形式が正しくありません。");
+  }
+}
     </script>
 
 </body>
