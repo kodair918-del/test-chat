@@ -71,11 +71,63 @@
         .read-badge:hover { text-decoration: underline; }
         .reader-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .reader-item:last-child { border-bottom: none; }
+        /* リアルチャットモード用のスタイル */
+#realtime-container {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    min-height: 120px;
+    z-index: 1500;
+}
+
+.user-bubble-track {
+    min-width: 120px;
+    max-width: 150px;
+    display: flex;
+    flex-direction: column-reverse; /* 下から上へ押し上げる */
+    align-items: center;
+    position: relative;
+}
+
+.user-label {
+    font-size: 10px;
+    font-weight: bold;
+    margin-top: 5px;
+    background: var(--accent);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.bubble-pop {
+    background: var(--card-bg);
+    border: 2px solid var(--accent);
+    border-radius: 15px;
+    padding: 8px;
+    font-size: 13px;
+    margin-bottom: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    word-break: break-all;
+    width: 100%;
+    text-align: center;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
     </style>
 </head>
 <body>
 
     <header>
+        <div id="realtime-container">
+            </div>
         <button onclick="window.goHome()">🏠</button>
         <div class="title" id="head-title">ホーム</div>
         <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
@@ -418,6 +470,48 @@
         };
 
         // --- Chat with Read Receipts ---
+            // --- ここに追加 ---
+const updateRealtimeBubbles = (gid) => {
+    const rtContainer = document.getElementById('realtime-container');
+    const rtRef = ref(db, `v20_groups/${gid}/realtime`);
+
+    onValue(rtRef, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.val();
+        
+        Object.entries(data).forEach(([uid, info]) => {
+            let track = document.getElementById(`track-${uid}`);
+            if (!track) {
+                track = document.createElement('div');
+                track.id = `track-${uid}`;
+                track.className = 'user-bubble-track';
+                track.innerHTML = `<div class="user-label">${info.name}</div><div class="bubble-content" style="display:flex; flex-direction:column-reverse; width:100%;"></div>`;
+                rtContainer.appendChild(track);
+            }
+
+            const contentArea = track.querySelector('.bubble-content');
+            
+            if (info.lastMsgId !== track.dataset.lastId) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble-pop';
+                bubble.innerText = info.text;
+                contentArea.appendChild(bubble);
+                
+                // ポンと鳴らす
+                popSound.play().catch(e => console.log("Audio play blocked"));
+
+                if (contentArea.children.length > 2) {
+                    contentArea.removeChild(contentArea.firstChild);
+                }
+                
+                track.dataset.lastId = info.lastMsgId;
+            }
+        });
+    });
+};
+
+// 既存の enterChat が続く...
+
 
         window.enterChat = async (gid) => {
     // 前の監視役がいたら解除する（連投バグ防止）
@@ -618,32 +712,59 @@
     const text = input.value.trim();
     if (!text) return;
 
+    // --- 連投・二重送信防止ガード ---
     const signature = `${currentGid}::${text}`;
     const now = Date.now();
+    
+    // 送信中フラグが立っているか、短時間の同一内容送信をブロック
     if (isSendingMessage || (signature === lastMessageSignature && now - lastMessageAt < 1200)) {
         return;
     }
 
-    isSendingMessage = true;
+    isSendingMessage = true; 
     lastMessageSignature = signature;
     lastMessageAt = now;
+    // ----------------------------
 
     const sendBtn = document.getElementById('send-btn');
     if (sendBtn) sendBtn.disabled = true;
 
     try {
-        await push(ref(db, `v20_groups/${currentGid}/messages`), {
+        // Firebaseの新しいプッシュIDを生成
+        const msgRef = ref(db, `v20_groups/${currentGid}/messages`);
+        const msgId = push(msgRef).key;
+        
+        const updates = {};
+        
+        // 1. 通常のメッセージログ（履歴用）
+        updates[`v20_groups/${currentGid}/messages/${msgId}`] = {
             uid: myId,
             name: myName,
-            text,
+            text: text,
             type: "text",
             time: serverTimestamp()
-        });
+        };
+        
+        // 2. リアルタイム枠用の最新ステータス（上部の枠用）
+        // uidをキーにすることで、常に自分の枠の最新メッセージが上書き更新される
+        updates[`v20_groups/${currentGid}/realtime/${myId}`] = {
+            name: myName,
+            text: text,
+            lastMsgId: msgId,
+            time: serverTimestamp()
+        };
+
+        // すべてのデータを一括でFirebaseに反映
+        await update(ref(db), updates);
+        
+        // 送信が成功したら入力欄を空にする
         input.value = "";
+        
     } catch (e) {
         console.error("送信エラー:", e);
         alert("送信失敗！理由: " + e.message);
     } finally {
+        // 送信処理が終わったらフラグを解除してボタンを有効化
         isSendingMessage = false;
         if (sendBtn) sendBtn.disabled = false;
     }
@@ -654,6 +775,7 @@
         window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.currentViewFile.url; a.download = window.currentViewFile.name; a.click(); };
         window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
 
+            const popSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); // ポンという音
         window.onload = async () => {
             window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
             const showAuth = await shouldOpenAuthScreen();
