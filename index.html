@@ -1,957 +1,845 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K</title>
-    <style>
-        :root {
-            --accent: #007AFF;
-            --bg: #F2F2F7;
-            --card-bg: #FFFFFF;
-            --text: #000000;
-            --header-bg: rgba(255,255,255,0.92);
-            --bubble-me: #007AFF;
-            --bubble-other: #E9E9EB;
-            --danger: #FF3B30;
-            --header-h: 56px;
-        }
-        body.neon-mode {
-            --accent: #00f2ff;
-            --bg: #0a0b10;
-            --card-bg: #161821;
-            --text: #ffffff;
-            --header-bg: rgba(10,11,16,0.88);
-            --bubble-me: #1a6fff;
-            --bubble-other: #252836;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s, color 0.3s; }
-
-        /* ── Header ── */
-        header {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            background: var(--header-bg);
-            border-bottom: 0.5px solid rgba(128,128,128,0.2);
-            display: flex; align-items: center;
-            height: calc(var(--header-h) + env(safe-area-inset-top));
-            padding-top: env(safe-area-inset-top);
-            padding-left: 4px; padding-right: 4px;
-        }
-        header button { background: none; border: none; font-size: 22px; color: inherit; padding: 8px 12px; cursor: pointer; }
-        .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
-
-        /* ── Realtime bar (below header, chat only) ── */
-        #realtime-bar {
-            position: fixed;
-            top: calc(var(--header-h) + env(safe-area-inset-top));
-            left: 0; right: 0; z-index: 150;
-            display: none;
-            overflow-x: auto;
-            gap: 8px;
-            padding: 8px 12px;
-            background: var(--header-bg);
-            backdrop-filter: blur(10px);
-            border-bottom: 0.5px solid rgba(128,128,128,0.15);
-            align-items: flex-end;
-            min-height: 68px;
-            scrollbar-width: none;
-        }
-        #realtime-bar::-webkit-scrollbar { display: none; }
-        #realtime-bar.visible { display: flex; }
-
-        .rt-track { min-width: 90px; max-width: 130px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .rt-bubble {
-            background: var(--card-bg); border: 1.5px solid var(--accent);
-            border-radius: 12px; padding: 6px 10px; font-size: 12px;
-            word-break: break-all; text-align: center; width: 100%;
-            animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
-        }
-        .rt-label {
-            font-size: 10px; font-weight: 700; background: var(--accent); color: white;
-            padding: 2px 8px; border-radius: 10px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-        }
-        @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        /* ── Chat area ── */
-        #chat-area {
-            position: fixed; left: 0; right: 0; bottom: 0;
-            top: calc(var(--header-h) + env(safe-area-inset-top));
-            overflow-y: auto;
-            padding: 16px 12px 88px;
-            display: flex; flex-direction: column; gap: 12px;
-            transition: top 0.2s;
-        }
-        #chat-area.with-bar { top: calc(var(--header-h) + env(safe-area-inset-top) + 68px); }
-
-        /* ── Footer / input ── */
-        .footer {
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-            background: var(--header-bg);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-top: 0.5px solid rgba(128,128,128,0.2);
-            padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-            display: none; gap: 8px; align-items: flex-end;
-        }
-        #msg-input {
-            flex: 1; border: none; background: rgba(120,120,128,0.12);
-            padding: 10px 14px; border-radius: 22px; color: var(--text);
-            outline: none; font-size: 16px; max-height: 120px; resize: none; line-height: 1.4;
-        }
-        #send-btn {
-            width: 40px; height: 40px; border-radius: 50%; border: none;
-            background: var(--accent); color: white; font-size: 20px;
-            cursor: pointer; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-            transition: opacity 0.15s;
-        }
-        #send-btn:disabled { opacity: 0.35; }
-        .attach-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text); padding: 4px; flex-shrink: 0; opacity: 0.7; }
-
-        /* ── Messages ── */
-        .msg-row { display: flex; gap: 8px; max-width: 88%; }
-        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .u-icon {
-            width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
-            flex-shrink: 0; overflow: hidden;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: 700; font-size: 13px;
-        }
-        .u-icon img { width: 100%; height: 100%; object-fit: cover; }
-        .bubble {
-            padding: 10px 14px; border-radius: 18px; font-size: 15px;
-            background: var(--bubble-other); color: var(--text);
-            line-height: 1.45; word-break: break-word; cursor: pointer;
-            white-space: pre-wrap;
-        }
-        .me .bubble { background: var(--bubble-me); color: white; }
-        .msg-name { font-size: 10px; opacity: 0.5; margin-bottom: 3px; }
-        .msg-meta { font-size: 10px; color: #888; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
-        .msg-row.me .msg-meta { justify-content: flex-end; }
-        .read-badge { color: var(--accent); cursor: pointer; }
-        .read-badge:hover { text-decoration: underline; }
-        .img-preview { max-width: 220px; border-radius: 14px; cursor: pointer; display: block; }
-
-        /* ── Modals ── */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 300;
-            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-            display: none; overflow-y: auto;
-        }
-        .modal.active { display: block; }
-        .modal-inner { padding: 16px 16px 32px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-header h2 { font-size: 22px; font-weight: 700; }
-
-        /* ── Cards ── */
-        .card { background: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .card-label { font-size: 12px; font-weight: 600; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
-
-        /* ── Inputs ── */
-        .std-input {
-            width: 100%; padding: 12px 14px; margin-bottom: 10px;
-            border-radius: 10px; border: 1.5px solid rgba(128,128,128,0.15);
-            background: rgba(120,120,128,0.06); color: var(--text);
-            outline: none; font-size: 16px; transition: border-color 0.2s;
-        }
-        .std-input:focus { border-color: var(--accent); }
-        .std-input[readonly] { opacity: 0.55; }
-
-        /* ── Buttons ── */
-        .btn {
-            width: 100%; height: 50px; border: none; border-radius: 14px;
-            font-size: 16px; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            margin-bottom: 10px; transition: opacity 0.15s, transform 0.1s;
-        }
-        .btn:active { opacity: 0.7; transform: scale(0.98); }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-success { background: #34C759; color: white; }
-        .btn-neutral { background: #8E8E93; color: white; }
-        .btn-danger  { background: var(--danger); color: white; }
-        .btn-sm {
-            height: 34px; padding: 0 16px; border-radius: 10px; border: none;
-            font-size: 13px; font-weight: 600; cursor: pointer;
-            background: var(--accent); color: white; transition: opacity 0.15s; white-space: nowrap;
-        }
-        .btn-sm:active { opacity: 0.7; }
-        .close-btn {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: rgba(120,120,128,0.15); border: none;
-            font-size: 16px; color: var(--text); cursor: pointer;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-
-        /* ── Profile card (home) ── */
-        .profile-card {
-            display: flex; align-items: center; gap: 14px; cursor: pointer;
-            padding: 16px; background: var(--card-bg); border-radius: 16px;
-            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: opacity 0.15s;
-        }
-        .profile-card:active { opacity: 0.7; }
-        .profile-icon {
-            width: 48px; height: 48px; border-radius: 50%; background: var(--accent);
-            overflow: hidden; display: flex; align-items: center;
-            justify-content: center; color: white; font-weight: 700; font-size: 20px; flex-shrink: 0;
-        }
-        .profile-icon img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* ── Group list ── */
-        .section-label { font-size: 13px; font-weight: 600; color: #8E8E93; margin: 20px 0 8px 4px; }
-        .group-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 14px 16px; background: var(--card-bg); border-radius: 14px;
-            margin-bottom: 8px; cursor: pointer;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: opacity 0.15s;
-        }
-        .group-item:active { opacity: 0.7; }
-        .group-name { font-weight: 600; font-size: 16px; }
-        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
-
-        /* ── Inline form ── */
-        .inline-form { display: none; padding: 16px; background: var(--card-bg); border-radius: 16px; margin-top: 8px; }
-        .inline-form.active { display: block; }
-        .inline-form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .inline-form-header h4 { font-size: 16px; font-weight: 600; }
-
-        /* ── Auth overlay ── */
-        #auth-overlay {
-            position: fixed; inset: 0; background: var(--bg); z-index: 500;
-            display: none; flex-direction: column; justify-content: center; align-items: center;
-            padding: 20px;
-        }
-        #auth-overlay.active { display: flex; }
-        .auth-card {
-            width: 100%; max-width: 380px; background: var(--card-bg);
-            border-radius: 24px; padding: 36px 24px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        }
-        .auth-logo { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; text-align: center; margin-bottom: 6px; }
-        .auth-sub { font-size: 12px; opacity: 0.4; text-align: center; margin-bottom: 28px; }
-        .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
-        .auth-grid .btn { margin: 0; }
-
-        /* ── Toggle switch ── */
-        .switch { position: relative; display: inline-block; width: 48px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 34px; transition: 0.3s; }
-        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
-        input:checked + .slider { background: var(--accent); }
-        input:checked + .slider:before { transform: translateX(20px); }
-        .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 0.5px solid rgba(128,128,128,0.15); margin-top: 4px; }
-
-        /* ── Reader list ── */
-        .reader-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid rgba(128,128,128,0.12); }
-        .reader-item:last-child { border-bottom: none; }
-
-        /* ── Request items ── */
-        .req-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid rgba(128,128,128,0.12); }
-        .req-item:last-child { border-bottom: none; }
-
-        /* ── Viewer ── */
-        #viewer {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .viewer-toolbar {
-            position: absolute; top: calc(20px + env(safe-area-inset-top));
-            left: 20px; right: 20px; display: flex; justify-content: space-between;
-        }
-        .v-btn {
-            background: rgba(255,255,255,0.2); border: none; color: white;
-            width: 44px; height: 44px; border-radius: 50%; font-size: 20px;
-            cursor: pointer; backdrop-filter: blur(10px);
-            display: flex; align-items: center; justify-content: center;
-        }
-        #viewer-img { max-width: 90%; max-height: 80vh; border-radius: 12px; }
-
-        /* ── Scrollbar ── */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.25); border-radius: 10px; }
-        body.neon-mode ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
-        body.neon-mode ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>Chat-K</title>
+<style>
+:root{
+  --accent:#007AFF;--bg:#F2F2F7;--card:#FFFFFF;--text:#000;--sub:#8E8E93;
+  --sep:rgba(0,0,0,.1);--hbg:rgba(255,255,255,.92);
+  --bme:#007AFF;--both:#E9E9EB;--danger:#FF3B30;--green:#34C759;
+  --dm:#AF52DE;--hh:56px;
+}
+body.dark{
+  --accent:#0A84FF;--bg:#000;--card:#1C1C1E;--text:#fff;--sub:#8E8E93;
+  --sep:rgba(255,255,255,.1);--hbg:rgba(28,28,30,.94);
+  --bme:#0A84FF;--both:#2C2C2E;--danger:#FF453A;--green:#30D158;--dm:#BF5AF2;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);overflow:hidden;position:fixed;width:100%;height:100%;transition:background .3s,color .3s}
+header{position:fixed;top:0;left:0;right:0;z-index:200;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:var(--hbg);border-bottom:.5px solid var(--sep);display:flex;align-items:center;height:calc(var(--hh) + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);padding:env(safe-area-inset-top) 4px 0}
+header button{background:none;border:none;font-size:22px;color:inherit;padding:8px 12px;cursor:pointer}
+.title{flex:1;text-align:center;font-weight:600;font-size:17px}
+#rt-bar{position:fixed;top:calc(var(--hh) + env(safe-area-inset-top));left:0;right:0;z-index:150;display:none;overflow-x:auto;gap:8px;padding:8px 12px;background:var(--hbg);backdrop-filter:blur(10px);border-bottom:.5px solid var(--sep);align-items:flex-end;min-height:68px;scrollbar-width:none}
+#rt-bar::-webkit-scrollbar{display:none}
+#rt-bar.on{display:flex}
+.rt-track{min-width:90px;max-width:130px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.rt-bub{background:var(--card);border:1.5px solid var(--accent);border-radius:12px;padding:6px 10px;font-size:12px;word-break:break-all;text-align:center;width:100%;animation:pop .25s cubic-bezier(.175,.885,.32,1.275)}
+.rt-lbl{font-size:10px;font-weight:700;background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+#chat-area{position:fixed;left:0;right:0;bottom:0;top:calc(var(--hh) + env(safe-area-inset-top));overflow-y:auto;padding:16px 12px 88px;display:flex;flex-direction:column;gap:12px;transition:top .2s}
+#chat-area.bar{top:calc(var(--hh) + env(safe-area-inset-top) + 68px)}
+.footer{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--hbg);backdrop-filter:blur(20px);border-top:.5px solid var(--sep);padding:8px 12px calc(8px + env(safe-area-inset-bottom));display:none;gap:8px;align-items:flex-end}
+#msg-input{flex:1;border:none;background:rgba(120,120,128,.12);padding:10px 14px;border-radius:22px;color:var(--text);outline:none;font-size:16px;max-height:120px;resize:none;line-height:1.4}
+#send-btn{width:40px;height:40px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:opacity .15s}
+#send-btn:disabled{opacity:.35}
+.att-btn{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text);padding:4px;flex-shrink:0;opacity:.7}
+.msg-row{display:flex;gap:8px;max-width:88%}
+.msg-row.me{align-self:flex-end;flex-direction:row-reverse}
+.u-icon{width:32px;height:32px;border-radius:50%;background:var(--accent);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
+.u-icon img{width:100%;height:100%;object-fit:cover}
+.bubble{padding:10px 14px;border-radius:18px;font-size:15px;background:var(--both);color:var(--text);line-height:1.45;word-break:break-word;cursor:pointer;white-space:pre-wrap}
+.me .bubble{background:var(--bme);color:#fff}
+.msg-name{font-size:10px;opacity:.5;margin-bottom:3px}
+.msg-meta{font-size:10px;color:var(--sub);margin-top:3px;display:flex;align-items:center;gap:6px}
+.msg-row.me .msg-meta{justify-content:flex-end}
+.rbadge{color:var(--accent);cursor:pointer}
+.rbadge:hover{text-decoration:underline}
+.img-pre{max-width:220px;border-radius:14px;cursor:pointer;display:block}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:300;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);display:none;overflow-y:auto}
+.modal.active{display:block}
+.mi{padding:16px 16px 32px}
+.mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.mhdr h2{font-size:22px;font-weight:700}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.clbl{font-size:12px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.std-input{width:100%;padding:12px 14px;margin-bottom:10px;border-radius:10px;border:1.5px solid var(--sep);background:rgba(120,120,128,.06);color:var(--text);outline:none;font-size:16px;transition:border-color .2s}
+.std-input:focus{border-color:var(--accent)}
+.std-input[readonly]{opacity:.55}
+.btn{width:100%;height:50px;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px;transition:opacity .15s,transform .1s}
+.btn:active{opacity:.7;transform:scale(.98)}
+.bp{background:var(--accent);color:#fff}
+.bs{background:var(--green);color:#fff}
+.bn{background:#8E8E93;color:#fff}
+.bd{background:var(--danger);color:#fff}
+.bdm{background:var(--dm);color:#fff}
+.btn-sm{height:34px;padding:0 14px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;transition:opacity .15s;white-space:nowrap}
+.btn-sm:active{opacity:.7}
+.btn-sm.d{background:var(--danger)}
+.btn-sm.s{background:var(--green)}
+.cbtn{width:32px;height:32px;border-radius:50%;background:rgba(120,120,128,.15);border:none;font-size:16px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pcard{display:flex;align-items:center;gap:14px;cursor:pointer;padding:16px;background:var(--card);border-radius:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:opacity .15s}
+.pcard:active{opacity:.7}
+.iw{position:relative;flex-shrink:0}
+.picon{width:48px;height:48px;border-radius:50%;background:var(--accent);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:20px}
+.picon img{width:100%;height:100%;object-fit:cover}
+.odot{position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;background:var(--green);border:2px solid var(--bg)}
+#online-sec{margin-bottom:4px}
+.oscroll{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:none}
+.oscroll::-webkit-scrollbar{display:none}
+.ouser{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.oav{width:44px;height:44px;border-radius:50%;background:var(--accent);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;border:2.5px solid var(--green)}
+.oav img{width:100%;height:100%;object-fit:cover}
+.onm{font-size:10px;opacity:.6;max-width:48px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slbl{font-size:13px;font-weight:600;color:var(--sub);margin:20px 0 8px 4px}
+.chat-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border-radius:14px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:opacity .15s}
+.chat-item:active{opacity:.7}
+.ci-icon{width:44px;height:44px;border-radius:50%;background:var(--accent);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0;position:relative}
+.ci-icon.dm{background:var(--dm)}
+.ci-icon .odot{bottom:0;right:0}
+.ci-info{flex:1;min-width:0}
+.ci-name{font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-sub{font-size:12px;color:var(--sub);margin-top:2px}
+.badge{background:var(--danger);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;flex-shrink:0}
+.pini{font-size:14px;opacity:.5;flex-shrink:0}
+.freq-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--sep)}
+.freq-item:last-child{border-bottom:none}
+.iform{display:none;padding:16px;background:var(--card);border-radius:16px;margin-top:8px}
+.iform.on{display:block}
+.ifhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.ifhdr h4{font-size:16px;font-weight:600}
+#auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+#auth-overlay.active{display:flex}
+.acard{width:100%;max-width:380px;background:var(--card);border-radius:24px;padding:36px 24px;box-shadow:0 8px 32px rgba(0,0,0,.1)}
+.alogo{font-size:40px;font-weight:800;letter-spacing:-1.5px;text-align:center;margin-bottom:6px}
+.asub{font-size:12px;opacity:.4;text-align:center;margin-bottom:28px}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.agrid .btn{margin:0}
+.switch{position:relative;display:inline-block;width:48px;height:28px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:34px;transition:.3s}
+.slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.slider{background:var(--accent)}
+input:checked+.slider:before{transform:translateX(20px)}
+.trow{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:.5px solid var(--sep)}
+.ritem{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--sep)}
+.ritem:last-child{border-bottom:none}
+.req-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:.5px solid var(--sep)}
+.req-item:last-child{border-bottom:none}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center}
+.vtb{position:absolute;top:calc(20px + env(safe-area-inset-top));left:20px;right:20px;display:flex;justify-content:space-between}
+.vbtn{background:rgba(255,255,255,.2);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center}
+#viewer-img{max-width:90%;max-height:80vh;border-radius:12px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(128,128,128,.25);border-radius:10px}
+body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
+</style>
 </head>
 <body>
 
 <header>
-    <button onclick="window.goHome()">🏠</button>
-    <div class="title" id="head-title">ホーム</div>
-    <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
+  <button onclick="G.home()">🏠</button>
+  <div class="title" id="htitle">ホーム</div>
+  <button id="hset" onclick="G.openSettings()" style="visibility:hidden">⚙️</button>
 </header>
 
-<!-- リアルタイムバー（ヘッダー下、チャット中のみ表示） -->
-<div id="realtime-bar"></div>
-
-<!-- チャットエリア -->
+<div id="rt-bar"></div>
 <div id="chat-area"></div>
 
-<!-- 入力フッター -->
-<div class="footer" id="chat-footer">
-    <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
-    <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
-    <textarea id="msg-input" placeholder="メッセージ..." rows="1"></textarea>
-    <button id="send-btn" onclick="window.sendMessage()">↑</button>
+<div class="footer" id="footer">
+  <button class="att-btn" onclick="document.getElementById('fi').click()">📎</button>
+  <input type="file" id="fi" style="display:none" onchange="G.sendFile(this)">
+  <textarea id="msg-input" placeholder="メッセージ..." rows="1"></textarea>
+  <button id="send-btn" onclick="G.send()">↑</button>
 </div>
 
-<!-- ホームモーダル -->
-<div id="main-modal" class="modal">
-    <div class="modal-inner">
-        <div class="profile-card" onclick="window.openUserCard()">
-            <div id="home-icon" class="profile-icon"></div>
-            <div style="flex:1;">
-                <div style="font-weight:700; font-size:17px;" id="u-name-display">-</div>
-                <div style="font-size:13px; opacity:0.5;" id="u-id-display">@-</div>
-            </div>
-            <span style="opacity:0.35; font-size:20px;">›</span>
-        </div>
+<!-- HOME -->
+<div id="home-modal" class="modal">
+<div class="mi">
+  <div class="pcard" onclick="G.openProfile()">
+    <div class="iw"><div id="home-icon" class="picon"></div></div>
+    <div style="flex:1"><div style="font-weight:700;font-size:17px" id="uname">-</div><div style="font-size:13px;opacity:.5" id="uid">@-</div></div>
+    <span style="opacity:.35;font-size:20px">›</span>
+  </div>
+  <div id="online-sec" style="display:none">
+    <div class="slbl">🟢 オンライン中</div>
+    <div class="oscroll" id="online-list"></div>
+  </div>
+  <div id="freq-sec" style="display:none">
+    <div class="slbl">👤 フレンド申請</div>
+    <div class="card" id="freq-list"></div>
+  </div>
+  <div id="pin-sec" style="display:none">
+    <div class="slbl">📌 ピン止め</div>
+    <div id="pin-list"></div>
+  </div>
+  <div class="slbl">💬 グループ</div>
+  <div id="grp-list"></div>
+  <button class="btn bs" onclick="G.showForm('create')">＋ 新規グループ作成</button>
+  <button class="btn bn" onclick="G.showForm('join')">ID で参加</button>
+  <div id="grp-form" class="iform">
+    <div class="ifhdr"><h4 id="gform-title">-</h4><button class="cbtn" onclick="document.getElementById('grp-form').classList.remove('on')">✕</button></div>
+    <input type="text" id="g-id" class="std-input" placeholder="グループ名 / ID">
+    <input type="password" id="g-pw" class="std-input" placeholder="パスワード">
+    <button class="btn bp" onclick="G.execGroup()">実行</button>
+  </div>
+  <div class="slbl" style="margin-top:20px">💜 ダイレクトメッセージ</div>
+  <div id="dm-list"></div>
+  <button class="btn bdm" onclick="G.showDmForm()">＋ フレンド申請を送る</button>
+  <div id="dm-form" class="iform">
+    <div class="ifhdr"><h4>フレンド申請</h4><button class="cbtn" onclick="document.getElementById('dm-form').classList.remove('on')">✕</button></div>
+    <input type="text" id="dm-target" class="std-input" placeholder="相手のユーザーID">
+    <button class="btn bdm" onclick="G.sendFriendReq()">申請を送る</button>
+  </div>
+</div>
+</div>
 
-        <div class="section-label">グループ</div>
-        <div id="project-list"></div>
-
-        <div style="margin-top:16px;">
-            <button class="btn btn-success" onclick="window.showForm('create')">＋ 新規グループ作成</button>
-            <button class="btn btn-neutral" onclick="window.showForm('join')">ID で参加</button>
-        </div>
-
-        <div id="p-form" class="inline-form">
-            <div class="inline-form-header">
-                <h4 id="p-form-title">-</h4>
-                <button class="close-btn" onclick="document.getElementById('p-form').classList.remove('active')">✕</button>
-            </div>
-            <input type="text" id="p-id-input" class="std-input" placeholder="グループ名 / ID">
-            <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード">
-            <button class="btn btn-primary" onclick="window.execAction()">実行</button>
-        </div>
+<!-- SETTINGS -->
+<div id="set-modal" class="modal">
+<div class="mi">
+  <div class="mhdr"><h2 id="set-title">設定</h2><button class="cbtn" onclick="G.closeSettings()">✕</button></div>
+  <div class="card">
+    <div class="trow" style="border-top:none;padding-top:0">
+      <span style="font-weight:500">📌 ピン止め</span>
+      <label class="switch"><input type="checkbox" id="pin-tog" onchange="G.togglePin(this.checked)"><span class="slider"></span></label>
     </div>
-</div>
-
-<!-- 設定モーダル -->
-<div id="settings-modal" class="modal">
-    <div class="modal-inner">
-        <div class="modal-header">
-            <h2>グループ設定</h2>
-            <button class="close-btn" onclick="window.closeSettingsToChat()">✕</button>
-        </div>
-        <div class="card">
-            <div class="card-label">チーム情報</div>
-            <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">グループ名</label>
-            <input type="text" id="team-id-input" class="std-input" placeholder="グループ名">
-            <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">パスワード</label>
-            <input type="text" id="team-pass-input" class="std-input" placeholder="パスワード">
-            <p id="team-settings-note" style="font-size:12px; opacity:0.5; margin-bottom:12px;">※ホストのみ変更できます。</p>
-            <button id="team-settings-save" class="btn btn-primary" onclick="window.updateTeamSettings()" style="display:none;">保存</button>
-        </div>
-        <button class="btn btn-danger" onclick="window.leaveGroup()">🚪 グループを退会する</button>
-        <div id="host-panel" style="display:none;" class="card">
-            <div class="card-label">👑 参加申請</div>
-            <div id="req-list"><p style="opacity:0.5; font-size:13px; text-align:center; padding:8px 0;">申請はありません</p></div>
-        </div>
+  </div>
+  <div id="grp-set" style="display:none">
+    <div class="card">
+      <div class="clbl">チーム情報</div>
+      <label style="font-size:12px;opacity:.6;display:block;margin-bottom:4px">グループ名</label>
+      <input type="text" id="t-name" class="std-input">
+      <label style="font-size:12px;opacity:.6;display:block;margin-bottom:4px">パスワード</label>
+      <input type="text" id="t-pw" class="std-input">
+      <p id="t-note" style="font-size:12px;opacity:.5;margin-bottom:12px"></p>
+      <button id="t-save" class="btn bp" onclick="G.saveTeam()" style="display:none">保存</button>
     </div>
-</div>
-
-<!-- プロフィールモーダル -->
-<div id="user-modal" class="modal">
-    <div class="modal-inner">
-        <div class="modal-header">
-            <h2>プロフィール</h2>
-            <button class="close-btn" onclick="window.closeModal('user-modal')">✕</button>
-        </div>
-        <div class="card" style="text-align:center;">
-            <div id="edit-icon-preview" class="profile-icon" style="width:80px;height:80px;margin:0 auto 16px;font-size:32px;"></div>
-            <button class="btn btn-neutral" onclick="document.getElementById('icon-input').click()">📷 写真を変更</button>
-            <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-            <label style="font-size:12px; opacity:0.6; display:block; margin:12px 0 4px; text-align:left;">表示名</label>
-            <input type="text" id="edit-name" class="std-input" placeholder="名前">
-            <label style="font-size:12px; opacity:0.6; display:block; margin:8px 0 4px; text-align:left;">パスワード変更（任意）</label>
-            <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード">
-            <div class="toggle-row">
-                <span style="font-weight:500;">ネオンモード</span>
-                <label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label>
-            </div>
-            <button class="btn btn-primary" onclick="window.updateUser()" style="margin-top:16px;">設定を保存</button>
-            <button class="btn btn-neutral" onclick="window.logout()">ログアウト</button>
-            <button class="btn btn-danger" onclick="window.deleteAccount()">アカウントを削除</button>
-        </div>
+    <button class="btn bd" onclick="G.leaveGroup()">🚪 グループを退会する</button>
+    <div id="host-panel" style="display:none" class="card">
+      <div class="clbl">👑 参加申請</div>
+      <div id="req-list"></div>
     </div>
+  </div>
+  <div id="dm-set" style="display:none">
+    <button class="btn bd" onclick="G.deleteDM()">🗑 このDMを削除する</button>
+  </div>
+</div>
 </div>
 
-<!-- 既読モーダル -->
+<!-- PROFILE -->
+<div id="prof-modal" class="modal">
+<div class="mi">
+  <div class="mhdr"><h2>プロフィール</h2><button class="cbtn" onclick="G.closeModal('prof-modal')">✕</button></div>
+  <div class="card" style="text-align:center">
+    <div id="prof-icon" class="picon" style="width:80px;height:80px;margin:0 auto 16px;font-size:32px"></div>
+    <button class="btn bn" onclick="document.getElementById('icon-in').click()">📷 写真を変更</button>
+    <input type="file" id="icon-in" accept="image/*" style="display:none" onchange="G.previewIcon(this)">
+    <label style="font-size:12px;opacity:.6;display:block;margin:12px 0 4px;text-align:left">表示名</label>
+    <input type="text" id="e-name" class="std-input">
+    <label style="font-size:12px;opacity:.6;display:block;margin:8px 0 4px;text-align:left">パスワード変更（任意）</label>
+    <input type="password" id="e-pw" class="std-input">
+    <div class="trow">
+      <span style="font-weight:500">🌙 ダークモード</span>
+      <label class="switch"><input type="checkbox" id="dark-tog" onchange="G.toggleDark(this.checked)"><span class="slider"></span></label>
+    </div>
+    <button class="btn bp" onclick="G.saveProfile()" style="margin-top:16px">設定を保存</button>
+    <button class="btn bn" onclick="G.logout()">ログアウト</button>
+    <button class="btn bd" onclick="G.deleteAccount()">アカウントを削除</button>
+  </div>
+</div>
+</div>
+
+<!-- READ -->
 <div id="read-modal" class="modal">
-    <div class="modal-inner">
-        <div class="modal-header">
-            <h2>既読ユーザー</h2>
-            <button class="close-btn" onclick="window.closeModal('read-modal')">✕</button>
-        </div>
-        <div class="card" id="reader-list-content"></div>
-    </div>
+<div class="mi">
+  <div class="mhdr"><h2>既読ユーザー</h2><button class="cbtn" onclick="G.closeModal('read-modal')">✕</button></div>
+  <div class="card" id="read-list"></div>
+</div>
 </div>
 
-<!-- 認証オーバーレイ -->
+<!-- AUTH -->
 <div id="auth-overlay">
-    <div class="auth-card">
-        <div class="auth-logo">Chat-K</div>
-        <div class="auth-sub">※ Enterキーは無効、ボタン操作のみ</div>
-        <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID（世界に一つ）">
-        <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
-        <div class="auth-grid">
-            <button class="btn btn-success" onclick="window.execRegister()">新規登録</button>
-            <button class="btn btn-primary" onclick="window.execLogin()">ログイン</button>
-        </div>
+  <div class="acard">
+    <div class="alogo">Chat-K</div>
+    <div class="asub">※ Enterキーは無効、ボタン操作のみ</div>
+    <input type="text" id="a-id" class="std-input" placeholder="ユーザーID（世界に一つ）">
+    <input type="password" id="a-pw" class="std-input" placeholder="パスワード">
+    <div class="agrid">
+      <button class="btn bs" onclick="G.register()">新規登録</button>
+      <button class="btn bp" onclick="G.login()">ログイン</button>
     </div>
+  </div>
 </div>
 
-<!-- 画像ビューアー -->
+<!-- VIEWER -->
 <div id="viewer">
-    <div class="viewer-toolbar">
-        <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
-        <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
-    </div>
-    <img id="viewer-img" src="" alt="">
+  <div class="vtb">
+    <button class="vbtn" onclick="G.dlFromViewer()">📥</button>
+    <button class="vbtn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
+  </div>
+  <img id="viewer-img" src="" alt="">
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import{getDatabase,ref,set,get,push,onValue,update,remove,serverTimestamp,onDisconnect}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const config = {
-        apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
-        databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com",
-        projectId: "my-chat-1d626"
-    };
-    const app = initializeApp(config);
-    const db = getDatabase(app);
+const app=initializeApp({apiKey:"AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",databaseURL:"https://my-chat-1d626-default-rtdb.firebaseio.com",projectId:"my-chat-1d626"});
+const db=getDatabase(app);
 
-    // ── State ──
-    let myId = null, myName = null, myIcon = "";
-    let currentGid = null;
-    let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
-    let currentListener = null;
-    let realtimeListener = null;
-    let isSending = false;
-    let lastSig = "", lastSigAt = 0;
+// ── State ──
+let myId=null,myName=null,myIcon="";
+let curId=null,curType=null,curOther=null;
+let lastSeen=JSON.parse(localStorage.getItem('ls')||'{}');
+let pins={};
+let curLsn=null,rtLsn=null,freqLsn=null;
+let presSubs={},onlineMap={};
+let sending=false,lastSig="",lastSigAt=0;
 
-    // ── Helpers ──
-    const $ = id => document.getElementById(id);
+// ── Helpers ──
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt=ts=>{if(!ts)return'';const d=new Date(ts);return`${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`};
+const mkDmId=(a,b)=>'dm_'+[a,b].sort().join('_');
+const draw=(el,url,name,dm=false)=>{
+  if(!el)return;
+  el.style.background=dm?'var(--dm)':'var(--accent)';
+  el.innerHTML=url?`<img src="${url}" alt="">`:(name?name[0].toUpperCase():'?');
+};
 
-    const escHtml = s => String(s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ── Auth ──
+const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
+const goAuth=()=>{
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  $('auth-overlay').classList.add('active');
+  $('footer').style.display='none';
+  $('hset').style.visibility='hidden';
+  $('htitle').textContent='Chat-K';
+};
+const check=async()=>{
+  const id=localStorage.getItem('chat_uid'),nm=localStorage.getItem('chat_name');
+  if(!id||!nm)return true;
+  try{const s=await get(ref(db,`v20_users/${id}`));if(!s.exists()){clear();return true;}}catch{return true;}
+  myId=id;myName=nm;return false;
+};
+const sess=(id,nm)=>{
+  localStorage.setItem('chat_uid',id);localStorage.setItem('chat_name',nm);
+  myId=id;myName=nm;
+  $('auth-overlay').classList.remove('active');
+  presence();G.home();
+};
 
-    const drawIcon = (el, url, name) => {
-        if (!el) return;
-        if (url) {
-            el.innerHTML = `<img src="${url}" alt="">`;
-        } else {
-            el.textContent = name ? name[0].toUpperCase() : "?";
-            el.style.background = "var(--accent)";
-        }
-    };
+window.G={};
+G.register=async()=>{
+  const id=$('a-id').value.trim(),pw=$('a-pw').value;
+  if(!id||!pw)return alert('IDとパスワードを入力してください');
+  try{
+    if((await get(ref(db,`v20_users/${id}`))).exists())return alert('そのIDはすでに使われています。');
+    await set(ref(db,`v20_users/${id}`),{name:id,pw,icon:''});
+    sess(id,id);
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.login=async()=>{
+  const id=$('a-id').value.trim(),pw=$('a-pw').value;
+  if(!id||!pw)return alert('IDとパスワードを入力してください');
+  try{
+    const s=await get(ref(db,`v20_users/${id}`));
+    if(!s.exists())return alert('IDが見つかりません。');
+    if(s.val().pw!==pw)return alert('パスワードが違います。');
+    sess(id,s.val().name);
+  }catch(e){alert('エラー: '+e.message);}
+};
+document.addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
 
-    // ── Auth ──
-    const clearSession = () => {
-        ['chat_uid','chat_name','chat_last_seen'].forEach(k => localStorage.removeItem(k));
-        myId = myName = null;
-    };
+// ── Presence ──
+const presence=()=>{
+  if(!myId)return;
+  const pr=ref(db,`v20_presence/${myId}`);
+  onValue(ref(db,'.info/connected'),s=>{
+    if(s.val()){
+      onDisconnect(pr).update({online:false,lastSeen:serverTimestamp()});
+      update(pr,{online:true,name:myName,icon:myIcon||'',lastSeen:serverTimestamp()});
+    }
+  });
+};
 
-    const goToAuthScreen = () => {
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        $('auth-overlay').classList.add('active');
-        $('chat-footer').style.display = 'none';
-        $('header-set-btn').style.visibility = 'hidden';
-        $('head-title').textContent = 'Chat-K';
-    };
+// ── Theme ──
+G.toggleDark=on=>{document.body.classList.toggle('dark',on);localStorage.setItem('dark',on);};
+G.closeModal=id=>$(id).classList.remove('active');
 
-    const shouldOpenAuthScreen = async () => {
-        const id   = localStorage.getItem('chat_uid');
-        const name = localStorage.getItem('chat_name');
-        if (!id || !name) return true;
-        try {
-            const snap = await get(ref(db, `v20_users/${id}`));
-            if (!snap.exists()) { clearSession(); return true; }
-        } catch { return true; }
-        myId = id; myName = name;
-        return false;
-    };
-
-    const saveSession = (id, name) => {
-        localStorage.setItem('chat_uid', id);
-        localStorage.setItem('chat_name', name);
-        myId = id; myName = name;
-        $('auth-overlay').classList.remove('active');
-        window.goHome();
-    };
-
-    window.execRegister = async () => {
-        const id = $('auth-id').value.trim();
-        const pw = $('auth-pw').value;
-        if (!id || !pw) return alert("IDとパスワードを入力してください");
-        try {
-            const userRef = ref(db, `v20_users/${id}`);
-            if ((await get(userRef)).exists()) return alert("そのIDはすでに使われています。");
-            await set(userRef, { name: id, pw, icon: "" });
-            saveSession(id, id);
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    window.execLogin = async () => {
-        const id = $('auth-id').value.trim();
-        const pw = $('auth-pw').value;
-        if (!id || !pw) return alert("IDとパスワードを入力してください");
-        try {
-            const snap = await get(ref(db, `v20_users/${id}`));
-            if (!snap.exists()) return alert("IDが見つかりません。");
-            if (snap.val().pw !== pw) return alert("パスワードが違います。");
-            saveSession(id, snap.val().name);
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    document.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
-
-    // ── Theme ──
-    window.toggleNeon = isOn => {
-        document.body.classList.toggle('neon-mode', isOn);
-        localStorage.setItem('neon_enabled', isOn);
-    };
-    window.closeModal = id => $(id).classList.remove('active');
-
-    // ── Home ──
-    window.goHome = async () => {
-        if (currentListener)  { currentListener();  currentListener  = null; }
-        if (realtimeListener) { realtimeListener(); realtimeListener = null; }
-        currentGid = null;
-
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        $('main-modal').classList.add('active');
-        $('chat-footer').style.display    = 'none';
-        $('header-set-btn').style.visibility = 'hidden';
-        $('head-title').textContent = 'ホーム';
-        $('realtime-bar').classList.remove('visible');
-        $('realtime-bar').innerHTML = '';
-        $('chat-area').classList.remove('with-bar');
-
-        try {
-            const uSnap = await get(ref(db, `v20_users/${myId}`));
-            if (uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
-        } catch {}
-
-        $('u-name-display').textContent = myName;
-        $('u-id-display').textContent   = "@" + myId;
-        drawIcon($('home-icon'), myIcon, myName);
-
-        const list = $('project-list');
-        list.innerHTML = '';
-        try {
-            const snap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            if (snap.exists()) {
-                for (const gid of Object.keys(snap.val())) {
-                    const unread = await calcUnread(gid);
-                    const item = document.createElement('div');
-                    item.className = 'group-item';
-                    item.innerHTML = `
-                        <span class="group-name">${escHtml(gid.split('_')[0])}</span>
-                        ${unread > 0
-                            ? `<span class="badge">🔴 ${unread}</span>`
-                            : '<span style="opacity:0.3;font-size:18px;">›</span>'}`;
-                    item.onclick = () => window.enterChat(gid);
-                    list.appendChild(item);
-                }
-            }
-        } catch {}
-    };
-
-    const calcUnread = async gid => {
-        try {
-            const snap = await get(ref(db, `v20_groups/${gid}/messages`));
-            if (!snap.exists()) return 0;
-            const t = lastSeen[gid] || 0;
-            return Object.values(snap.val()).filter(m => m.time > t && m.uid !== myId).length;
-        } catch { return 0; }
-    };
-
-    // ── Enter chat ──
-    window.enterChat = async gid => {
-        if (currentListener)  { currentListener();  currentListener  = null; }
-        if (realtimeListener) { realtimeListener(); realtimeListener = null; }
-
-        currentGid = gid;
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        $('chat-footer').style.display       = 'flex';
-        $('header-set-btn').style.visibility = 'visible';
-        lastSeen[gid] = Date.now();
-        localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
-
-        try {
-            const gSnap = await get(ref(db, `v20_groups/${gid}`));
-            if (gSnap.exists()) {
-                const g = gSnap.val();
-                $('head-title').textContent = g.name || gid.split('_')[0];
-                if (g.host === myId) {
-                    $('host-panel').style.display = 'block';
-                    watchRequests(gid);
-                } else {
-                    $('host-panel').style.display = 'none';
-                }
-            }
-        } catch {}
-
-        // リアルタイムバー
-        $('realtime-bar').innerHTML = '';
-        realtimeListener = onValue(ref(db, `v20_groups/${gid}/realtime`), snap => {
-            if (!snap.exists()) return;
-            const bar = $('realtime-bar');
-            snap.forEach(child => {
-                const uid  = child.key;
-                const info = child.val();
-                let track = document.getElementById(`rt-${uid}`);
-                if (!track) {
-                    track = document.createElement('div');
-                    track.id = `rt-${uid}`;
-                    track.className = 'rt-track';
-                    track.innerHTML = `<div class="rt-bubble" id="rtb-${uid}"></div><div class="rt-label">${escHtml(info.name)}</div>`;
-                    bar.appendChild(track);
-                    bar.classList.add('visible');
-                    $('chat-area').classList.add('with-bar');
-                }
-                const bubble = document.getElementById(`rtb-${uid}`);
-                if (bubble && bubble.textContent !== info.text) {
-                    bubble.textContent = info.text;
-                    bubble.style.animation = 'none';
-                    void bubble.offsetHeight;
-                    bubble.style.animation = '';
-                }
-            });
-        });
-
-        // メッセージ
-        currentListener = onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
-            const area = $('chat-area');
-            area.innerHTML = '';
-            if (!snap.exists()) return;
-
-            snap.forEach(child => {
-                const key  = child.key;
-                const m    = child.val();
-                const isMe = m.uid === myId;
-
-                if (!isMe && (!m.readBy || !m.readBy[myId])) {
-                    update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), {
-                        [myId]: { name: myName, time: Date.now() }
-                    }).catch(() => {});
-                }
-
-                const readCount = m.readBy ? Object.keys(m.readBy).length : 0;
-                let contentHtml = '';
-
-                if (m.type === 'file') {
-                    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName || '');
-                    contentHtml = isImg
-                        ? `<img src="${m.data}" class="img-preview" onclick="window._openViewer('${key}')">`
-                        : `<div class="bubble" onclick="window._dlFile('${key}')">📄 ${escHtml(m.fileName)}</div>`;
-                } else {
-                    contentHtml = `<div class="bubble" onclick="window.checkReadStatus('${key}')">${escHtml(m.text || '')}</div>`;
-                }
-
-                const readHtml = readCount > 0
-                    ? `<span class="read-badge" onclick="window.checkReadStatus('${key}')">既読 ${readCount}</span>`
-                    : `<span style="opacity:0.3;">未読</span>`;
-
-                const row = document.createElement('div');
-                row.className = `msg-row ${isMe ? 'me' : ''}`;
-                row.dataset.key = key;
-                row.innerHTML = `
-                    <div class="u-icon">${escHtml((m.name || '?')[0])}</div>
-                    <div style="max-width:100%;">
-                        ${!isMe ? `<div class="msg-name">${escHtml(m.name || '')}</div>` : ''}
-                        ${contentHtml}
-                        <div class="msg-meta">${readHtml}</div>
-                    </div>`;
-
-                // ファイル参照をデータに保持
-                if (m.type === 'file') row._fileData = { data: m.data, fileName: m.fileName };
-                area.appendChild(row);
-            });
-            area.scrollTop = area.scrollHeight;
-        });
-    };
-
-    // ファイル操作（DOM参照経由でキーを使う）
-    window._openViewer = key => {
-        const row = document.querySelector(`[data-key="${key}"]`);
-        if (row && row._fileData) window.openViewer(row._fileData.data, row._fileData.fileName);
-    };
-    window._dlFile = key => {
-        const row = document.querySelector(`[data-key="${key}"]`);
-        if (row && row._fileData) window.downloadFile(row._fileData.data, row._fileData.fileName);
-    };
-
-    // ── Send message ──
-    window.sendMessage = async () => {
-        const input = $('msg-input');
-        if (!input || !currentGid) return;
-        const text = input.value.trim();
-        if (!text) return;
-
-        const sig = `${currentGid}::${text}`;
-        const now = Date.now();
-        if (isSending || (sig === lastSig && now - lastSigAt < 1200)) return;
-
-        isSending = true; lastSig = sig; lastSigAt = now;
-        const btn = $('send-btn');
-        btn.disabled = true;
-        input.value = '';
-        input.style.height = 'auto';
-
-        try {
-            const msgId = push(ref(db, `v20_groups/${currentGid}/messages`)).key;
-            await update(ref(db), {
-                [`v20_groups/${currentGid}/messages/${msgId}`]: {
-                    uid: myId, name: myName, text, type: 'text', time: serverTimestamp()
-                },
-                [`v20_groups/${currentGid}/realtime/${myId}`]: {
-                    name: myName, text, lastMsgId: msgId, time: serverTimestamp()
-                }
-            });
-        } catch (e) {
-            alert("送信失敗: " + e.message);
-            input.value = text;
-        } finally {
-            isSending = false;
-            btn.disabled = false;
-            input.focus();
-        }
-    };
-
-    window.sendFile = input => {
-        const file = input.files[0];
-        if (!file || !currentGid) return;
-        const r = new FileReader();
-        r.onload = e => push(ref(db, `v20_groups/${currentGid}/messages`), {
-            uid: myId, name: myName, type: 'file',
-            data: e.target.result, fileName: file.name, time: serverTimestamp()
-        }).catch(err => alert("ファイル送信失敗: " + err.message));
-        r.readAsDataURL(file);
-        input.value = '';
-    };
-
-    // ── Read receipts ──
-    window.checkReadStatus = async msgId => {
-        if (!currentGid) return;
-        const snap = await get(ref(db, `v20_groups/${currentGid}/messages/${msgId}/readBy`)).catch(() => null);
-        const el = $('reader-list-content');
-        el.innerHTML = '';
-        if (snap && snap.exists()) {
-            Object.values(snap.val()).forEach(r => {
-                const d = new Date(r.time);
-                const t = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
-                const item = document.createElement('div');
-                item.className = 'reader-item';
-                item.innerHTML = `<div class="u-icon">${escHtml(r.name[0])}</div><div><b>${escHtml(r.name)}</b><br><small style="opacity:0.5;">${t}</small></div>`;
-                el.appendChild(item);
-            });
-        } else {
-            el.innerHTML = '<div style="padding:20px; text-align:center; opacity:0.5;">まだ誰も読んでいません</div>';
-        }
-        $('read-modal').classList.add('active');
-    };
-
-    // ── Group actions ──
-    window.showForm = mode => {
-        window.pMode = mode;
-        $('p-form-title').textContent = mode === 'create' ? '新規グループ作成' : 'グループに参加';
-        $('p-form').classList.add('active');
-    };
-
-    window.execAction = async () => {
-        const id = $('p-id-input').value.trim();
-        const pw = $('p-pw-input').value;
-        if (!id) return alert("入力してください");
-        try {
-            if (window.pMode === 'create') {
-                const gid = id + '_' + Math.random().toString(36).substr(2, 6);
-                await set(ref(db, `v20_groups/${gid}`), { name: id, pw, host: myId });
-                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
-                alert("グループを作成しました！");
-            } else {
-                const snap = await get(ref(db, 'v20_groups'));
-                let target = null;
-                snap.forEach(g => { if (g.val().name === id && g.val().pw === pw) target = g.key; });
-                if (target) {
-                    await update(ref(db, `v20_groups/${target}/requests/${myId}`), { uid: myId, name: myName });
-                    alert("申請を送りました。管理者が許可するまでお待ちください。");
-                } else {
-                    alert("グループが見つかりません");
-                }
-            }
-        } catch (e) { alert("エラー: " + e.message); }
-        window.goHome();
-    };
-
-    window.leaveGroup = async () => {
-        if (!currentGid || !confirm("このグループを退会しますか？")) return;
-        try {
-            await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
-            await remove(ref(db, `v20_groups/${currentGid}/requests/${myId}`));
-            alert("退会しました");
-            window.goHome();
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    // ── Settings ──
-    window.openSettings = async () => {
-        if (!currentGid) return;
-        try {
-            const snap = await get(ref(db, `v20_groups/${currentGid}`));
-            if (!snap.exists()) return;
-            const g = snap.val();
-            const isHost = g.host === myId;
-            $('team-id-input').value    = g.name || currentGid.split('_')[0];
-            $('team-pass-input').value  = g.pw || '';
-            $('team-id-input').readOnly   = !isHost;
-            $('team-pass-input').readOnly = !isHost;
-            $('team-settings-save').style.display = isHost ? 'flex' : 'none';
-            $('team-settings-note').textContent = isHost
-                ? '※ホストはグループ名/PASSを変更できます。'
-                : '※閲覧のみ（変更はホストのみ）。';
-        } catch {}
-        $('settings-modal').classList.add('active');
-    };
-
-    window.updateTeamSettings = async () => {
-        const name = $('team-id-input').value.trim();
-        const pw   = $('team-pass-input').value;
-        if (!name || !pw) return alert("グループ名とPASSを入力してください");
-        try {
-            const snap = await get(ref(db, `v20_groups/${currentGid}`));
-            if (snap.val().host !== myId) return alert("ホストのみ変更できます。");
-            await update(ref(db, `v20_groups/${currentGid}`), { name, pw });
-            $('head-title').textContent = name;
-            alert("更新しました");
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    window.closeSettingsToChat = () => $('settings-modal').classList.remove('active');
-
-    const watchRequests = gid => {
-        onValue(ref(db, `v20_groups/${gid}/requests`), snap => {
-            const el = $('req-list');
-            el.innerHTML = '';
-            if (snap.exists()) {
-                Object.entries(snap.val()).forEach(([uid, req]) => {
-                    const div = document.createElement('div');
-                    div.className = 'req-item';
-                    div.innerHTML = `
-                        <div><b>${escHtml(req.name)}</b> <small style="opacity:0.5;">@${escHtml(uid)}</small></div>
-                        <button class="btn-sm" onclick="window.acceptUser('${uid}','${escHtml(req.name)}')">許可</button>`;
-                    el.appendChild(div);
-                });
-            } else {
-                el.innerHTML = '<p style="opacity:0.5;font-size:13px;text-align:center;padding:12px 0;">申請はありません</p>';
-            }
-        });
-    };
-
-    window.acceptUser = async (uid, name) => {
-        if (!currentGid) return;
-        try {
-            await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
-            await remove(ref(db, `v20_groups/${currentGid}/requests/${uid}`));
-            alert(`${name}さんの参加を許可しました`);
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    // ── Profile ──
-    window.openUserCard = () => {
-        $('user-modal').classList.add('active');
-        $('edit-name').value = myName;
-        $('edit-pw').value   = '';
-        $('neon-toggle').checked = localStorage.getItem('neon_enabled') === 'true';
-        drawIcon($('edit-icon-preview'), myIcon, myName);
-        window.tempIcon = null;
-    };
-
-    window.previewIcon = input => {
-        const r = new FileReader();
-        r.onload = e => { window.tempIcon = e.target.result; drawIcon($('edit-icon-preview'), e.target.result, ''); };
-        r.readAsDataURL(input.files[0]);
-    };
-
-    window.updateUser = async () => {
-        const name = $('edit-name').value.trim();
-        const pw   = $('edit-pw').value;
-        if (!name) return alert("名前を入力してください");
-        const up = { name, icon: window.tempIcon || myIcon };
-        if (pw) up.pw = pw;
-        try {
-            await update(ref(db, `v20_users/${myId}`), up);
-            myName = name; myIcon = up.icon;
-            localStorage.setItem('chat_name', name);
-            alert("更新しました");
-            window.closeModal('user-modal');
-            window.goHome();
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    window.logout = () => {
-        if (!confirm("ログアウトしますか？")) return;
-        clearSession();
-        goToAuthScreen();
-    };
-
-    window.deleteAccount = async () => {
-        if (!confirm("本当にアカウントを削除しますか？\nこの操作は元に戻せません。")) return;
-        try {
-            const snap = await get(ref(db, `v20_users/${myId}/myGroups`));
-            if (snap.exists()) {
-                for (const gid of Object.keys(snap.val())) {
-                    await remove(ref(db, `v20_groups/${gid}/requests/${myId}`)).catch(() => {});
-                }
-            }
-            await remove(ref(db, `v20_users/${myId}`));
-            clearSession();
-            goToAuthScreen();
-        } catch (e) { alert("エラー: " + e.message); }
-    };
-
-    // ── Viewer ──
-    window.openViewer = (url, name) => {
-        $('viewer-img').src = url;
-        window._viewFile = { url, name };
-        $('viewer').style.display = 'flex';
-    };
-    window.downloadFromViewer = () => {
-        const a = document.createElement('a');
-        a.href = window._viewFile.url;
-        a.download = window._viewFile.name;
-        a.click();
-    };
-    window.downloadFile = (data, name) => {
-        const a = document.createElement('a');
-        a.href = data; a.download = name; a.click();
-    };
-
-    // ── Input events ──
-    $('msg-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+// ── Online users ──
+const subOnline=async()=>{
+  Object.values(presSubs).forEach(u=>u());
+  presSubs={};onlineMap={};
+  const uids=new Set();
+  try{
+    const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
+    if(gs.exists())for(const gid of Object.keys(gs.val())){
+      const ms=await get(ref(db,`v20_groups/${gid}/members`));
+      if(ms.exists())Object.keys(ms.val()).forEach(u=>uids.add(u));
+    }
+  }catch{}
+  try{
+    const ds=await get(ref(db,`v20_users/${myId}/myDMs`));
+    if(ds.exists())Object.keys(ds.val()).forEach(u=>uids.add(u));
+  }catch{}
+  uids.delete(myId);
+  const el=$('online-list'),sec=$('online-sec');
+  uids.forEach(uid=>{
+    presSubs[uid]=onValue(ref(db,`v20_presence/${uid}`),s=>{
+      if(s.exists()&&s.val().online)onlineMap[uid]=s.val();
+      else delete onlineMap[uid];
+      const us=Object.entries(onlineMap);
+      sec.style.display=us.length?'block':'none';
+      el.innerHTML=us.map(([,i])=>`<div class="ouser"><div class="oav">${esc((i.name||'?')[0].toUpperCase())}</div><div class="onm">${esc(i.name||'')}</div></div>`).join('');
     });
-    $('msg-input').addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-    });
+  });
+};
 
-    // ── Init ──
-    window.addEventListener('load', async () => {
-        window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
-        const showAuth = await shouldOpenAuthScreen();
-        if (showAuth) goToAuthScreen();
-        else window.goHome();
+// ── Home ──
+G.home=async()=>{
+  if(curLsn){curLsn();curLsn=null;}
+  if(rtLsn){rtLsn();rtLsn=null;}
+  curId=curType=curOther=null;
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  $('home-modal').classList.add('active');
+  $('footer').style.display='none';
+  $('hset').style.visibility='hidden';
+  $('htitle').textContent='ホーム';
+  $('rt-bar').classList.remove('on');
+  $('rt-bar').innerHTML='';
+  $('chat-area').classList.remove('bar');
+
+  try{const u=await get(ref(db,`v20_users/${myId}`));if(u.exists()){myName=u.val().name;myIcon=u.val().icon||'';}}catch{}
+  $('uname').textContent=myName;
+  $('uid').textContent='@'+myId;
+  draw($('home-icon'),myIcon,myName);
+
+  try{const ps=await get(ref(db,`v20_users/${myId}/pinnedChats`));pins=ps.exists()?ps.val():{};}catch{}
+
+  $('pin-list').innerHTML='';
+  await loadGroups();
+  await loadDMs();
+  $('pin-sec').style.display=$('pin-list').children.length?'block':'none';
+
+  loadFreq();
+  subOnline();
+};
+
+const loadGroups=async()=>{
+  const list=$('grp-list'); list.innerHTML='';
+  try{
+    const snap=await get(ref(db,`v20_users/${myId}/myGroups`));
+    if(!snap.exists())return;
+    for(const gid of Object.keys(snap.val())){
+      // Bug fix: always fetch real name from Firebase
+      let gname=gid.split('_')[0];
+      try{const gs=await get(ref(db,`v20_groups/${gid}`));if(gs.exists()&&gs.val().name)gname=gs.val().name;}catch{}
+      const unread=await calcUnread(`v20_groups/${gid}/messages`,gid);
+      const pinned=!!pins[gid];
+      const item=mkItem(gname,'',false,pinned,unread,()=>G.enter(gid,'group'));
+      if(pinned)$('pin-list').appendChild(item);
+      else list.appendChild(item);
+    }
+  }catch{}
+};
+
+const loadDMs=async()=>{
+  const list=$('dm-list'); list.innerHTML='';
+  try{
+    const snap=await get(ref(db,`v20_users/${myId}/myDMs`));
+    if(!snap.exists())return;
+    for(const[dmId,otherUid]of Object.entries(snap.val())){
+      let oname=otherUid,oicon='';
+      try{const u=await get(ref(db,`v20_users/${otherUid}`));if(u.exists()){oname=u.val().name;oicon=u.val().icon||'';}}catch{}
+      const unread=await calcUnread(`v20_dms/${dmId}/messages`,dmId);
+      const pinned=!!pins[dmId];
+      const online=!!onlineMap[otherUid];
+      const item=mkItem(oname,'',true,pinned,unread,()=>G.enter(dmId,'dm',otherUid),online);
+      if(pinned)$('pin-list').appendChild(item);
+      else list.appendChild(item);
+    }
+  }catch{}
+};
+
+const mkItem=(name,sub,isDm,pinned,unread,fn,online=false)=>{
+  const d=document.createElement('div');
+  d.className='chat-item';
+  d.innerHTML=`
+    <div class="ci-icon${isDm?' dm':''}">${esc(name[0]||'?')}${online?'<div class="odot"></div>':''}</div>
+    <div class="ci-info">
+      <div class="ci-name">${esc(name)}</div>
+      ${isDm?`<div class="ci-sub" style="color:var(--dm)">ダイレクトメッセージ</div>`:''}
+    </div>
+    ${pinned?'<span class="pini">📌</span>':''}
+    ${unread>0?`<span class="badge">🔴 ${unread}</span>`:'<span style="opacity:.3;font-size:18px">›</span>'}
+  `;
+  d.onclick=fn;
+  return d;
+};
+
+const calcUnread=async(path,chatId)=>{
+  try{
+    const s=await get(ref(db,path));
+    if(!s.exists())return 0;
+    const t=lastSeen[chatId]||0;
+    return Object.values(s.val()).filter(m=>m.time>t&&m.uid!==myId).length;
+  }catch{return 0;}
+};
+
+// ── Friend requests ──
+const loadFreq=()=>{
+  if(freqLsn)return;
+  freqLsn=onValue(ref(db,`v20_users/${myId}/friendRequests`),snap=>{
+    const sec=$('freq-sec'),list=$('freq-list');
+    list.innerHTML='';
+    if(!snap.exists()){sec.style.display='none';return;}
+    sec.style.display='block';
+    Object.entries(snap.val()).forEach(([fuid,req])=>{
+      const d=document.createElement('div');d.className='freq-item';
+      d.innerHTML=`
+        <div class="ci-icon dm" style="width:40px;height:40px;font-size:16px;flex-shrink:0">${esc((req.name||'?')[0])}</div>
+        <div style="flex:1"><b>${esc(req.name||fuid)}</b><br><small style="opacity:.5">@${esc(fuid)}</small></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm s" onclick="G.acceptFreq('${fuid}','${esc(req.name||fuid)}')">承認</button>
+          <button class="btn-sm d" onclick="G.rejectFreq('${fuid}')">拒否</button>
+        </div>
+      `;
+      list.appendChild(d);
     });
+  });
+};
+
+G.showDmForm=()=>$('dm-form').classList.toggle('on');
+G.sendFriendReq=async()=>{
+  const tid=$('dm-target').value.trim();
+  if(!tid)return alert('相手のIDを入力してください');
+  if(tid===myId)return alert('自分自身には申請できません');
+  try{
+    const s=await get(ref(db,`v20_users/${tid}`));
+    if(!s.exists())return alert('ユーザーが見つかりません');
+    const did=mkDmId(myId,tid);
+    if((await get(ref(db,`v20_dms/${did}`))).exists())return alert('すでにDMが存在します');
+    await update(ref(db,`v20_users/${tid}/friendRequests/${myId}`),{name:myName});
+    alert('申請を送りました！');
+    $('dm-target').value='';
+    $('dm-form').classList.remove('on');
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.acceptFreq=async(fuid,fname)=>{
+  try{
+    const did=mkDmId(myId,fuid);
+    await set(ref(db,`v20_dms/${did}`),{users:{[myId]:true,[fuid]:true},names:{[myId]:myName,[fuid]:fname}});
+    await update(ref(db,`v20_users/${myId}/myDMs`),{[did]:fuid});
+    await update(ref(db,`v20_users/${fuid}/myDMs`),{[did]:myId});
+    await remove(ref(db,`v20_users/${myId}/friendRequests/${fuid}`));
+    alert(`${fname}さんとのDMを開始しました！`);
+    G.home();
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.rejectFreq=async fuid=>{
+  if(!confirm('この申請を拒否しますか？'))return;
+  await remove(ref(db,`v20_users/${myId}/friendRequests/${fuid}`)).catch(()=>{});
+};
+
+// ── Enter chat ──
+G.enter=async(chatId,type,otherUid)=>{
+  if(curLsn){curLsn();curLsn=null;}
+  if(rtLsn){rtLsn();rtLsn=null;}
+  curId=chatId;curType=type;curOther=otherUid||null;
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  $('footer').style.display='flex';
+  $('hset').style.visibility='visible';
+  lastSeen[chatId]=Date.now();
+  localStorage.setItem('ls',JSON.stringify(lastSeen));
+  $('rt-bar').innerHTML='';
+
+  if(type==='group'){
+    try{
+      const gs=await get(ref(db,`v20_groups/${chatId}`));
+      if(gs.exists()){
+        const g=gs.val();
+        $('htitle').textContent=g.name||chatId.split('_')[0];
+        await update(ref(db,`v20_groups/${chatId}/members`),{[myId]:true}).catch(()=>{});
+      }
+    }catch{}
+    rtLsn=onValue(ref(db,`v20_groups/${chatId}/realtime`),snap=>{
+      if(!snap.exists())return;
+      const bar=$('rt-bar');
+      snap.forEach(c=>{
+        const uid=c.key,info=c.val();
+        let tr=document.getElementById(`rt-${uid}`);
+        if(!tr){tr=document.createElement('div');tr.id=`rt-${uid}`;tr.className='rt-track';
+          tr.innerHTML=`<div class="rt-bub" id="rtb-${uid}"></div><div class="rt-lbl">${esc(info.name)}</div>`;
+          bar.appendChild(tr);bar.classList.add('on');$('chat-area').classList.add('bar');}
+        const b=document.getElementById(`rtb-${uid}`);
+        if(b&&b.textContent!==info.text){b.textContent=info.text;b.style.animation='none';void b.offsetHeight;b.style.animation='';}
+      });
+    });
+    curLsn=onValue(ref(db,`v20_groups/${chatId}/messages`),s=>renderMsgs(s,chatId,'group'));
+  }else{
+    let oname=otherUid;
+    try{const u=await get(ref(db,`v20_users/${otherUid}`));if(u.exists())oname=u.val().name;}catch{}
+    $('htitle').textContent=oname;
+    curLsn=onValue(ref(db,`v20_dms/${chatId}/messages`),s=>renderMsgs(s,chatId,'dm'));
+  }
+};
+
+const renderMsgs=(snap,chatId,type)=>{
+  const area=$('chat-area');area.innerHTML='';
+  if(!snap.exists())return;
+  const base=type==='group'?`v20_groups/${chatId}/messages`:`v20_dms/${chatId}/messages`;
+  snap.forEach(c=>{
+    const key=c.key,m=c.val(),isMe=m.uid===myId;
+    if(!isMe&&(!m.readBy||!m.readBy[myId]))
+      update(ref(db,`${base}/${key}/readBy`),{[myId]:{name:myName,time:Date.now()}}).catch(()=>{});
+    const rc=m.readBy?Object.keys(m.readBy).length:0;
+    const ts=fmt(m.time);
+    let html='';
+    if(m.type==='file'){
+      const img=/\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName||'');
+      html=img?`<img src="${m.data}" class="img-pre" onclick="G._view('${key}')">`
+               :`<div class="bubble" onclick="G._dl('${key}')">📄 ${esc(m.fileName)}</div>`;
+    }else{
+      html=`<div class="bubble" onclick="G.readStatus('${key}')">${esc(m.text||'')}</div>`;
+    }
+    const rh=rc>0?`<span class="rbadge" onclick="G.readStatus('${key}')">既読 ${rc}</span>`
+                  :`<span style="opacity:.3">未読</span>`;
+    const row=document.createElement('div');
+    row.className=`msg-row${isMe?' me':''}`;
+    row.dataset.key=key;
+    row.innerHTML=`
+      <div class="u-icon">${esc((m.name||'?')[0])}</div>
+      <div style="max-width:100%">
+        ${!isMe?`<div class="msg-name">${esc(m.name||'')}</div>`:''}
+        ${html}
+        <div class="msg-meta">${ts} ${rh}</div>
+      </div>`;
+    if(m.type==='file')row._fd={data:m.data,fileName:m.fileName};
+    area.appendChild(row);
+  });
+  area.scrollTop=area.scrollHeight;
+};
+
+G._view=key=>{const r=document.querySelector(`[data-key="${key}"]`);if(r&&r._fd)G.openViewer(r._fd.data,r._fd.fileName);};
+G._dl=key=>{const r=document.querySelector(`[data-key="${key}"]`);if(r&&r._fd)G.dl(r._fd.data,r._fd.fileName);};
+
+// ── Send ──
+G.send=async()=>{
+  const inp=$('msg-input');if(!inp||!curId)return;
+  const text=inp.value.trim();if(!text)return;
+  const sig=`${curId}::${text}`,now=Date.now();
+  if(sending||(sig===lastSig&&now-lastSigAt<1200))return;
+  sending=true;lastSig=sig;lastSigAt=now;
+  const btn=$('send-btn');btn.disabled=true;
+  inp.value='';inp.style.height='auto';
+  try{
+    if(curType==='group'){
+      const mid=push(ref(db,`v20_groups/${curId}/messages`)).key;
+      await update(ref(db),{
+        [`v20_groups/${curId}/messages/${mid}`]:{uid:myId,name:myName,text,type:'text',time:serverTimestamp()},
+        [`v20_groups/${curId}/realtime/${myId}`]:{name:myName,text,lastMsgId:mid,time:serverTimestamp()}
+      });
+    }else{
+      await push(ref(db,`v20_dms/${curId}/messages`),{uid:myId,name:myName,text,type:'text',time:serverTimestamp()});
+    }
+  }catch(e){alert('送信失敗: '+e.message);inp.value=text;}
+  finally{sending=false;btn.disabled=false;inp.focus();}
+};
+
+G.sendFile=inp=>{
+  const f=inp.files[0];if(!f||!curId)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const path=curType==='group'?`v20_groups/${curId}/messages`:`v20_dms/${curId}/messages`;
+    push(ref(db,path),{uid:myId,name:myName,type:'file',data:e.target.result,fileName:f.name,time:serverTimestamp()})
+      .catch(err=>alert('ファイル送信失敗: '+err.message));
+  };
+  r.readAsDataURL(f);inp.value='';
+};
+
+// ── Read status ──
+G.readStatus=async msgId=>{
+  if(!curId)return;
+  const path=curType==='group'?`v20_groups/${curId}/messages/${msgId}/readBy`:`v20_dms/${curId}/messages/${msgId}/readBy`;
+  const s=await get(ref(db,path)).catch(()=>null);
+  const el=$('read-list');el.innerHTML='';
+  if(s&&s.exists()){
+    Object.values(s.val()).forEach(r=>{
+      const t=fmt(r.time);
+      const d=document.createElement('div');d.className='ritem';
+      d.innerHTML=`<div class="u-icon">${esc(r.name[0])}</div><div><b>${esc(r.name)}</b><br><small style="opacity:.5">${t}</small></div>`;
+      el.appendChild(d);
+    });
+  }else{el.innerHTML='<div style="padding:20px;text-align:center;opacity:.5">まだ誰も読んでいません</div>';}
+  $('read-modal').classList.add('active');
+};
+
+// ── Group actions ──
+G.showForm=mode=>{
+  window._gmode=mode;
+  $('gform-title').textContent=mode==='create'?'新規グループ作成':'グループに参加';
+  $('grp-form').classList.add('on');
+};
+G.execGroup=async()=>{
+  const id=$('g-id').value.trim(),pw=$('g-pw').value;
+  if(!id)return alert('入力してください');
+  try{
+    if(window._gmode==='create'){
+      const gid=id+'_'+Math.random().toString(36).substr(2,6);
+      await set(ref(db,`v20_groups/${gid}`),{name:id,pw,host:myId,members:{[myId]:true}});
+      await update(ref(db,`v20_users/${myId}/myGroups`),{[gid]:true});
+      alert('グループを作成しました！');
+    }else{
+      const s=await get(ref(db,'v20_groups'));let tgt=null;
+      s.forEach(g=>{if(g.val().name===id&&g.val().pw===pw)tgt=g.key;});
+      if(tgt){await update(ref(db,`v20_groups/${tgt}/requests/${myId}`),{uid:myId,name:myName});alert('申請を送りました。管理者が許可するまでお待ちください。');}
+      else alert('グループが見つかりません');
+    }
+  }catch(e){alert('エラー: '+e.message);}
+  G.home();
+};
+G.leaveGroup=async()=>{
+  if(!curId||!confirm('このグループを退会しますか？'))return;
+  try{
+    await remove(ref(db,`v20_users/${myId}/myGroups/${curId}`));
+    await remove(ref(db,`v20_groups/${curId}/requests/${myId}`));
+    await remove(ref(db,`v20_groups/${curId}/members/${myId}`));
+    await remove(ref(db,`v20_users/${myId}/pinnedChats/${curId}`));
+    alert('退会しました');G.home();
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.deleteDM=async()=>{
+  if(!curId||!confirm('このDMを削除しますか？'))return;
+  try{
+    await remove(ref(db,`v20_users/${myId}/myDMs/${curId}`));
+    await remove(ref(db,`v20_users/${myId}/pinnedChats/${curId}`));
+    alert('DMを削除しました');G.home();
+  }catch(e){alert('エラー: '+e.message);}
+};
+
+// ── Pin ──
+G.togglePin=async on=>{
+  if(!curId)return;
+  try{
+    if(on)await update(ref(db,`v20_users/${myId}/pinnedChats`),{[curId]:true});
+    else await remove(ref(db,`v20_users/${myId}/pinnedChats/${curId}`));
+  }catch(e){alert('エラー: '+e.message);}
+};
+
+// ── Settings ──
+G.openSettings=async()=>{
+  if(!curId)return;
+  const pin=await get(ref(db,`v20_users/${myId}/pinnedChats/${curId}`)).catch(()=>null);
+  $('pin-tog').checked=!!(pin&&pin.val());
+  if(curType==='group'){
+    $('grp-set').style.display='block';
+    $('dm-set').style.display='none';
+    $('set-title').textContent='グループ設定';
+    try{
+      const s=await get(ref(db,`v20_groups/${curId}`));if(!s.exists())return;
+      const g=s.val(),isHost=g.host===myId;
+      $('t-name').value=g.name||curId.split('_')[0];
+      $('t-pw').value=g.pw||'';
+      $('t-name').readOnly=!isHost;
+      $('t-pw').readOnly=!isHost;
+      $('t-save').style.display=isHost?'flex':'none';
+      $('t-note').textContent=isHost?'※ホストはグループ名/PASSを変更できます。':'※閲覧のみ（変更はホストのみ）。';
+      if(isHost){$('host-panel').style.display='block';watchReqs(curId);}
+      else $('host-panel').style.display='none';
+    }catch{}
+  }else{
+    $('grp-set').style.display='none';
+    $('dm-set').style.display='block';
+    $('set-title').textContent='DM設定';
+  }
+  $('set-modal').classList.add('active');
+};
+G.saveTeam=async()=>{
+  const name=$('t-name').value.trim(),pw=$('t-pw').value;
+  if(!name||!pw)return alert('グループ名とPASSを入力してください');
+  try{
+    const s=await get(ref(db,`v20_groups/${curId}`));
+    if(s.val().host!==myId)return alert('ホストのみ変更できます。');
+    await update(ref(db,`v20_groups/${curId}`),{name,pw});
+    $('htitle').textContent=name;alert('更新しました');
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.closeSettings=()=>$('set-modal').classList.remove('active');
+const watchReqs=gid=>{
+  onValue(ref(db,`v20_groups/${gid}/requests`),s=>{
+    const el=$('req-list');if(!el)return;el.innerHTML='';
+    if(s.exists()){
+      Object.entries(s.val()).forEach(([uid,req])=>{
+        const d=document.createElement('div');d.className='req-item';
+        d.innerHTML=`<div><b>${esc(req.name)}</b> <small style="opacity:.5">@${esc(uid)}</small></div><button class="btn-sm" onclick="G.acceptUser('${uid}','${esc(req.name)}')">許可</button>`;
+        el.appendChild(d);
+      });
+    }else{el.innerHTML='<p style="opacity:.5;font-size:13px;text-align:center;padding:12px 0">申請はありません</p>';}
+  });
+};
+G.acceptUser=async(uid,name)=>{
+  if(!curId)return;
+  try{
+    await update(ref(db,`v20_users/${uid}/myGroups`),{[curId]:true});
+    await update(ref(db,`v20_groups/${curId}/members`),{[uid]:true});
+    await remove(ref(db,`v20_groups/${curId}/requests/${uid}`));
+    alert(`${name}さんの参加を許可しました`);
+  }catch(e){alert('エラー: '+e.message);}
+};
+
+// ── Profile ──
+G.openProfile=()=>{
+  $('prof-modal').classList.add('active');
+  $('e-name').value=myName;$('e-pw').value='';
+  $('dark-tog').checked=localStorage.getItem('dark')==='true';
+  draw($('prof-icon'),myIcon,myName);
+  window._ti=null;
+};
+G.previewIcon=inp=>{
+  const r=new FileReader();
+  r.onload=e=>{window._ti=e.target.result;draw($('prof-icon'),e.target.result,'');};
+  r.readAsDataURL(inp.files[0]);
+};
+G.saveProfile=async()=>{
+  const name=$('e-name').value.trim(),pw=$('e-pw').value;
+  if(!name)return alert('名前を入力してください');
+  const up={name,icon:window._ti||myIcon};if(pw)up.pw=pw;
+  try{
+    await update(ref(db,`v20_users/${myId}`),up);
+    await update(ref(db,`v20_presence/${myId}`),{name,icon:up.icon});
+    myName=name;myIcon=up.icon;
+    localStorage.setItem('chat_name',name);
+    alert('更新しました');G.closeModal('prof-modal');G.home();
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.logout=()=>{
+  if(!confirm('ログアウトしますか？'))return;
+  update(ref(db,`v20_presence/${myId}`),{online:false}).catch(()=>{});
+  clear();goAuth();
+};
+G.deleteAccount=async()=>{
+  if(!confirm('本当にアカウントを削除しますか？\nこの操作は元に戻せません。'))return;
+  try{
+    const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
+    if(gs.exists())for(const gid of Object.keys(gs.val())){
+      await remove(ref(db,`v20_groups/${gid}/requests/${myId}`)).catch(()=>{});
+      await remove(ref(db,`v20_groups/${gid}/members/${myId}`)).catch(()=>{});
+    }
+    await remove(ref(db,`v20_presence/${myId}`));
+    await remove(ref(db,`v20_users/${myId}`));
+    clear();goAuth();
+  }catch(e){alert('エラー: '+e.message);}
+};
+
+// ── Viewer ──
+G.openViewer=(url,name)=>{$('viewer-img').src=url;window._vf={url,name};$('viewer').style.display='flex';};
+G.dlFromViewer=()=>{const a=document.createElement('a');a.href=window._vf.url;a.download=window._vf.name;a.click();};
+G.dl=(data,name)=>{const a=document.createElement('a');a.href=data;a.download=name;a.click();};
+
+// ── Input ──
+$('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G.send();}});
+$('msg-input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+
+// ── Init ──
+window.addEventListener('load',async()=>{
+  G.toggleDark(localStorage.getItem('dark')==='true');
+  const showAuth=await check();
+  if(showAuth)goAuth();
+  else{presence();G.home();}
+});
 </script>
-
 </body>
 </html>
