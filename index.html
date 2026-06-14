@@ -520,7 +520,8 @@ const loadGrpMembers=async()=>{
       if(!ms.exists())continue;
       for(const uid of Object.keys(ms.val())){
         if(uid===myId||grpMembers[uid]||existingDmUids.has(uid))continue;
-        try{const u=await get(ref(db,`v20_users/${uid}`));if(u.exists())grpMembers[uid]={name:u.val().name};}catch{}
+        // name が取れない場合は uid をフォールバックとして使う
+        try{const u=await get(ref(db,`v20_users/${uid}`));if(u.exists())grpMembers[uid]={name:u.val().name||uid};}catch{}
       }
     }
   }catch{}
@@ -539,23 +540,27 @@ G.showDmForm=async()=>{
 G.filterMembers=q=>{
   const el=$('dm-suggest');
   const lower=q.toLowerCase();
-  const hits=Object.entries(grpMembers).filter(([uid,i])=>
-    !q||i.name.toLowerCase().includes(lower)||uid.toLowerCase().includes(lower)
-  );
+  // nm を先に確定させることで i.name が undefined でもクラッシュしない
+  const hits=Object.entries(grpMembers).filter(([uid,i])=>{
+    const nm=i.name||uid;
+    return !q||nm.toLowerCase().includes(lower)||uid.toLowerCase().includes(lower);
+  });
   if(!hits.length){
     el.innerHTML=`<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">${q?'一致するメンバーが見つかりません':'同じグループのメンバーはいません'}</div>`;
     return;
   }
-  el.innerHTML=hits.map(([uid,i])=>`
-    <div class="mem-item" onclick="G.sendFriendReqTo('${uid}','${esc(i.name)}')"> 
-      <div class="ci-icon dm" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${esc(i.name[0])}</div>
+  el.innerHTML=hits.map(([uid,i])=>{
+    const nm=i.name||uid;
+    return `
+    <div class="mem-item" onclick="G.sendFriendReqTo('${uid}','${esc(nm)}')">
+      <div class="ci-icon dm" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${esc(nm[0])}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:15px">${esc(i.name)}</div>
+        <div style="font-weight:600;font-size:15px">${esc(nm)}</div>
         <div style="font-size:12px;opacity:.5">@${esc(uid)}</div>
       </div>
       <span style="font-size:12px;color:var(--dm);font-weight:600">申請 ›</span>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 };
 
 G.sendFriendReqTo=async(uid,name)=>{
@@ -576,7 +581,7 @@ G.sendFriendReqById=async()=>{
   try{
     const s=await get(ref(db,`v20_users/${tid}`));
     if(!s.exists())return alert('ユーザーが見つかりません');
-    await G.sendFriendReqTo(tid,s.val().name);
+    await G.sendFriendReqTo(tid,s.val().name||tid);
   }catch(e){alert('エラー: '+e.message);}
 };
 
@@ -722,7 +727,7 @@ G.readStatus=async msgId=>{
     Object.values(s.val()).forEach(r=>{
       const t=fmt(r.time);
       const d=document.createElement('div');d.className='ritem';
-      d.innerHTML=`<div class="u-icon">${esc(r.name[0])}</div><div><b>${esc(r.name)}</b><br><small style="opacity:.5">${t}</small></div>`;
+      d.innerHTML=`<div class="u-icon">${esc((r.name||'?')[0])}</div><div><b>${esc(r.name||'')}</b><br><small style="opacity:.5">${t}</small></div>`;
       el.appendChild(d);
     });
   }else{el.innerHTML='<div style="padding:20px;text-align:center;opacity:.5">まだ誰も読んでいません</div>';}
