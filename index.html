@@ -185,7 +185,8 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
     <input type="text" id="dm-search" class="std-input" placeholder="名前またはユーザーIDで検索" oninput="G.filterMembers(this.value)" style="margin-bottom:6px">
     <div id="dm-suggest" style="max-height:220px;overflow-y:auto;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;align-items:center;padding-top:10px;border-top:.5px solid var(--sep)">
-      <span style="font-size:12px;opacity:.5;flex:1">↑ 上から選ぶか、IDを直接入力</span>
+      <span style="font-size:12px;opacity:.5;flex:1">↑ 上から選ぶか直接入力</span>
+      <button class="btn-sm" style="background:var(--accent)" onclick="G.sendFriendReqByName()">名前で送る</button>
       <button class="btn-sm" style="background:var(--dm)" onclick="G.sendFriendReqById()">IDで送る</button>
     </div>
   </div>
@@ -520,7 +521,6 @@ const loadGrpMembers=async()=>{
       if(!ms.exists())continue;
       for(const uid of Object.keys(ms.val())){
         if(uid===myId||grpMembers[uid]||existingDmUids.has(uid))continue;
-        // name が取れない場合は uid をフォールバックとして使う
         try{const u=await get(ref(db,`v20_users/${uid}`));if(u.exists())grpMembers[uid]={name:u.val().name||uid};}catch{}
       }
     }
@@ -540,7 +540,6 @@ G.showDmForm=async()=>{
 G.filterMembers=q=>{
   const el=$('dm-suggest');
   const lower=q.toLowerCase();
-  // nm を先に確定させることで i.name が undefined でもクラッシュしない
   const hits=Object.entries(grpMembers).filter(([uid,i])=>{
     const nm=i.name||uid;
     return !q||nm.toLowerCase().includes(lower)||uid.toLowerCase().includes(lower);
@@ -583,6 +582,17 @@ G.sendFriendReqById=async()=>{
     if(!s.exists())return alert('ユーザーが見つかりません');
     await G.sendFriendReqTo(tid,s.val().name||tid);
   }catch(e){alert('エラー: '+e.message);}
+};
+
+G.sendFriendReqByName=async()=>{
+  const q=$('dm-search').value.trim();
+  if(!q)return alert('名前を入力してください');
+  const lower=q.toLowerCase();
+  const matches=Object.entries(grpMembers).filter(([uid,i])=>(i.name||uid).toLowerCase()===lower);
+  if(matches.length===0)return alert(`「${q}」という名前のメンバーが同じグループにいません`);
+  if(matches.length>1){alert(`「${q}」という名前のユーザーが複数います。リストから選んでください。`);G.filterMembers(q);return;}
+  const [uid,i]=matches[0];
+  await G.sendFriendReqTo(uid,i.name||uid);
 };
 
 G.acceptFreq=async(fuid,fname)=>{
