@@ -95,6 +95,8 @@ header button{background:none;border:none;font-size:22px;color:inherit;padding:8
 .pini{font-size:14px;opacity:.5;flex-shrink:0}
 .freq-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--sep)}
 .freq-item:last-child{border-bottom:none}
+.mem-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s}
+.mem-item:hover,.mem-item:active{background:rgba(120,120,128,.1)}
 .iform{display:none;padding:16px;background:var(--card);border-radius:16px;margin-top:8px}
 .iform.on{display:block}
 .ifhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
@@ -180,8 +182,12 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
   <button class="btn bdm" onclick="G.showDmForm()">＋ フレンド申請を送る</button>
   <div id="dm-form" class="iform">
     <div class="ifhdr"><h4>フレンド申請</h4><button class="cbtn" onclick="document.getElementById('dm-form').classList.remove('on')">✕</button></div>
-    <input type="text" id="dm-target" class="std-input" placeholder="相手のユーザーID">
-    <button class="btn bdm" onclick="G.sendFriendReq()">申請を送る</button>
+    <input type="text" id="dm-search" class="std-input" placeholder="名前またはユーザーIDで検索" oninput="G.filterMembers(this.value)" style="margin-bottom:6px">
+    <div id="dm-suggest" style="max-height:220px;overflow-y:auto;margin-bottom:8px"></div>
+    <div style="display:flex;gap:8px;align-items:center;padding-top:10px;border-top:.5px solid var(--sep)">
+      <span style="font-size:12px;opacity:.5;flex:1">↑ 上から選ぶか、IDを直接入力</span>
+      <button class="btn-sm" style="background:var(--dm)" onclick="G.sendFriendReqById()">IDで送る</button>
+    </div>
   </div>
 </div>
 </div>
@@ -287,6 +293,7 @@ let pins={};
 let curLsn=null,rtLsn=null,freqLsn=null;
 let presSubs={},onlineMap={};
 let sending=false,lastSig="",lastSigAt=0;
+let grpMembers={};
 
 // ── Helpers ──
 const $=id=>document.getElementById(id);
@@ -424,7 +431,6 @@ const loadGroups=async()=>{
     const snap=await get(ref(db,`v20_users/${myId}/myGroups`));
     if(!snap.exists())return;
     for(const gid of Object.keys(snap.val())){
-      // Bug fix: always fetch real name from Firebase
       let gname=gid.split('_')[0];
       try{const gs=await get(ref(db,`v20_groups/${gid}`));if(gs.exists()&&gs.val().name)gname=gs.val().name;}catch{}
       const unread=await calcUnread(`v20_groups/${gid}/messages`,gid);
@@ -502,22 +508,78 @@ const loadFreq=()=>{
   });
 };
 
-G.showDmForm=()=>$('dm-form').classList.toggle('on');
-G.sendFriendReq=async()=>{
-  const tid=$('dm-target').value.trim();
-  if(!tid)return alert('相手のIDを入力してください');
+const loadGrpMembers=async()=>{
+  grpMembers={};
+  const existingDmUids=new Set();
+  try{const ds=await get(ref(db,`v20_users/${myId}/myDMs`));if(ds.exists())Object.values(ds.val()).forEach(u=>existingDmUids.add(u));}catch{}
+  try{
+    const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
+    if(!gs.exists())return;
+    for(const gid of Object.keys(gs.val())){
+      const ms=await get(ref(db,`v20_groups/${gid}/members`));
+      if(!ms.exists())continue;
+      for(const uid of Object.keys(ms.val())){
+        if(uid===myId||grpMembers[uid]||existingDmUids.has(uid))continue;
+        try{const u=await get(ref(db,`v20_users/${uid}`));if(u.exists())grpMembers[uid]={name:u.val().name};}catch{}
+      }
+    }
+  }catch{}
+};
+
+G.showDmForm=async()=>{
+  const form=$('dm-form');
+  if(form.classList.contains('on')){form.classList.remove('on');return;}
+  form.classList.add('on');
+  $('dm-search').value='';
+  $('dm-suggest').innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">読み込み中...</div>';
+  await loadGrpMembers();
+  G.filterMembers('');
+};
+
+G.filterMembers=q=>{
+  const el=$('dm-suggest');
+  const lower=q.toLowerCase();
+  const hits=Object.entries(grpMembers).filter(([uid,i])=>
+    !q||i.name.toLowerCase().includes(lower)||uid.toLowerCase().includes(lower)
+  );
+  if(!hits.length){
+    el.innerHTML=`<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">${q?'一致するメンバーが見つかりません':'同じグループのメンバーはいません'}</div>`;
+    return;
+  }
+  el.innerHTML=hits.map(([uid,i])=>`
+    <div class="mem-item" onclick="G.sendFriendReqTo('${uid}','${esc(i.name)}')"> 
+      <div class="ci-icon dm" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${esc(i.name[0])}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:15px">${esc(i.name)}</div>
+        <div style="font-size:12px;opacity:.5">@${esc(uid)}</div>
+      </div>
+      <span style="font-size:12px;color:var(--dm);font-weight:600">申請 ›</span>
+    </div>
+  `).join('');
+};
+
+G.sendFriendReqTo=async(uid,name)=>{
+  if(!confirm(`${name}さんにフレンド申請を送りますか？`))return;
+  try{
+    const did=mkDmId(myId,uid);
+    if((await get(ref(db,`v20_dms/${did}`))).exists())return alert('すでにDMが存在します');
+    await update(ref(db,`v20_users/${uid}/friendRequests/${myId}`),{name:myName});
+    alert('申請を送りました！');
+    $('dm-form').classList.remove('on');
+  }catch(e){alert('エラー: '+e.message);}
+};
+
+G.sendFriendReqById=async()=>{
+  const tid=$('dm-search').value.trim();
+  if(!tid)return alert('ユーザーIDを入力してください');
   if(tid===myId)return alert('自分自身には申請できません');
   try{
     const s=await get(ref(db,`v20_users/${tid}`));
     if(!s.exists())return alert('ユーザーが見つかりません');
-    const did=mkDmId(myId,tid);
-    if((await get(ref(db,`v20_dms/${did}`))).exists())return alert('すでにDMが存在します');
-    await update(ref(db,`v20_users/${tid}/friendRequests/${myId}`),{name:myName});
-    alert('申請を送りました！');
-    $('dm-target').value='';
-    $('dm-form').classList.remove('on');
+    await G.sendFriendReqTo(tid,s.val().name);
   }catch(e){alert('エラー: '+e.message);}
 };
+
 G.acceptFreq=async(fuid,fname)=>{
   try{
     const did=mkDmId(myId,fuid);
