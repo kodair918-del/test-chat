@@ -509,31 +509,39 @@ const loadFreq=()=>{
   });
 };
 
-const loadGrpMembers=async()=>{
-  grpMembers={};
-  const existingDmUids=new Set();
-  try{const ds=await get(ref(db,`v20_users/${myId}/myDMs`));if(ds.exists())Object.values(ds.val()).forEach(u=>existingDmUids.add(u));}catch{}
-  try{
-    const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
-    if(!gs.exists())return;
-    for(const gid of Object.keys(gs.val())){
-      const ms=await get(ref(db,`v20_groups/${gid}/members`));
-      if(!ms.exists())continue;
-      for(const uid of Object.keys(ms.val())){
-        if(uid===myId||grpMembers[uid]||existingDmUids.has(uid))continue;
-        try{const u=await get(ref(db,`v20_users/${uid}`));if(u.exists())grpMembers[uid]={name:u.val().name||uid};}catch{}
-      }
-    }
-  }catch{}
-};
-
 G.showDmForm=async()=>{
   const form=$('dm-form');
   if(form.classList.contains('on')){form.classList.remove('on');return;}
   form.classList.add('on');
   $('dm-search').value='';
-  $('dm-suggest').innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">読み込み中...</div>';
-  await loadGrpMembers();
+  const el=$('dm-suggest');
+  el.innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">読み込み中...</div>';
+
+  // 入参する全グループの全メンバーを直接列挙（フィルターなし）
+  grpMembers={};
+  try{
+    const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
+    if(!gs.exists()){
+      el.innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">グループに参加していません</div>';
+      return;
+    }
+    for(const gid of Object.keys(gs.val())){
+      try{
+        const ms=await get(ref(db,`v20_groups/${gid}/members`));
+        if(!ms.exists())continue;
+        for(const uid of Object.keys(ms.val())){
+          if(uid===myId||grpMembers[uid])continue;
+          try{
+            const u=await get(ref(db,`v20_users/${uid}`));
+            if(u.exists())grpMembers[uid]={name:u.val().name||uid};
+          }catch{}
+        }
+      }catch{}
+    }
+  }catch(e){
+    el.innerHTML=`<div style="color:var(--danger);font-size:13px;padding:10px">エラー: ${esc(e.message)}</div>`;
+    return;
+  }
   G.filterMembers('');
 };
 
@@ -588,9 +596,10 @@ G.sendFriendReqByName=async()=>{
   const q=$('dm-search').value.trim();
   if(!q)return alert('名前を入力してください');
   const lower=q.toLowerCase();
-  const matches=Object.entries(grpMembers).filter(([uid,i])=>(i.name||uid).toLowerCase()===lower);
+  // 部分一致で検索
+  const matches=Object.entries(grpMembers).filter(([uid,i])=>(i.name||uid).toLowerCase().includes(lower));
   if(matches.length===0)return alert(`「${q}」という名前のメンバーが同じグループにいません`);
-  if(matches.length>1){alert(`「${q}」という名前のユーザーが複数います。リストから選んでください。`);G.filterMembers(q);return;}
+  if(matches.length>1){alert(`「${q}」に一致するユーザーが${matches.length}人います。リストから選んでください。`);G.filterMembers(q);return;}
   const [uid,i]=matches[0];
   await G.sendFriendReqTo(uid,i.name||uid);
 };
