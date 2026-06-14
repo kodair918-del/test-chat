@@ -3,895 +3,955 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chat-K | Ver 4.444.4 (Fixed)</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007AFF">
+    <title>Chat-K</title>
     <style>
-        /* --- Theme --- */
         :root {
-            --accent: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000;
-            --header-bg: rgba(255, 255, 255, 0.9); --bubble-me: #007AFF; --bubble-other: #E9E9EB; --danger: #FF3B30;
+            --accent: #007AFF;
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text: #000000;
+            --header-bg: rgba(255,255,255,0.92);
+            --bubble-me: #007AFF;
+            --bubble-other: #E9E9EB;
+            --danger: #FF3B30;
+            --header-h: 56px;
         }
         body.neon-mode {
-            --accent: #00f2ff; --bg: #0a0b10; --card-bg: #161821; --text: #ffffff;
-            --header-bg: rgba(10, 11, 16, 0.85); --bubble-me: linear-gradient(135deg, #007AFF, #00f2ff); --bubble-other: #252836;
+            --accent: #00f2ff;
+            --bg: #0a0b10;
+            --card-bg: #161821;
+            --text: #ffffff;
+            --header-bg: rgba(10,11,16,0.88);
+            --bubble-me: #1a6fff;
+            --bubble-other: #252836;
         }
 
-        /* --- Layout --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s; }
-        
-        header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: var(--header-bg); height: 60px; display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0; border-bottom: 0.5px solid rgba(0,0,0,0.1); z-index: 2000; position: relative; }
-        header button { background: none; border: none; font-size: 22px; color: inherit; padding: 10px; cursor: pointer; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); overflow: hidden; position: fixed; width: 100%; height: 100%; transition: background 0.3s, color 0.3s; }
+
+        /* ── Header ── */
+        header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: var(--header-bg);
+            border-bottom: 0.5px solid rgba(128,128,128,0.2);
+            display: flex; align-items: center;
+            height: calc(var(--header-h) + env(safe-area-inset-top));
+            padding-top: env(safe-area-inset-top);
+            padding-left: 4px; padding-right: 4px;
+        }
+        header button { background: none; border: none; font-size: 22px; color: inherit; padding: 8px 12px; cursor: pointer; }
         .title { flex: 1; text-align: center; font-weight: 600; font-size: 17px; }
 
-        #chat-area { height: calc(100% - 60px); overflow-y: auto; padding: 20px 15px 140px; display: flex; flex-direction: column; gap: 15px; position: relative; z-index: 1000; }
-        .footer { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--header-bg); backdrop-filter: blur(20px); padding: 10px 15px calc(15px + env(safe-area-inset-bottom)); display: none; gap: 10px; border-top: 0.5px solid rgba(0,0,0,0.1); z-index: 2500; align-items: center; }
-        
-        /* --- Inputs & Buttons --- */
-        .std-input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: rgba(120, 120, 128, 0.05); color: var(--text); outline: none; font-size: 16px; }
-        #msg-input { flex: 1; border: none; background: rgba(120, 120, 128, 0.12); padding: 10px 15px; border-radius: 20px; color: var(--text); outline: none; font-size: 16px; max-height: 100px; resize: none; }
-        .btn-main { width: 100%; height: 50px; background: var(--accent); color: white; border: none; border-radius: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-bottom: 10px; transition: opacity 0.2s; }
-        .btn-main:active { opacity: 0.7; }
-        
-        .close-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; }
+        /* ── Realtime bar (below header, chat only) ── */
+        #realtime-bar {
+            position: fixed;
+            top: calc(var(--header-h) + env(safe-area-inset-top));
+            left: 0; right: 0; z-index: 150;
+            display: none;
+            overflow-x: auto;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--header-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 0.5px solid rgba(128,128,128,0.15);
+            align-items: flex-end;
+            min-height: 68px;
+            scrollbar-width: none;
+        }
+        #realtime-bar::-webkit-scrollbar { display: none; }
+        #realtime-bar.visible { display: flex; }
 
-        /* --- UI Elements --- */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom); display: none; overflow-y: auto; }
-        .modal.active { display: block; }
-        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .u-icon { width: 38px; height: 38px; border-radius: 50%; background: #ccc; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .msg-row { display: flex; gap: 10px; max-width: 90%; }
+        .rt-track { min-width: 90px; max-width: 130px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .rt-bubble {
+            background: var(--card-bg); border: 1.5px solid var(--accent);
+            border-radius: 12px; padding: 6px 10px; font-size: 12px;
+            word-break: break-all; text-align: center; width: 100%;
+            animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
+        }
+        .rt-label {
+            font-size: 10px; font-weight: 700; background: var(--accent); color: white;
+            padding: 2px 8px; border-radius: 10px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        }
+        @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* ── Chat area ── */
+        #chat-area {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            top: calc(var(--header-h) + env(safe-area-inset-top));
+            overflow-y: auto;
+            padding: 16px 12px 88px;
+            display: flex; flex-direction: column; gap: 12px;
+            transition: top 0.2s;
+        }
+        #chat-area.with-bar { top: calc(var(--header-h) + env(safe-area-inset-top) + 68px); }
+
+        /* ── Footer / input ── */
+        .footer {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+            background: var(--header-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 0.5px solid rgba(128,128,128,0.2);
+            padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+            display: none; gap: 8px; align-items: flex-end;
+        }
+        #msg-input {
+            flex: 1; border: none; background: rgba(120,120,128,0.12);
+            padding: 10px 14px; border-radius: 22px; color: var(--text);
+            outline: none; font-size: 16px; max-height: 120px; resize: none; line-height: 1.4;
+        }
+        #send-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: none;
+            background: var(--accent); color: white; font-size: 20px;
+            cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.15s;
+        }
+        #send-btn:disabled { opacity: 0.35; }
+        .attach-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text); padding: 4px; flex-shrink: 0; opacity: 0.7; }
+
+        /* ── Messages ── */
+        .msg-row { display: flex; gap: 8px; max-width: 88%; }
         .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-        .bubble { padding: 10px 15px; border-radius: 18px; font-size: 16px; background: var(--bubble-other); color: var(--text); line-height: 1.4; word-break: break-all; cursor: pointer; }
+        .u-icon {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+            flex-shrink: 0; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 13px;
+        }
+        .u-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .bubble {
+            padding: 10px 14px; border-radius: 18px; font-size: 15px;
+            background: var(--bubble-other); color: var(--text);
+            line-height: 1.45; word-break: break-word; cursor: pointer;
+            white-space: pre-wrap;
+        }
         .me .bubble { background: var(--bubble-me); color: white; }
-        .img-preview { width: 100%; max-width: 250px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
-        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
-
-        #viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; }
-        .v-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(22px); }
-
-        /* --- Stylish Scrollbar --- */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 10px; transition: background 0.3s; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.4); }
-        body.neon-mode ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
-        body.neon-mode ::-webkit-scrollbar-thumb:hover { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-
-        /* --- Read Receipt & Status --- */
-        .msg-meta { font-size: 11px; color: #888; text-align: right; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
-        .read-badge { color: var(--accent); font-weight: bold; cursor: pointer; }
+        .msg-name { font-size: 10px; opacity: 0.5; margin-bottom: 3px; }
+        .msg-meta { font-size: 10px; color: #888; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+        .msg-row.me .msg-meta { justify-content: flex-end; }
+        .read-badge { color: var(--accent); cursor: pointer; }
         .read-badge:hover { text-decoration: underline; }
-        .reader-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .img-preview { max-width: 220px; border-radius: 14px; cursor: pointer; display: block; }
+
+        /* ── Modals ── */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 300;
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+            display: none; overflow-y: auto;
+        }
+        .modal.active { display: block; }
+        .modal-inner { padding: 16px 16px 32px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { font-size: 22px; font-weight: 700; }
+
+        /* ── Cards ── */
+        .card { background: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .card-label { font-size: 12px; font-weight: 600; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+
+        /* ── Inputs ── */
+        .std-input {
+            width: 100%; padding: 12px 14px; margin-bottom: 10px;
+            border-radius: 10px; border: 1.5px solid rgba(128,128,128,0.15);
+            background: rgba(120,120,128,0.06); color: var(--text);
+            outline: none; font-size: 16px; transition: border-color 0.2s;
+        }
+        .std-input:focus { border-color: var(--accent); }
+        .std-input[readonly] { opacity: 0.55; }
+
+        /* ── Buttons ── */
+        .btn {
+            width: 100%; height: 50px; border: none; border-radius: 14px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            margin-bottom: 10px; transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn:active { opacity: 0.7; transform: scale(0.98); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-success { background: #34C759; color: white; }
+        .btn-neutral { background: #8E8E93; color: white; }
+        .btn-danger  { background: var(--danger); color: white; }
+        .btn-sm {
+            height: 34px; padding: 0 16px; border-radius: 10px; border: none;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            background: var(--accent); color: white; transition: opacity 0.15s; white-space: nowrap;
+        }
+        .btn-sm:active { opacity: 0.7; }
+        .close-btn {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(120,120,128,0.15); border: none;
+            font-size: 16px; color: var(--text); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+
+        /* ── Profile card (home) ── */
+        .profile-card {
+            display: flex; align-items: center; gap: 14px; cursor: pointer;
+            padding: 16px; background: var(--card-bg); border-radius: 16px;
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: opacity 0.15s;
+        }
+        .profile-card:active { opacity: 0.7; }
+        .profile-icon {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--accent);
+            overflow: hidden; display: flex; align-items: center;
+            justify-content: center; color: white; font-weight: 700; font-size: 20px; flex-shrink: 0;
+        }
+        .profile-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ── Group list ── */
+        .section-label { font-size: 13px; font-weight: 600; color: #8E8E93; margin: 20px 0 8px 4px; }
+        .group-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: var(--card-bg); border-radius: 14px;
+            margin-bottom: 8px; cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: opacity 0.15s;
+        }
+        .group-item:active { opacity: 0.7; }
+        .group-name { font-weight: 600; font-size: 16px; }
+        .badge { background: var(--danger); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+
+        /* ── Inline form ── */
+        .inline-form { display: none; padding: 16px; background: var(--card-bg); border-radius: 16px; margin-top: 8px; }
+        .inline-form.active { display: block; }
+        .inline-form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .inline-form-header h4 { font-size: 16px; font-weight: 600; }
+
+        /* ── Auth overlay ── */
+        #auth-overlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 500;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        #auth-overlay.active { display: flex; }
+        .auth-card {
+            width: 100%; max-width: 380px; background: var(--card-bg);
+            border-radius: 24px; padding: 36px 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .auth-logo { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; text-align: center; margin-bottom: 6px; }
+        .auth-sub { font-size: 12px; opacity: 0.4; text-align: center; margin-bottom: 28px; }
+        .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+        .auth-grid .btn { margin: 0; }
+
+        /* ── Toggle switch ── */
+        .switch { position: relative; display: inline-block; width: 48px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 34px; transition: 0.3s; }
+        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        input:checked + .slider { background: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 0.5px solid rgba(128,128,128,0.15); margin-top: 4px; }
+
+        /* ── Reader list ── */
+        .reader-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid rgba(128,128,128,0.12); }
         .reader-item:last-child { border-bottom: none; }
-        /* リアルチャットモード用のスタイル */
-#realtime-container {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 10px;
-    padding: 10px;
-    background: rgba(0,0,0,0.05);
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-    min-height: 120px;
-    z-index: 1500;
-}
 
-.user-bubble-track {
-    min-width: 120px;
-    max-width: 150px;
-    display: flex;
-    flex-direction: column-reverse; /* 下から上へ押し上げる */
-    align-items: center;
-    position: relative;
-}
+        /* ── Request items ── */
+        .req-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid rgba(128,128,128,0.12); }
+        .req-item:last-child { border-bottom: none; }
 
-.user-label {
-    font-size: 10px;
-    font-weight: bold;
-    margin-top: 5px;
-    background: var(--accent);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 10px;
-}
+        /* ── Viewer ── */
+        #viewer {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .viewer-toolbar {
+            position: absolute; top: calc(20px + env(safe-area-inset-top));
+            left: 20px; right: 20px; display: flex; justify-content: space-between;
+        }
+        .v-btn {
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            width: 44px; height: 44px; border-radius: 50%; font-size: 20px;
+            cursor: pointer; backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #viewer-img { max-width: 90%; max-height: 80vh; border-radius: 12px; }
 
-.bubble-pop {
-    background: var(--card-bg);
-    border: 2px solid var(--accent);
-    border-radius: 15px;
-    padding: 8px;
-    font-size: 13px;
-    margin-bottom: 5px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    word-break: break-all;
-    width: 100%;
-    text-align: center;
-}
-
-@keyframes popIn {
-    0% { transform: scale(0.5); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.25); border-radius: 10px; }
+        body.neon-mode ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+        body.neon-mode ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
     </style>
 </head>
 <body>
 
-    <header>
-        <div id="realtime-container">
-            </div>
-        <button onclick="window.goHome()">🏠</button>
-        <div class="title" id="head-title">ホーム</div>
-        <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
-    </header>
+<header>
+    <button onclick="window.goHome()">🏠</button>
+    <div class="title" id="head-title">ホーム</div>
+    <button id="header-set-btn" onclick="window.openSettings()" style="visibility:hidden;">⚙️</button>
+</header>
 
-    <div id="chat-area"></div>
+<!-- リアルタイムバー（ヘッダー下、チャット中のみ表示） -->
+<div id="realtime-bar"></div>
 
-    <div class="footer" id="chat-footer">
-        <button onclick="document.getElementById('file-input').click()" style="background:none; border:none; font-size:26px;">📎</button>
-        <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
-        <textarea id="msg-input" placeholder="メッセージ..."></textarea>
-        <button id="send-btn" onclick="window.sendMessage()" style="background:var(--accent); color:white; border:none; width:44px; height:44px; border-radius:50%; flex-shrink:0;">↑</button>
-    </div>
+<!-- チャットエリア -->
+<div id="chat-area"></div>
 
-    <div id="main-modal" class="modal">
-        <div style="padding-top:20px;">
-            <div class="card" onclick="window.openUserCard()" style="display:flex; align-items:center; gap:15px; cursor:pointer;">
-                <div id="home-icon-preview" class="u-icon"></div>
-                <div style="flex:1;"><b id="u-name-display">-</b><br><small id="u-id-display" style="opacity:0.5;">@id</small></div>
-                <span>👤</span>
-            </div>
-            <h3>プロジェクト</h3>
-            <div id="project-list"></div>
-            <button onclick="window.showForm('create')" class="btn-main" style="background:#34C759; margin-top:15px;"><span>＋ 新規作成</span></button>
-            <div style="margin-top:10px;">
-                <button onclick="window.showForm('join')" class="btn-main" style="background:#8E8E93;"><span>ID参加</span></button>
-            </div>
-          <div style="margin: 20px 0; text-align: center;">
-    <button id="debug-toggle-btn" style="display: none; padding: 10px 20px; background: #333; color: white;">
-    管理画面を表示
-</button>
+<!-- 入力フッター -->
+<div class="footer" id="chat-footer">
+    <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
+    <input type="file" id="file-input" style="display:none;" onchange="window.sendFile(this)">
+    <textarea id="msg-input" placeholder="メッセージ..." rows="1"></textarea>
+    <button id="send-btn" onclick="window.sendMessage()">↑</button>
 </div>
 
-<div id="debug-admin-panel" style="display: none; border: 3px solid #ff4444; padding: 15px; margin: 10px; background: #fff;">
-    <h3 style="color: #ff4444; margin-top: 0;">🛠 データベース管理（仮）</h3>
-    <p style="color: #666; font-size: 0.8em;">※ここにFirebaseのデータが表示される予定です</p>
-    
-    <textarea id="debug-db-textarea" style="width: 100%; height: 200px; font-family: monospace;" placeholder="読み込み中..."></textarea>
-    
-    <div style="margin-top: 10px;">
-        <button style="background: #ff4444; color: white; border: none; padding: 5px 15px; cursor: pointer;">
-            データを更新する
-        </button>
-    </div>
-</div>
-            <div id="p-form" style="display:none; margin-top:15px;" class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h4 id="p-form-title" style="margin:0;">-</h4><button class="close-btn" onclick="document.getElementById('p-form').style.display='none'">✕</button></div>
-                <input type="text" id="p-id-input" class="std-input" placeholder="名前 / ID">
-                <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード">
-                <button class="btn-main" onclick="window.execAction()"><span>実行</span></button>
+<!-- ホームモーダル -->
+<div id="main-modal" class="modal">
+    <div class="modal-inner">
+        <div class="profile-card" onclick="window.openUserCard()">
+            <div id="home-icon" class="profile-icon"></div>
+            <div style="flex:1;">
+                <div style="font-weight:700; font-size:17px;" id="u-name-display">-</div>
+                <div style="font-size:13px; opacity:0.5;" id="u-id-display">@-</div>
             </div>
+            <span style="opacity:0.35; font-size:20px;">›</span>
+        </div>
+
+        <div class="section-label">グループ</div>
+        <div id="project-list"></div>
+
+        <div style="margin-top:16px;">
+            <button class="btn btn-success" onclick="window.showForm('create')">＋ 新規グループ作成</button>
+            <button class="btn btn-neutral" onclick="window.showForm('join')">ID で参加</button>
+        </div>
+
+        <div id="p-form" class="inline-form">
+            <div class="inline-form-header">
+                <h4 id="p-form-title">-</h4>
+                <button class="close-btn" onclick="document.getElementById('p-form').classList.remove('active')">✕</button>
+            </div>
+            <input type="text" id="p-id-input" class="std-input" placeholder="グループ名 / ID">
+            <input type="password" id="p-pw-input" class="std-input" placeholder="パスワード">
+            <button class="btn btn-primary" onclick="window.execAction()">実行</button>
         </div>
     </div>
-  <div id="admin-panel" style="display: none; margin-top: 20px; border: 2px solid #ff4444; padding: 10px;">
-  <h3>🛠 管理者専用：データベース一括表示</h3>
-  <div id="db-content" style="background: #f0f0f0; color: #333; padding: 10px; max-height: 400px; overflow-y: auto;">
-    読み込み中...
-  </div>
-  <hr>
-  <p>※データを直接編集して更新する（簡易実装例）</p>
-  <textarea id="db-edit-area" style="width: 100%; height: 150px;"></textarea>
-  <button onclick="saveDatabaseChanges()">データベースを更新（保存）</button>
 </div>
-    <div id="auth-overlay" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; justify-content:center; align-items:center;">
-        <div class="card" style="width:90%; max-width:400px; text-align:center; padding:40px 20px;">
-            <h1 style="margin-bottom:20px;">Chat-K</h1>
-            <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID (世界に一つ)">
-            <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
-                <button class="btn-main" onclick="window.execRegister()" style="background:#34C759;"><span>新規登録</span></button>
-                <button class="btn-main" onclick="window.execLogin()" style="background:var(--accent);"><span>ログイン</span></button>
-            </div>
-            <p style="font-size:11px; opacity:0.4; margin-top:20px;">※保存（実行）はボタン操作のみ。Enterキーは無効です。</p>
-        </div>
-    </div>
 
-    <div id="settings-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>設定</h2><button class="close-btn" onclick="window.closeSettingsToChat()">✕</button></div>
+<!-- 設定モーダル -->
+<div id="settings-modal" class="modal">
+    <div class="modal-inner">
+        <div class="modal-header">
+            <h2>グループ設定</h2>
+            <button class="close-btn" onclick="window.closeSettingsToChat()">✕</button>
+        </div>
         <div class="card">
-            <h3 style="margin-top:0;">チーム情報</h3>
-            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">チームID</label>
-            <input type="text" id="team-id-input" class="std-input" placeholder="チームID">
-            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">チームPASS</label>
-            <input type="text" id="team-pass-input" class="std-input" placeholder="チームPASS">
-            <p id="team-settings-note" style="font-size:12px; opacity:0.6; margin:6px 2px 12px;">※ホストのみ変更できます。</p>
-            <button id="team-settings-save" class="btn-main" onclick="window.updateTeamSettings()" style="display:none;"><span>チーム情報を保存</span></button>
-            <button class="btn-main" onclick="window.leaveGroup()" style="background:var(--danger);">
-                <span>🚪 グループを退会する</span>
-            </button>
+            <div class="card-label">チーム情報</div>
+            <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">グループ名</label>
+            <input type="text" id="team-id-input" class="std-input" placeholder="グループ名">
+            <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">パスワード</label>
+            <input type="text" id="team-pass-input" class="std-input" placeholder="パスワード">
+            <p id="team-settings-note" style="font-size:12px; opacity:0.5; margin-bottom:12px;">※ホストのみ変更できます。</p>
+            <button id="team-settings-save" class="btn btn-primary" onclick="window.updateTeamSettings()" style="display:none;">保存</button>
         </div>
+        <button class="btn btn-danger" onclick="window.leaveGroup()">🚪 グループを退会する</button>
         <div id="host-panel" style="display:none;" class="card">
-            <h3 style="color:var(--accent);">👑 管理者パネル</h3>
-            <p style="font-size:12px; color:#888;">参加申請が届くとここに表示されます</p>
-            <div id="req-list" style="margin-top:10px;"></div>
+            <div class="card-label">👑 参加申請</div>
+            <div id="req-list"><p style="opacity:0.5; font-size:13px; text-align:center; padding:8px 0;">申請はありません</p></div>
         </div>
     </div>
+</div>
 
-    <div id="user-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>プロフィール</h2><button class="close-btn" onclick="window.closeModal('user-modal')">✕</button></div>
+<!-- プロフィールモーダル -->
+<div id="user-modal" class="modal">
+    <div class="modal-inner">
+        <div class="modal-header">
+            <h2>プロフィール</h2>
+            <button class="close-btn" onclick="window.closeModal('user-modal')">✕</button>
+        </div>
         <div class="card" style="text-align:center;">
-            <div id="edit-icon-preview" class="u-icon" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
-            <button class="btn-main" style="background:#8E8E93;" onclick="document.getElementById('icon-input').click()"><span>写真を変更</span></button>
+            <div id="edit-icon-preview" class="profile-icon" style="width:80px;height:80px;margin:0 auto 16px;font-size:32px;"></div>
+            <button class="btn btn-neutral" onclick="document.getElementById('icon-input').click()">📷 写真を変更</button>
             <input type="file" id="icon-input" accept="image/*" style="display:none;" onchange="window.previewIcon(this)">
-            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">表示名</label>
+            <label style="font-size:12px; opacity:0.6; display:block; margin:12px 0 4px; text-align:left;">表示名</label>
             <input type="text" id="edit-name" class="std-input" placeholder="名前">
-            <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin:10px 0 5px 5px;">パスワード変更（任意）</label>
+            <label style="font-size:12px; opacity:0.6; display:block; margin:8px 0 4px; text-align:left;">パスワード変更（任意）</label>
             <input type="password" id="edit-pw" class="std-input" placeholder="新しいパスワード">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin:15px 0;"><span>ネオンモード</span><label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label></div>
-            <button class="btn-main" onclick="window.updateUser()"><span>設定を保存する</span></button>
-            <button class="btn-main" style="background:#8E8E93; margin-top:20px;" onclick="window.logout()"><span>ログアウト</span></button>
-            <button class="btn-main" style="background:var(--danger); margin-top:10px;" onclick="window.deleteAccount()"><span>アカウントを完全に削除</span></button>
+            <div class="toggle-row">
+                <span style="font-weight:500;">ネオンモード</span>
+                <label class="switch"><input type="checkbox" id="neon-toggle" onchange="window.toggleNeon(this.checked)"><span class="slider"></span></label>
+            </div>
+            <button class="btn btn-primary" onclick="window.updateUser()" style="margin-top:16px;">設定を保存</button>
+            <button class="btn btn-neutral" onclick="window.logout()">ログアウト</button>
+            <button class="btn btn-danger" onclick="window.deleteAccount()">アカウントを削除</button>
         </div>
     </div>
+</div>
 
-    <div id="read-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>既読したユーザー</h3>
-            <button class="close-btn" onclick="document.getElementById('read-modal').classList.remove('active')">✕</button>
+<!-- 既読モーダル -->
+<div id="read-modal" class="modal">
+    <div class="modal-inner">
+        <div class="modal-header">
+            <h2>既読ユーザー</h2>
+            <button class="close-btn" onclick="window.closeModal('read-modal')">✕</button>
         </div>
         <div class="card" id="reader-list-content"></div>
     </div>
+</div>
 
-    <div id="viewer">
-        <div style="position:absolute; top:40px; left:20px; right:20px; display:flex; justify-content:space-between;">
-            <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
-            <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
+<!-- 認証オーバーレイ -->
+<div id="auth-overlay">
+    <div class="auth-card">
+        <div class="auth-logo">Chat-K</div>
+        <div class="auth-sub">※ Enterキーは無効、ボタン操作のみ</div>
+        <input type="text" id="auth-id" class="std-input" placeholder="ユーザーID（世界に一つ）">
+        <input type="password" id="auth-pw" class="std-input" placeholder="パスワード">
+        <div class="auth-grid">
+            <button class="btn btn-success" onclick="window.execRegister()">新規登録</button>
+            <button class="btn btn-primary" onclick="window.execLogin()">ログイン</button>
         </div>
-        <img id="viewer-img" src="" style="max-width:90%; max-height:80%;">
     </div>
+</div>
 
-    <script>
-        (async () => {
-            const [{ initializeApp }, { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp }] = await Promise.all([
-                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"),
-                import("https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js")
-            ]);
+<!-- 画像ビューアー -->
+<div id="viewer">
+    <div class="viewer-toolbar">
+        <button class="v-btn" onclick="window.downloadFromViewer()">📥</button>
+        <button class="v-btn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
+    </div>
+    <img id="viewer-img" src="" alt="">
+</div>
 
-            const config = { apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo", databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com", projectId: "my-chat-1d626" };
-            const app = initializeApp(config); const db = getDatabase(app);
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        let myId = localStorage.getItem('chat_uid');
-        let myName = localStorage.getItem('chat_name');
-        let myIcon = "";
-        let currentGid = null;
-        let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
-        let currentListener = null;
-        let isSendingMessage = false;
-        let lastMessageSignature = "";
-        let lastMessageAt = 0;
+    const config = {
+        apiKey: "AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",
+        databaseURL: "https://my-chat-1d626-default-rtdb.firebaseio.com",
+        projectId: "my-chat-1d626"
+    };
+    const app = initializeApp(config);
+    const db = getDatabase(app);
 
-        // --- Auth ---
-        window.saveSession = (id, name) => {
-            localStorage.setItem('chat_uid', id);
-            localStorage.setItem('chat_name', name);
-            myId = id; myName = name;
-            document.getElementById('auth-overlay').style.display = 'none';
-            window.goHome();
-        };
+    // ── State ──
+    let myId = null, myName = null, myIcon = "";
+    let currentGid = null;
+    let lastSeen = JSON.parse(localStorage.getItem('chat_last_seen') || "{}");
+    let currentListener = null;
+    let realtimeListener = null;
+    let isSending = false;
+    let lastSig = "", lastSigAt = 0;
 
-        const clearSession = () => {
-            localStorage.removeItem('chat_uid');
-            localStorage.removeItem('chat_name');
-            localStorage.removeItem('chat_last_seen');
-            myId = null;
-            myName = null;
-        };
+    // ── Helpers ──
+    const $ = id => document.getElementById(id);
 
-        const goToAuthScreen = () => {
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById('auth-overlay').style.display = 'flex';
-            document.getElementById('main-modal').classList.remove('active');
-            document.getElementById('chat-footer').style.display = 'none';
-            document.getElementById('header-set-btn').style.visibility = 'hidden';
-            document.getElementById('head-title').innerText = 'ログイン / 新規登録';
-        };
+    const escHtml = s => String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-        const shouldOpenAuthScreen = async () => {
-            const savedId = localStorage.getItem('chat_uid');
-            const savedName = localStorage.getItem('chat_name');
-
-            if (!savedId || !savedName) return true;
-
-            try {
-                const userSnap = await get(ref(db, `v20_users/${savedId}`));
-                if (!userSnap.exists()) {
-                    clearSession();
-                    return true;
-                }
-            } catch (e) {
-                console.error('ユーザー確認エラー:', e);
-                return true;
-            }
-
-            myId = savedId;
-            myName = savedName;
-            return false;
-        };
-
-        window.execRegister = async () => {
-            const id = document.getElementById('auth-id').value;
-            const pw = document.getElementById('auth-pw').value;
-            if (!id || !pw) return alert("IDとパスワードを入力してください");
-            try {
-                const userRef = ref(db, `v20_users/${id}`);
-                const snap = await get(userRef);
-                if (snap.exists()) {
-                    alert("そのIDはすでに存在します。");
-                } else {
-                    await set(userRef, { name: id, pw: pw, icon: "" });
-                    window.saveSession(id, id);
-                    alert("新規登録が完了しました！");
-                }
-            } catch (e) { alert("エラー: " + e.message); }
-        };
-
-        window.execLogin = async () => {
-            const id = document.getElementById('auth-id').value;
-            const pw = document.getElementById('auth-pw').value;
-            if (!id || !pw) return alert("IDとパスワードを入力してください");
-            try {
-                const userRef = ref(db, `v20_users/${id}`);
-                const snap = await get(userRef);
-                if (!snap.exists()) {
-                    alert("IDが見つかりません。");
-                } else {
-                    if (snap.val().pw === pw) window.saveSession(id, snap.val().name);
-                    else alert("パスワードが違います。");
-                }
-            } catch (e) { alert("エラー: " + e.message); }
-        };
-
-        document.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); return false; } });
-
-        // --- UI Logic ---
-        window.toggleNeon = (isOn) => { document.body.classList.toggle('neon-mode', isOn); localStorage.setItem('neon_enabled', isOn); };
-        const drawIcon = (el, url, name) => { if(!el) return; if(url) el.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`; else { el.innerHTML = name ? name[0] : "?"; el.style.background = "var(--accent)"; } };
-
-        window.goHome = async () => {
-    if (currentListener) {
-        currentListener();
-        currentListener = null;
-    }
-    currentGid = null; 
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('main-modal').classList.add('active');
-    document.getElementById('chat-footer').style.display = "none";
-    document.getElementById('header-set-btn').style.visibility = "hidden";
-    document.getElementById('head-title').innerText = "ホーム";
-
-    const uSnap = await get(ref(db, `v20_users/${myId}`));
-    if(uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
-    document.getElementById('u-name-display').innerText = myName;
-    document.getElementById('u-id-display').innerText = "@" + myId;
-    drawIcon(document.getElementById('home-icon-preview'), myIcon, myName);
-
-    const listSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-    const list = document.getElementById('project-list'); 
-    list.innerHTML = "";
-    if(listSnap.exists()) {
-        for(let gid of Object.keys(listSnap.val())) {
-            const unread = await calculateUnread(gid);
-            const b = document.createElement('button'); b.className = "btn-main";
-            b.innerHTML = `<span>${gid.split('_')[0]}</span> ${unread > 0 ? `<span class="badge">🔴 ${unread}</span>` : ''}`;
-            b.onclick = () => window.enterChat(gid);
-            list.appendChild(b);
+    const drawIcon = (el, url, name) => {
+        if (!el) return;
+        if (url) {
+            el.innerHTML = `<img src="${url}" alt="">`;
+        } else {
+            el.textContent = name ? name[0].toUpperCase() : "?";
+            el.style.background = "var(--accent)";
         }
-    }
-}; // ← ここも最後にこれがあるか確認
+    };
 
-        async function calculateUnread(gid) {
+    // ── Auth ──
+    const clearSession = () => {
+        ['chat_uid','chat_name','chat_last_seen'].forEach(k => localStorage.removeItem(k));
+        myId = myName = null;
+    };
+
+    const goToAuthScreen = () => {
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        $('auth-overlay').classList.add('active');
+        $('chat-footer').style.display = 'none';
+        $('header-set-btn').style.visibility = 'hidden';
+        $('head-title').textContent = 'Chat-K';
+    };
+
+    const shouldOpenAuthScreen = async () => {
+        const id   = localStorage.getItem('chat_uid');
+        const name = localStorage.getItem('chat_name');
+        if (!id || !name) return true;
+        try {
+            const snap = await get(ref(db, `v20_users/${id}`));
+            if (!snap.exists()) { clearSession(); return true; }
+        } catch { return true; }
+        myId = id; myName = name;
+        return false;
+    };
+
+    const saveSession = (id, name) => {
+        localStorage.setItem('chat_uid', id);
+        localStorage.setItem('chat_name', name);
+        myId = id; myName = name;
+        $('auth-overlay').classList.remove('active');
+        window.goHome();
+    };
+
+    window.execRegister = async () => {
+        const id = $('auth-id').value.trim();
+        const pw = $('auth-pw').value;
+        if (!id || !pw) return alert("IDとパスワードを入力してください");
+        try {
+            const userRef = ref(db, `v20_users/${id}`);
+            if ((await get(userRef)).exists()) return alert("そのIDはすでに使われています。");
+            await set(userRef, { name: id, pw, icon: "" });
+            saveSession(id, id);
+        } catch (e) { alert("エラー: " + e.message); }
+    };
+
+    window.execLogin = async () => {
+        const id = $('auth-id').value.trim();
+        const pw = $('auth-pw').value;
+        if (!id || !pw) return alert("IDとパスワードを入力してください");
+        try {
+            const snap = await get(ref(db, `v20_users/${id}`));
+            if (!snap.exists()) return alert("IDが見つかりません。");
+            if (snap.val().pw !== pw) return alert("パスワードが違います。");
+            saveSession(id, snap.val().name);
+        } catch (e) { alert("エラー: " + e.message); }
+    };
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+
+    // ── Theme ──
+    window.toggleNeon = isOn => {
+        document.body.classList.toggle('neon-mode', isOn);
+        localStorage.setItem('neon_enabled', isOn);
+    };
+    window.closeModal = id => $(id).classList.remove('active');
+
+    // ── Home ──
+    window.goHome = async () => {
+        if (currentListener)  { currentListener();  currentListener  = null; }
+        if (realtimeListener) { realtimeListener(); realtimeListener = null; }
+        currentGid = null;
+
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        $('main-modal').classList.add('active');
+        $('chat-footer').style.display    = 'none';
+        $('header-set-btn').style.visibility = 'hidden';
+        $('head-title').textContent = 'ホーム';
+        $('realtime-bar').classList.remove('visible');
+        $('realtime-bar').innerHTML = '';
+        $('chat-area').classList.remove('with-bar');
+
+        try {
+            const uSnap = await get(ref(db, `v20_users/${myId}`));
+            if (uSnap.exists()) { myName = uSnap.val().name; myIcon = uSnap.val().icon || ""; }
+        } catch {}
+
+        $('u-name-display').textContent = myName;
+        $('u-id-display').textContent   = "@" + myId;
+        drawIcon($('home-icon'), myIcon, myName);
+
+        const list = $('project-list');
+        list.innerHTML = '';
+        try {
+            const snap = await get(ref(db, `v20_users/${myId}/myGroups`));
+            if (snap.exists()) {
+                for (const gid of Object.keys(snap.val())) {
+                    const unread = await calcUnread(gid);
+                    const item = document.createElement('div');
+                    item.className = 'group-item';
+                    item.innerHTML = `
+                        <span class="group-name">${escHtml(gid.split('_')[0])}</span>
+                        ${unread > 0
+                            ? `<span class="badge">🔴 ${unread}</span>`
+                            : '<span style="opacity:0.3;font-size:18px;">›</span>'}`;
+                    item.onclick = () => window.enterChat(gid);
+                    list.appendChild(item);
+                }
+            }
+        } catch {}
+    };
+
+    const calcUnread = async gid => {
+        try {
             const snap = await get(ref(db, `v20_groups/${gid}/messages`));
-            if(!snap.exists()) return 0;
-            const lastTime = lastSeen[gid] || 0;
-            return Object.values(snap.val()).filter(m => m.time > lastTime && m.uid !== myId).length;
-        }
+            if (!snap.exists()) return 0;
+            const t = lastSeen[gid] || 0;
+            return Object.values(snap.val()).filter(m => m.time > t && m.uid !== myId).length;
+        } catch { return 0; }
+    };
 
-        // --- Host: Handle Requests (New Logic) ---
-        const loadTeamSettings = async () => {
-            if (!currentGid) return;
-            try {
-                const snap = await get(ref(db, `v20_groups/${currentGid}`));
-                if (!snap.exists()) return;
-                const g = snap.val();
-                const isHost = g.host === myId;
+    // ── Enter chat ──
+    window.enterChat = async gid => {
+        if (currentListener)  { currentListener();  currentListener  = null; }
+        if (realtimeListener) { realtimeListener(); realtimeListener = null; }
 
-                const teamIdInput = document.getElementById('team-id-input');
-                const teamPassInput = document.getElementById('team-pass-input');
-                const saveBtn = document.getElementById('team-settings-save');
-                const note = document.getElementById('team-settings-note');
+        currentGid = gid;
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        $('chat-footer').style.display       = 'flex';
+        $('header-set-btn').style.visibility = 'visible';
+        lastSeen[gid] = Date.now();
+        localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
 
-                teamIdInput.value = g.name || currentGid.split('_')[0];
-                teamPassInput.value = g.pw || "";
-                teamIdInput.readOnly = !isHost;
-                teamPassInput.readOnly = !isHost;
-                saveBtn.style.display = isHost ? 'flex' : 'none';
-                note.innerText = isHost ? '※ホストはチームID / PASSを変更できます。' : '※閲覧のみ（変更はホストのみ）。';
-            } catch (e) {
-                console.error('チーム情報読み込みエラー:', e);
-            }
-        };
-
-        const watchRequests = (gid) => {
-            onValue(ref(db, `v20_groups/${gid}/requests`), (snap) => {
-                const reqList = document.getElementById('req-list');
-                if (!reqList) return;
-                reqList.innerHTML = "";
-                if (snap.exists()) {
-                    Object.entries(snap.val()).forEach(([uid, req]) => {
-                        const div = document.createElement('div');
-                        div.style.padding = "10px";
-                        div.style.borderBottom = "1px solid #eee";
-                        div.style.display = "flex";
-                        div.style.justifyContent = "space-between";
-                        div.style.alignItems = "center";
-                        div.innerHTML = `
-                            <div>
-                                <b>${req.name}</b> <small style="opacity:0.6;">@${uid}</small>
-                            </div>
-                            <button class="btn-main" style="width:70px; height:34px; font-size:12px; margin:0;" onclick="window.acceptUser('${uid}', '${req.name}')">許可</button>
-                        `;
-                        reqList.appendChild(div);
-                    });
+        try {
+            const gSnap = await get(ref(db, `v20_groups/${gid}`));
+            if (gSnap.exists()) {
+                const g = gSnap.val();
+                $('head-title').textContent = g.name || gid.split('_')[0];
+                if (g.host === myId) {
+                    $('host-panel').style.display = 'block';
+                    watchRequests(gid);
                 } else {
-                    reqList.innerHTML = "<p style='opacity:0.5; text-align:center; font-size:12px;'>現在、申請はありません。</p>";
+                    $('host-panel').style.display = 'none';
+                }
+            }
+        } catch {}
+
+        // リアルタイムバー
+        $('realtime-bar').innerHTML = '';
+        realtimeListener = onValue(ref(db, `v20_groups/${gid}/realtime`), snap => {
+            if (!snap.exists()) return;
+            const bar = $('realtime-bar');
+            snap.forEach(child => {
+                const uid  = child.key;
+                const info = child.val();
+                let track = document.getElementById(`rt-${uid}`);
+                if (!track) {
+                    track = document.createElement('div');
+                    track.id = `rt-${uid}`;
+                    track.className = 'rt-track';
+                    track.innerHTML = `<div class="rt-bubble" id="rtb-${uid}"></div><div class="rt-label">${escHtml(info.name)}</div>`;
+                    bar.appendChild(track);
+                    bar.classList.add('visible');
+                    $('chat-area').classList.add('with-bar');
+                }
+                const bubble = document.getElementById(`rtb-${uid}`);
+                if (bubble && bubble.textContent !== info.text) {
+                    bubble.textContent = info.text;
+                    bubble.style.animation = 'none';
+                    void bubble.offsetHeight;
+                    bubble.style.animation = '';
                 }
             });
-        };
-
-        window.acceptUser = async (uid, name) => {
-            if (!currentGid) return;
-            try {
-                // 1. Add group to user's list
-                await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
-                // 2. Remove request
-                await remove(ref(db, `v20_groups/${currentGid}/requests/${uid}`));
-                alert(`${name}さんの参加を許可しました`);
-            } catch (e) {
-                alert("エラー: " + e.message);
-            }
-        };
-
-        // --- Chat with Read Receipts ---
-            // --- ここに追加 ---
-const updateRealtimeBubbles = (gid) => {
-    const rtContainer = document.getElementById('realtime-container');
-    const rtRef = ref(db, `v20_groups/${gid}/realtime`);
-
-    onValue(rtRef, (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.val();
-        
-        Object.entries(data).forEach(([uid, info]) => {
-            let track = document.getElementById(`track-${uid}`);
-            if (!track) {
-                track = document.createElement('div');
-                track.id = `track-${uid}`;
-                track.className = 'user-bubble-track';
-                track.innerHTML = `<div class="user-label">${info.name}</div><div class="bubble-content" style="display:flex; flex-direction:column-reverse; width:100%;"></div>`;
-                rtContainer.appendChild(track);
-            }
-
-            const contentArea = track.querySelector('.bubble-content');
-            
-            if (info.lastMsgId !== track.dataset.lastId) {
-                const bubble = document.createElement('div');
-                bubble.className = 'bubble-pop';
-                bubble.innerText = info.text;
-                contentArea.appendChild(bubble);
-                
-                // ポンと鳴らす
-                popSound.play().catch(e => console.log("Audio play blocked"));
-
-                if (contentArea.children.length > 2) {
-                    contentArea.removeChild(contentArea.firstChild);
-                }
-                
-                track.dataset.lastId = info.lastMsgId;
-            }
         });
-    });
-};
 
-// 既存の enterChat が続く...
+        // メッセージ
+        currentListener = onValue(ref(db, `v20_groups/${gid}/messages`), snap => {
+            const area = $('chat-area');
+            area.innerHTML = '';
+            if (!snap.exists()) return;
 
-
-        window.enterChat = async (gid) => {
-    // 前の監視役がいたら解除する（連投バグ防止）
-    if (currentListener) {
-        currentListener();
-        currentListener = null;
-    }
-
-    currentGid = gid; 
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-    document.getElementById('chat-footer').style.display = "flex";
-    document.getElementById('header-set-btn').style.visibility = "visible";
-    
-    lastSeen[gid] = Date.now(); 
-    localStorage.setItem('chat_last_seen', JSON.stringify(lastSeen));
-
-    const gSnap = await get(ref(db, `v20_groups/${gid}`));
-    if(gSnap.exists()) {
-        const gData = gSnap.val();
-        document.getElementById('head-title').innerText = gData.name || gid.split('_')[0];
-        
-        if (gData.host === myId) {
-            document.getElementById('host-panel').style.display = "block";
-            watchRequests(gid);
-        } else {
-            document.getElementById('host-panel').style.display = "none";
-        }
-    }
-
-    // 新しい監視役をセット
-    const msgRef = ref(db, `v20_groups/${gid}/messages`);
-    currentListener = onValue(msgRef, snap => {
-        const area = document.getElementById('chat-area');
-        area.innerHTML = "";
-        
-        if(snap.exists()) {
-            Object.entries(snap.val()).forEach(([key, m]) => {
+            snap.forEach(child => {
+                const key  = child.key;
+                const m    = child.val();
                 const isMe = m.uid === myId;
-                
+
                 if (!isMe && (!m.readBy || !m.readBy[myId])) {
-                    update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), { 
-                        [myId]: { name: myName, time: Date.now() } 
-                    });
+                    update(ref(db, `v20_groups/${gid}/messages/${key}/readBy`), {
+                        [myId]: { name: myName, time: Date.now() }
+                    }).catch(() => {});
                 }
 
                 const readCount = m.readBy ? Object.keys(m.readBy).length : 0;
-                let content = "";
-                
-                if(m.type === "file") {
-                    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName);
-                    content = isImg 
-                        ? `<img src="${m.data}" class="img-preview" onclick="window.openViewer('${m.data}','${m.fileName}')">` 
-                        : `<div class="bubble" onclick="window.downloadFile('${m.data}','${m.fileName}')">📄 ${m.fileName}</div>`;
+                let contentHtml = '';
+
+                if (m.type === 'file') {
+                    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName || '');
+                    contentHtml = isImg
+                        ? `<img src="${m.data}" class="img-preview" onclick="window._openViewer('${key}')">`
+                        : `<div class="bubble" onclick="window._dlFile('${key}')">📄 ${escHtml(m.fileName)}</div>`;
                 } else {
-                    content = `<div class="bubble" onclick="window.checkReadStatus('${key}')">${m.text}</div>`;
+                    contentHtml = `<div class="bubble" onclick="window.checkReadStatus('${key}')">${escHtml(m.text || '')}</div>`;
                 }
 
-                const row = document.createElement('div');
-                row.className = `msg-row ${isMe ? 'me' : 'other'}`;
-                const readHtml = readCount > 0 
-                    ? `<span class="read-badge" onclick="window.checkReadStatus('${key}')">既読 ${readCount}</span>` 
+                const readHtml = readCount > 0
+                    ? `<span class="read-badge" onclick="window.checkReadStatus('${key}')">既読 ${readCount}</span>`
                     : `<span style="opacity:0.3;">未読</span>`;
 
+                const row = document.createElement('div');
+                row.className = `msg-row ${isMe ? 'me' : ''}`;
+                row.dataset.key = key;
                 row.innerHTML = `
-                    <div class="u-icon">${(m.name||"?")[0]}</div>
-                    <div style="max-width:80%;">
-                        <div style="font-size:10px; opacity:0.5; margin-bottom:2px;">${m.name}</div>
-                        ${content}
+                    <div class="u-icon">${escHtml((m.name || '?')[0])}</div>
+                    <div style="max-width:100%;">
+                        ${!isMe ? `<div class="msg-name">${escHtml(m.name || '')}</div>` : ''}
+                        ${contentHtml}
                         <div class="msg-meta">${readHtml}</div>
                     </div>`;
+
+                // ファイル参照をデータに保持
+                if (m.type === 'file') row._fileData = { data: m.data, fileName: m.fileName };
                 area.appendChild(row);
             });
             area.scrollTop = area.scrollHeight;
-        }
-    });
-};
+        });
+    };
 
-        window.checkReadStatus = async (msgId) => {
-            if(!currentGid || !msgId) return;
-            const snap = await get(ref(db, `v20_groups/${currentGid}/messages/${msgId}/readBy`));
-            const listDiv = document.getElementById('reader-list-content');
-            listDiv.innerHTML = "";
-            if(snap.exists()) {
-                Object.values(snap.val()).forEach(r => {
-                    const d = new Date(r.time);
-                    const timeStr = `${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
-                    const item = document.createElement('div');
-                    item.className = "reader-item";
-                    item.innerHTML = `<div class="u-icon">${r.name[0]}</div><div><b>${r.name}</b><br><small style="opacity:0.5;">${timeStr}</small></div>`;
-                    listDiv.appendChild(item);
+    // ファイル操作（DOM参照経由でキーを使う）
+    window._openViewer = key => {
+        const row = document.querySelector(`[data-key="${key}"]`);
+        if (row && row._fileData) window.openViewer(row._fileData.data, row._fileData.fileName);
+    };
+    window._dlFile = key => {
+        const row = document.querySelector(`[data-key="${key}"]`);
+        if (row && row._fileData) window.downloadFile(row._fileData.data, row._fileData.fileName);
+    };
+
+    // ── Send message ──
+    window.sendMessage = async () => {
+        const input = $('msg-input');
+        if (!input || !currentGid) return;
+        const text = input.value.trim();
+        if (!text) return;
+
+        const sig = `${currentGid}::${text}`;
+        const now = Date.now();
+        if (isSending || (sig === lastSig && now - lastSigAt < 1200)) return;
+
+        isSending = true; lastSig = sig; lastSigAt = now;
+        const btn = $('send-btn');
+        btn.disabled = true;
+        input.value = '';
+        input.style.height = 'auto';
+
+        try {
+            const msgId = push(ref(db, `v20_groups/${currentGid}/messages`)).key;
+            await update(ref(db), {
+                [`v20_groups/${currentGid}/messages/${msgId}`]: {
+                    uid: myId, name: myName, text, type: 'text', time: serverTimestamp()
+                },
+                [`v20_groups/${currentGid}/realtime/${myId}`]: {
+                    name: myName, text, lastMsgId: msgId, time: serverTimestamp()
+                }
+            });
+        } catch (e) {
+            alert("送信失敗: " + e.message);
+            input.value = text;
+        } finally {
+            isSending = false;
+            btn.disabled = false;
+            input.focus();
+        }
+    };
+
+    window.sendFile = input => {
+        const file = input.files[0];
+        if (!file || !currentGid) return;
+        const r = new FileReader();
+        r.onload = e => push(ref(db, `v20_groups/${currentGid}/messages`), {
+            uid: myId, name: myName, type: 'file',
+            data: e.target.result, fileName: file.name, time: serverTimestamp()
+        }).catch(err => alert("ファイル送信失敗: " + err.message));
+        r.readAsDataURL(file);
+        input.value = '';
+    };
+
+    // ── Read receipts ──
+    window.checkReadStatus = async msgId => {
+        if (!currentGid) return;
+        const snap = await get(ref(db, `v20_groups/${currentGid}/messages/${msgId}/readBy`)).catch(() => null);
+        const el = $('reader-list-content');
+        el.innerHTML = '';
+        if (snap && snap.exists()) {
+            Object.values(snap.val()).forEach(r => {
+                const d = new Date(r.time);
+                const t = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+                const item = document.createElement('div');
+                item.className = 'reader-item';
+                item.innerHTML = `<div class="u-icon">${escHtml(r.name[0])}</div><div><b>${escHtml(r.name)}</b><br><small style="opacity:0.5;">${t}</small></div>`;
+                el.appendChild(item);
+            });
+        } else {
+            el.innerHTML = '<div style="padding:20px; text-align:center; opacity:0.5;">まだ誰も読んでいません</div>';
+        }
+        $('read-modal').classList.add('active');
+    };
+
+    // ── Group actions ──
+    window.showForm = mode => {
+        window.pMode = mode;
+        $('p-form-title').textContent = mode === 'create' ? '新規グループ作成' : 'グループに参加';
+        $('p-form').classList.add('active');
+    };
+
+    window.execAction = async () => {
+        const id = $('p-id-input').value.trim();
+        const pw = $('p-pw-input').value;
+        if (!id) return alert("入力してください");
+        try {
+            if (window.pMode === 'create') {
+                const gid = id + '_' + Math.random().toString(36).substr(2, 6);
+                await set(ref(db, `v20_groups/${gid}`), { name: id, pw, host: myId });
+                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
+                alert("グループを作成しました！");
+            } else {
+                const snap = await get(ref(db, 'v20_groups'));
+                let target = null;
+                snap.forEach(g => { if (g.val().name === id && g.val().pw === pw) target = g.key; });
+                if (target) {
+                    await update(ref(db, `v20_groups/${target}/requests/${myId}`), { uid: myId, name: myName });
+                    alert("申請を送りました。管理者が許可するまでお待ちください。");
+                } else {
+                    alert("グループが見つかりません");
+                }
+            }
+        } catch (e) { alert("エラー: " + e.message); }
+        window.goHome();
+    };
+
+    window.leaveGroup = async () => {
+        if (!currentGid || !confirm("このグループを退会しますか？")) return;
+        try {
+            await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
+            await remove(ref(db, `v20_groups/${currentGid}/requests/${myId}`));
+            alert("退会しました");
+            window.goHome();
+        } catch (e) { alert("エラー: " + e.message); }
+    };
+
+    // ── Settings ──
+    window.openSettings = async () => {
+        if (!currentGid) return;
+        try {
+            const snap = await get(ref(db, `v20_groups/${currentGid}`));
+            if (!snap.exists()) return;
+            const g = snap.val();
+            const isHost = g.host === myId;
+            $('team-id-input').value    = g.name || currentGid.split('_')[0];
+            $('team-pass-input').value  = g.pw || '';
+            $('team-id-input').readOnly   = !isHost;
+            $('team-pass-input').readOnly = !isHost;
+            $('team-settings-save').style.display = isHost ? 'flex' : 'none';
+            $('team-settings-note').textContent = isHost
+                ? '※ホストはグループ名/PASSを変更できます。'
+                : '※閲覧のみ（変更はホストのみ）。';
+        } catch {}
+        $('settings-modal').classList.add('active');
+    };
+
+    window.updateTeamSettings = async () => {
+        const name = $('team-id-input').value.trim();
+        const pw   = $('team-pass-input').value;
+        if (!name || !pw) return alert("グループ名とPASSを入力してください");
+        try {
+            const snap = await get(ref(db, `v20_groups/${currentGid}`));
+            if (snap.val().host !== myId) return alert("ホストのみ変更できます。");
+            await update(ref(db, `v20_groups/${currentGid}`), { name, pw });
+            $('head-title').textContent = name;
+            alert("更新しました");
+        } catch (e) { alert("エラー: " + e.message); }
+    };
+
+    window.closeSettingsToChat = () => $('settings-modal').classList.remove('active');
+
+    const watchRequests = gid => {
+        onValue(ref(db, `v20_groups/${gid}/requests`), snap => {
+            const el = $('req-list');
+            el.innerHTML = '';
+            if (snap.exists()) {
+                Object.entries(snap.val()).forEach(([uid, req]) => {
+                    const div = document.createElement('div');
+                    div.className = 'req-item';
+                    div.innerHTML = `
+                        <div><b>${escHtml(req.name)}</b> <small style="opacity:0.5;">@${escHtml(uid)}</small></div>
+                        <button class="btn-sm" onclick="window.acceptUser('${uid}','${escHtml(req.name)}')">許可</button>`;
+                    el.appendChild(div);
                 });
             } else {
-                listDiv.innerHTML = `<div style="padding:20px; text-align:center; opacity:0.5;">まだ誰も読んでいません</div>`;
+                el.innerHTML = '<p style="opacity:0.5;font-size:13px;text-align:center;padding:12px 0;">申請はありません</p>';
             }
-            document.getElementById('read-modal').classList.add('active');
-        };
+        });
+    };
 
-        window.execAction = async () => {
-            const id = document.getElementById('p-id-input').value, pw = document.getElementById('p-pw-input').value;
-            if(!id) return alert("入力してください");
-            if(window.pMode === 'create') {
-                const gid = id + "_" + Math.random().toString(36).substr(2, 6);
-                await set(ref(db, `v20_groups/${gid}`), { name: id, pw: pw, host: myId });
-                await update(ref(db, `v20_users/${myId}/myGroups`), { [gid]: true });
-                alert("作成しました！");
-            } else if(window.pMode === 'join') {
-                const snap = await get(ref(db, `v20_groups`));
-                let target = null;
-                snap.forEach(g => { if(g.val().name === id && g.val().pw === pw) target = g.key; });
-                if(target) { 
-                    await update(ref(db, `v20_groups/${target}/requests/${myId}`), { uid: myId, name: myName }); 
-                    alert("申請を送りました。管理者が許可するまでお待ちください。"); 
-                }
-                else alert("見つかりません");
-            }
-            window.goHome();
-        };
+    window.acceptUser = async (uid, name) => {
+        if (!currentGid) return;
+        try {
+            await update(ref(db, `v20_users/${uid}/myGroups`), { [currentGid]: true });
+            await remove(ref(db, `v20_groups/${currentGid}/requests/${uid}`));
+            alert(`${name}さんの参加を許可しました`);
+        } catch (e) { alert("エラー: " + e.message); }
+    };
 
-        window.updateUser = async () => {
-            const n = document.getElementById('edit-name').value, p = document.getElementById('edit-pw').value;
-            const up = { name: n, icon: window.tempIcon || myIcon };
-            if(p) up.pw = p;
+    // ── Profile ──
+    window.openUserCard = () => {
+        $('user-modal').classList.add('active');
+        $('edit-name').value = myName;
+        $('edit-pw').value   = '';
+        $('neon-toggle').checked = localStorage.getItem('neon_enabled') === 'true';
+        drawIcon($('edit-icon-preview'), myIcon, myName);
+        window.tempIcon = null;
+    };
+
+    window.previewIcon = input => {
+        const r = new FileReader();
+        r.onload = e => { window.tempIcon = e.target.result; drawIcon($('edit-icon-preview'), e.target.result, ''); };
+        r.readAsDataURL(input.files[0]);
+    };
+
+    window.updateUser = async () => {
+        const name = $('edit-name').value.trim();
+        const pw   = $('edit-pw').value;
+        if (!name) return alert("名前を入力してください");
+        const up = { name, icon: window.tempIcon || myIcon };
+        if (pw) up.pw = pw;
+        try {
             await update(ref(db, `v20_users/${myId}`), up);
-            alert("更新しました"); location.reload();
-        };
+            myName = name; myIcon = up.icon;
+            localStorage.setItem('chat_name', name);
+            alert("更新しました");
+            window.closeModal('user-modal');
+            window.goHome();
+        } catch (e) { alert("エラー: " + e.message); }
+    };
 
-        window.logout = () => {
-            if (!confirm("ログアウトしますか？")) return;
+    window.logout = () => {
+        if (!confirm("ログアウトしますか？")) return;
+        clearSession();
+        goToAuthScreen();
+    };
+
+    window.deleteAccount = async () => {
+        if (!confirm("本当にアカウントを削除しますか？\nこの操作は元に戻せません。")) return;
+        try {
+            const snap = await get(ref(db, `v20_users/${myId}/myGroups`));
+            if (snap.exists()) {
+                for (const gid of Object.keys(snap.val())) {
+                    await remove(ref(db, `v20_groups/${gid}/requests/${myId}`)).catch(() => {});
+                }
+            }
+            await remove(ref(db, `v20_users/${myId}`));
             clearSession();
             goToAuthScreen();
-        };
-        window.leaveGroup = async () => {
-            if(!currentGid) return;
-            if(!confirm("退会しますか？")) return;
-            try {
-                await remove(ref(db, `v20_users/${myId}/myGroups/${currentGid}`));
-                await remove(ref(db, `v20_groups/${currentGid}/requests/${myId}`));
-                alert("退会しました"); window.goHome();
-            } catch (e) { alert("エラー: " + e.message); }
-        };
+        } catch (e) { alert("エラー: " + e.message); }
+    };
 
-        window.deleteAccount = async () => {
-            if (!confirm("本当に削除しますか？\n復元できません。")) return;
-            try {
-                const myGroupsSnap = await get(ref(db, `v20_users/${myId}/myGroups`));
-                if (myGroupsSnap.exists()) {
-                    for (const gid of Object.keys(myGroupsSnap.val())) {
-                        await remove(ref(db, `v20_groups/${gid}/requests/${myId}`));
-                    }
-                }
-                await remove(ref(db, `v20_users/${myId}`));
-                clearSession();
-                alert("削除しました。");
-                goToAuthScreen();
-            } catch (e) { alert("エラー: " + e.message); }
-        };
+    // ── Viewer ──
+    window.openViewer = (url, name) => {
+        $('viewer-img').src = url;
+        window._viewFile = { url, name };
+        $('viewer').style.display = 'flex';
+    };
+    window.downloadFromViewer = () => {
+        const a = document.createElement('a');
+        a.href = window._viewFile.url;
+        a.download = window._viewFile.name;
+        a.click();
+    };
+    window.downloadFile = (data, name) => {
+        const a = document.createElement('a');
+        a.href = data; a.download = name; a.click();
+    };
 
-        window.openSettings = async () => {
-            await loadTeamSettings();
-            document.getElementById('settings-modal').classList.add('active');
-        };
-        window.updateTeamSettings = async () => {
-            if (!currentGid) return;
-            const nextName = document.getElementById('team-id-input').value.trim();
-            const nextPw = document.getElementById('team-pass-input').value;
-            if (!nextName || !nextPw) return alert('チームIDとPASSを入力してください');
-            try {
-                const gRef = ref(db, `v20_groups/${currentGid}`);
-                const snap = await get(gRef);
-                if (!snap.exists()) return alert('チーム情報が見つかりません。');
-                if (snap.val().host !== myId) return alert('ホストのみ変更できます。');
-                await update(gRef, { name: nextName, pw: nextPw });
-                document.getElementById('head-title').innerText = nextName;
-                alert('チーム情報を更新しました。');
-            } catch (e) {
-                alert('エラー: ' + e.message);
-            }
-        };
-        window.closeSettingsToChat = () => {
-            document.getElementById('settings-modal').classList.remove('active');
-            if (currentGid) {
-                document.getElementById('chat-footer').style.display = "flex";
-                document.getElementById('header-set-btn').style.visibility = "visible";
-            }
-        };
-        window.openUserCard = () => { document.getElementById('user-modal').classList.add('active'); document.getElementById('edit-name').value = myName; drawIcon(document.getElementById('edit-icon-preview'), myIcon, myName); };
-        window.previewIcon = (input) => { const r = new FileReader(); r.onload = (e) => { window.tempIcon = e.target.result; drawIcon(document.getElementById('edit-icon-preview'), e.target.result, ""); }; r.readAsDataURL(input.files[0]); };
-        window.showForm = (m) => { 
-    window.pMode = m; 
-    document.getElementById('p-form').style.display = "block"; 
-    document.getElementById('p-form-title').innerText = (m === 'create') ? '新規作成' : 'グループに参加'; 
-};
+    // ── Input events ──
+    $('msg-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+    });
+    $('msg-input').addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
 
-    window.sendMessage = async () => {
-    const input = document.getElementById('msg-input');
-    if (!input || !currentGid) return;
-
-    const text = input.value.trim();
-    if (!text) return;
-
-    // --- 連投・二重送信防止ガード ---
-    const signature = `${currentGid}::${text}`;
-    const now = Date.now();
-    
-    // 送信中フラグが立っているか、短時間の同一内容送信をブロック
-    if (isSendingMessage || (signature === lastMessageSignature && now - lastMessageAt < 1200)) {
-        return;
-    }
-
-    isSendingMessage = true; 
-    lastMessageSignature = signature;
-    lastMessageAt = now;
-    // ----------------------------
-
-    const sendBtn = document.getElementById('send-btn');
-    if (sendBtn) sendBtn.disabled = true;
-
-    try {
-        // Firebaseの新しいプッシュIDを生成
-        const msgRef = ref(db, `v20_groups/${currentGid}/messages`);
-        const msgId = push(msgRef).key;
-        
-        const updates = {};
-        
-        // 1. 通常のメッセージログ（履歴用）
-        updates[`v20_groups/${currentGid}/messages/${msgId}`] = {
-            uid: myId,
-            name: myName,
-            text: text,
-            type: "text",
-            time: serverTimestamp()
-        };
-        
-        // 2. リアルタイム枠用の最新ステータス（上部の枠用）
-        // uidをキーにすることで、常に自分の枠の最新メッセージが上書き更新される
-        updates[`v20_groups/${currentGid}/realtime/${myId}`] = {
-            name: myName,
-            text: text,
-            lastMsgId: msgId,
-            time: serverTimestamp()
-        };
-
-        // すべてのデータを一括でFirebaseに反映
-        await update(ref(db), updates);
-        
-        // 送信が成功したら入力欄を空にする
-        input.value = "";
-        
-    } catch (e) {
-        console.error("送信エラー:", e);
-        alert("送信失敗！理由: " + e.message);
-    } finally {
-        // 送信処理が終わったらフラグを解除してボタンを有効化
-        isSendingMessage = false;
-        if (sendBtn) sendBtn.disabled = false;
-    }
-};
-        window.sendFile = (i) => { const f = i.files[0]; if(!f || !currentGid) return; const r = new FileReader(); r.onload = (e) => push(ref(db, `v20_groups/${currentGid}/messages`), { uid: myId, name: myName, type: "file", data: e.target.result, fileName: f.name, time: serverTimestamp() }); r.readAsDataURL(f); };
-        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-        window.openViewer = (url, name) => { document.getElementById('viewer-img').src = url; window.currentViewFile = { url, name }; document.getElementById('viewer').style.display = 'flex'; };
-        window.downloadFromViewer = () => { const a = document.createElement('a'); a.href = window.currentViewFile.url; a.download = window.currentViewFile.name; a.click(); };
-        window.downloadFile = (b, n) => { const a = document.createElement('a'); a.href = b; a.download = n; a.click(); };
-
-            const popSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); // ポンという音
-        window.onload = async () => {
-            window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
-            const showAuth = await shouldOpenAuthScreen();
-            if (showAuth) return goToAuthScreen();
-            window.goHome();
-        };
-        document.getElementById('msg-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { // Shift+Enterなら改行、Enterだけなら送信
-        e.preventDefault();
-        window.sendMessage();
-    }
-});
-        })().catch((e) => {
-            console.error("初期化エラー", e);
-            alert("初期化に失敗しました。CodePenの場合はJS設定でBabel/TypeScriptをOFFにしてください。\n" + e.message);
-        });
-    </script>
-
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').catch((err) => {
-            console.error('Service Worker registration failed:', err);
-          });
-        });
-      }
-      // ユーザーがログインした直後、または初期化時に実行
-function checkAdminStatus(uid) {
-  const userRef = firebase.database().ref('users/' + uid);
-  
-  userRef.on('value', (snapshot) => {
-    const userData = snapshot.val();
-    
-    // 「最高権限」が true かチェック
-    if (userData && userData.最高権限 === true) {
-      document.getElementById('admin-panel').style.display = 'block';
-      loadFullDatabase(); // データベース全取得関数へ
-    }
-  });
-}
-
-// データベース全体を読み込んで表示する
-function loadFullDatabase() {
-  const rootRef = firebase.database().ref('/');
-  
-  rootRef.on('value', (snapshot) => {
-    const data = snapshot.val();
-    const jsonStr = JSON.stringify(data, null, 2);
-    
-    // 表示用と編集用テキストエリアにセット
-    document.getElementById('db-content').innerText = jsonStr;
-    document.getElementById('db-edit-area').value = jsonStr;
-  });
-}
-
-// 編集した内容をデータベースに書き戻す（注意！）
-function saveDatabaseChanges() {
-  if (!confirm("本当にデータベース全体を上書きしますか？")) return;
-  
-  try {
-    const newData = JSON.parse(document.getElementById('db-edit-area').value);
-    firebase.database().ref('/').set(newData)
-      .then(() => alert("更新完了！"))
-      .catch((err) => alert("エラー: " + err.message));
-  } catch (e) {
-    alert("JSONの形式が正しくありません。");
-  }
-}
-    </script>
+    // ── Init ──
+    window.addEventListener('load', async () => {
+        window.toggleNeon(localStorage.getItem('neon_enabled') === 'true');
+        const showAuth = await shouldOpenAuthScreen();
+        if (showAuth) goToAuthScreen();
+        else window.goHome();
+    });
+</script>
 
 </body>
-<script>
-    const adminPanel = document.getElementById('debug-admin-panel');
-    const dbTextarea = document.getElementById('debug-db-textarea');
-    const toggleBtn = document.getElementById('debug-toggle-btn');
-
-    // 1. あなたのアプリでIDを保存している「正確な名前」を確認してください
-    // ここでは例として 'chat_user_id' としていますが、実際の保存名に合わせてください
-    const v20_users = localStorage.getItem('chat_user_id'); 
-
-    console.log("【診断】取得したID:", myId);
-
-    if (myId) {
-        // 2. データベースの参照先をログに出す
-        const adminRef = firebase.database().ref('users/' + myId + '/kannri');
-        console.log("【診断】参照パス:", 'users/' + myId + '/kannri');
-
-        adminRef.on('value', (snapshot) => {
-            const isAdmin = snapshot.val();
-            console.log("【診断】取得した値:", isAdmin);
-
-            if (isAdmin === true) {
-                console.log("【診断】管理者一致！ボタンを表示します。");
-                toggleBtn.style.display = 'inline-block';
-                loadDatabaseToTextarea();
-            } else {
-                console.log("【診断】管理者ではありません（値がtrueではない、または存在しない）");
-                toggleBtn.style.display = 'none';
-            }
-        }, (error) => {
-            console.error("【診断】Firebase読み取りエラー:", error.message);
-        });
-    } else {
-        console.warn("【診断】IDがlocalStorageから取得できませんでした。");
-    }
-
-    function loadDatabaseToTextarea() {
-        firebase.database().ref('/').on('value', (snapshot) => {
-            dbTextarea.value = JSON.stringify(snapshot.val(), null, 2);
-        });
-    }
-
-    toggleBtn.onclick = function() {
-        adminPanel.style.display = (adminPanel.style.display === 'none') ? 'block' : 'none';
-    };
-</script>
 </html>
-
-
