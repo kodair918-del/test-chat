@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>無限ブロック崩し</title>
+<style>
+  html,body{margin:0;padding:0;background:#0d0f1a;color:#eee;font-family:"Segoe UI","Hiragino Sans",sans-serif;overflow:hidden;height:100%;}
+  #wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;}
+  #hud{display:flex;gap:24px;width:800px;justify-content:space-between;padding:8px 4px;font-size:15px;box-sizing:border-box;}
+  #hud span b{color:#ffd34d;}
+  canvas{background:#11142a;border:3px solid #3a3f6b;border-radius:8px;box-shadow:0 0 30px rgba(80,100,255,.25);}
+  #overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(5,6,15,.85);text-align:center;}
+  #overlay h1{font-size:42px;margin:0 0 8px;color:#ffd34d;text-shadow:0 0 12px #ffae00;}
+  #overlay p{margin:4px 0;font-size:16px;color:#cfd2f0;}
+  #startBtn{margin-top:18px;padding:12px 36px;font-size:18px;background:linear-gradient(180deg,#5d6dff,#3344c9);border:none;border-radius:8px;color:#fff;cursor:pointer;box-shadow:0 4px 0 #1f2a8f;}
+  #startBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #1f2a8f;}
+  #legend{display:flex;gap:10px;flex-wrap:wrap;max-width:560px;justify-content:center;margin-top:18px;}
+  .lg{display:flex;align-items:center;gap:5px;font-size:12px;color:#aab;}
+  .sw{width:14px;height:14px;border-radius:3px;display:inline-block;}
+  #hidden{display:none;}
+  #toast{position:absolute;top:60px;font-size:22px;font-weight:bold;color:#ffe27a;text-shadow:0 0 8px #ff8c00;opacity:0;pointer-events:none;transition:opacity .15s;}
+  #aiToggleLabel{display:block;margin-top:12px;font-size:13px;color:#aab2e0;cursor:pointer;}
+  #aiToggleLabel input{margin-right:6px;vertical-align:middle;}
+  #oniToggleLabel{display:block;margin-top:8px;font-size:13px;color:#ff8c8c;cursor:pointer;}
+  #oniToggleLabel input{margin-right:6px;vertical-align:middle;}
+  #soukaiToggleLabel{display:block;margin-top:8px;font-size:13px;color:#8cf0d0;cursor:pointer;}
+  #soukaiToggleLabel input{margin-right:6px;vertical-align:middle;}
+  #speedPanel{display:none;align-items:center;gap:10px;width:800px;padding:8px 4px;box-sizing:border-box;font-size:13px;color:#aab2e0;}
+  #speedPanel input[type="range"]{flex:1;}
+  #speedPanel b{color:#ffd34d;min-width:34px;display:inline-block;}
+  #stuckBtn{padding:5px 12px;font-size:12px;background:linear-gradient(180deg,#8a4dff,#5a23c9);border:none;border-radius:6px;color:#fff;cursor:pointer;white-space:nowrap;}
+  #stuckBtn:active{transform:translateY(1px);}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <span>SCORE: <b id="score">0</b></span>
+    <span>BEST: <b id="best">0</b></span>
+    <span>STAGE: <b id="stage">1</b></span>
+    <span>LIFE: <b id="life">3</b></span>
+    <span id="statusLine"></span>
+  </div>
+  <div style="position:relative;">
+    <canvas id="game" width="800" height="560"></canvas>
+    <div id="toast">+1</div>
+    <div id="overlay">
+      <h1>無限ブロック崩し</h1>
+      <p>← → またはマウスでパドル移動 / クリック・スパースでボール発射</p>
+      <p>12種類のブロック！ステージは無限に続くよ / プレイ中も「A」キーでAIモード切替</p>
+      <p>最高記録: <b id="overlayBest" style="color:#ffd34d">0</b></p>
+      <button id="startBtn">スタート</button>
+      <label id="aiToggleLabel">
+        <input type="checkbox" id="aiToggle"> AIに自動プレイさせる（彈道とブロックを計算してパドルを動かす）
+      </label>
+      <label id="oniToggleLabel">
+        <input type="checkbox" id="oniToggle"> 鬼畜モード（パドルが激小固定＋ボール高速。他モードと併用可）
+      </label>
+      <label id="soukaiToggleLabel">
+        <input type="checkbox" id="soukaiToggle"> 爽快モード（硬速ブロックのみで構成、下部に増殖ブロックが3～4個。他モードと併用可）
+      </label>
+      <div id="legend"></div>
+    </div>
+  </div>
+  <div id="speedPanel">
+    <span>早送り</span>
+    <input type="range" id="speedSlider" min="1" max="20" value="1" step="1">
+    <b id="speedValueLabel">1x</b>
+    <button id="stuckBtn">詳みを宣言（ライフを失う）</button>
+  </div>
+</div>
+<script>
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+// ---------- 最高記録 ----------
+const BEST_KEY = 'blockbreaker_best_score';
+let bestScore = parseInt(localStorage.getItem(BEST_KEY), 10) || 0;
+document.getElementById('best').textContent = bestScore;
+document.getElementById('overlayBest').textContent = bestScore;
+function updateBestScore(){
+  if (state.score > bestScore){
+    bestScore = state.score;
+    localStorage.setItem(BEST_KEY, String(bestScore));
+    document.getElementById('best').textContent = bestScore;
+    document.getElementById('overlayBest').textContent = bestScore;
+    return true;
+  }
+  return false;
+}
+
+// ---------- サウンド ----------
+let audioCtx = null;
+function ensureAudio(){
+  if (!audioCtx){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playPop(freqStart, freqEnd, duration, gainPeak, type){
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type || 'triangle';
+  osc.frequency.setValueAtTime(freqStart, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 1), t0+duration);
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(gainPeak, t0+0.005);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+duration);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0+duration+0.02);
+}
+function playBreakSound(){
+  const base = 480 + Math.random()*160;
+  playPop(base*1.7, base*0.6, 0.14, 0.2, 'triangle');
+}
+function playBounceSound(){
+  playPop(620, 880, 0.06, 0.09, 'sine');
+}
+
+// ---------- ブロック種類定義 ----------
+const TYPES = {
+  NORMAL:  { color:'#5d8bff', label:'通常',     desc:'ふつうのブロック' },
+  HARD:    { color:'#caa45a', label:'硬い',     desc:'複数回当てると壊れる(耐久3)' },
+  MULTI:   { color:'#ff5dd0', label:'増殖',     desc:'ボールが増える' },
+  FAST:    { color:'#ff4d4d', label:'高速',     desc:'ボールが速くなる' },
+  SLOW:    { color:'#4dd8ff', label:'減速',     desc:'ボールが遅くなる' },
+  BOMB:    { color:'#ff9d2e', label:'爆発',     desc:'周囲のブロックを爆破' },
+  PIERCE:  { color:'#7dff7d', label:'貫通',     desc:'一定時間ブロックを貫通' },
+  WIDEN:   { color:'#c08cff', label:'パドル+',  desc:'パドルが広がる' },
+  SHRINK:  { color:'#ff6ec7', label:'パドル-',  desc:'パドルが縮む' },
+  LIFE:    { color:'#5dffb0', label:'ライフ',   desc:'ライフが1増える' },
+  STICKY:  { color:'#ffe14d', label:'吸著',     desc:'ボールがパドルに吸著する' },
+  TURBO:   { color:'#e63946', label:'硬速',     desc:'硬くて当てるたびに高速化する(耐久3)' },
+};
+
+function pickType(stage){
+  const specialChance = Math.min(0.55, 0.18 + stage*0.012);
+  if (Math.random() > specialChance) return Math.random()<0.15 ? 'HARD' : 'NORMAL';
+  const pool = ['MULTI','FAST','SLOW','BOMB','PIERCE','WIDEN','SHRINK','LIFE','STICKY','HARD'];
+  const weights = [12,10,10,9,8,7,6,4,7,8];
+  let total = weights.reduce((a,b)=>a+b,0);
+  let r = Math.random()*total;
+  for(let i=0;i<pool.length;i++){
+    if (r < weights[i]) return pool[i];
+    r -= weights[i];
+  }
+  return 'NORMAL';
+}
+
+const BRICK_W = 58, BRICK_H = 22, GAP = 6, OFFSET_TOP = 50, OFFSET_X = (W - (10*(BRICK_W+GAP)-GAP))/2;
+const COLS = 10;
+
+function generateStage(stage, soukai){
+  const rows = Math.min(5 + Math.floor(stage/2), 9);
+  const bricks = [];
+
+  if (soukai){
+    const grid = [];
+    const bottomRowBricks = [];
+    for (let r=0; r<rows; r++){
+      grid[r] = [];
+      for (let c=0; c<COLS; c++){
+        const brick = {
+          x: OFFSET_X + c*(BRICK_W+GAP),
+          y: OFFSET_TOP + r*(BRICK_H+GAP),
+          w: BRICK_W, h: BRICK_H,
+          type: 'TURBO', hp: 3,
+          alive: true, flash:0
+        };
+        grid[r][c] = brick;
+        bricks.push(brick);
+        if (r >= rows-2) bottomRowBricks.push(brick);
+      }
+    }
+
+    const bombRow = rows-1, bombCol = Math.floor(COLS/2);
+    const bombBrick = grid[bombRow][bombCol];
+    bombBrick.type = 'BOMB';
+    bombBrick.hp = 1;
+    const usedForRing = new Set([bombBrick]);
+    [[0,-1],[0,1],[-1,-1],[-1,0],[-1,1]].forEach(([dr,dc])=>{
+      const rr = bombRow+dr, cc = bombCol+dc;
+      if (rr>=0 && rr<rows && cc>=0 && cc<COLS){
+        const brick = grid[rr][cc];
+        brick.type = 'MULTI';
+        brick.hp = 1;
+        usedForRing.add(brick);
+      }
+    });
+
+    const extraCandidates = bottomRowBricks.filter(b => !usedForRing.has(b));
+    const extraCount = Math.min(2 + Math.floor(Math.random()*2), extraCandidates.length);
+    for (let i=0; i<extraCount; i++){
+      const idx = Math.floor(Math.random()*extraCandidates.length);
+      const brick = extraCandidates.splice(idx, 1)[0];
+      brick.type = 'MULTI';
+      brick.hp = 1;
+    }
+    return bricks;
+  }
+
+  const patternId = stage % 5;
+  for (let r=0; r<rows; r++){
+    for (let c=0; c<COLS; c++){
+      let skip = false;
+      if (patternId===1 && (r+c)%4===0) skip = true;
+      if (patternId===2 && Math.abs(c-4.5) < r*0.35) skip = true;
+      if (patternId===3 && (c===0||c===COLS-1) && r%2===0) skip = true;
+      if (patternId===4 && Math.random() < 0.18) skip = true;
+      if (skip) continue;
+      const type = pickType(stage);
+      bricks.push({
+        x: OFFSET_X + c*(BRICK_W+GAP),
+        y: OFFSET_TOP + r*(BRICK_H+GAP),
+        w: BRICK_W, h: BRICK_H,
+        type, hp: type==='HARD' ? 3 : 1,
+        alive: true, flash:0
+      });
+    }
+  }
+  return bricks;
+}
+
+let state;
+function freshState(){
+  return {
+    stage: 1,
+    score: 0,
+    life: 3,
+    bricks: generateStage(1),
+    paddle: { x: W/2-50, w:100, h:14, y:H-30, baseW:100 },
+    balls: [],
+    running:false,
+    launched:false,
+    particles: [],
+    effectTimers: { pierce:0 },
+    keys: {left:false,right:false},
+    speedMultiplier: 1,
+  };
+}
+
+function newBall(stuck, speed){
+  return { x: W/2, y: H-30-14-7, r:7, vx:0, vy:0, speed: speed||5.2, stuck: !!stuck, pierce:false };
+}
+
+function resetBallsOnPaddle(){
+  state.balls = [newBall(true, state.oni ? 9 : 5.2)];
+  state.launched = false;
+}
+
+function startGame(opts){
+  ensureAudio();
+  opts = opts || {};
+  state = freshState();
+  state.ai = !!opts.ai;
+  state.oni = !!opts.oni;
+  state.soukai = !!opts.soukai;
+  state.bricks = generateStage(1, state.soukai);
+  if (opts.oni){
+    state.paddle.w = state.paddle.h;
+    state.paddle.baseW = state.paddle.w;
+    state.paddle.x = W/2 - state.paddle.w/2;
+  }
+  resetBallsOnPaddle();
+  state.running = true;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('speedSlider').value = 1;
+  document.getElementById('speedValueLabel').textContent = '1x';
+  updateHUD();
+}
+
+document.addEventListener('keydown', e=>{
+  if (e.code==='ArrowLeft') state && (state.keys.left=true);
+  if (e.code==='ArrowRight') state && (state.keys.right=true);
+  if (e.code==='Space'){ launchBalls(); e.preventDefault(); }
+  if (e.code==='KeyA' && state){
+    state.ai = !state.ai;
+    if (!state.ai){
+      state.speedMultiplier = 1;
+      document.getElementById('speedSlider').value = 1;
+      document.getElementById('speedValueLabel').textContent = '1x';
+    }
+    toast(state.ai ? 'AIモード ON' : 'AIモード OFF');
+    updateHUD();
+  }
+});
+document.addEventListener('keyup', e=>{
+  if (e.code==='ArrowLeft') state && (state.keys.left=false);
+  if (e.code==='ArrowRight') state && (state.keys.right=false);
+});
+cv.addEventListener('mousemove', e=>{
+  if (!state || state.ai) return;
+  const rect = cv.getBoundingClientRect();
+  const mx = (e.clientX-rect.left) * (W/rect.width);
+  state.paddle.x = Math.max(0, Math.min(W-state.paddle.w, mx - state.paddle.w/2));
+});
+cv.addEventListener('click', launchBalls);
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  startGame({
+    ai: document.getElementById('aiToggle').checked,
+    oni: document.getElementById('oniToggle').checked,
+    soukai: document.getElementById('soukaiToggle').checked,
+  });
+});
+
+function launchBalls(){
+  if (!state || !state.running) return;
+  let any = false;
+  state.balls.forEach(b=>{
+    if (b.stuck){
+      any = true;
+      b.stuck = false;
+      const angle = -Math.PI/2 + (Math.random()*0.5-0.25);
+      b.vx = Math.cos(angle)*b.speed;
+      b.vy = Math.sin(angle)*b.speed;
+    }
+  });
+  if (any) state.launched = true;
+}
+
+function updateHUD(){
+  document.getElementById('score').textContent = state.score;
+  updateBestScore();
+  document.getElementById('stage').textContent = state.stage;
+  document.getElementById('life').textContent = state.life;
+  const tags = [];
+  if (state.ai) tags.push('AI MODE');
+  if (state.oni) tags.push('鬼畜MODE');
+  if (state.soukai) tags.push('爽快 MODE');
+  document.getElementById('statusLine').textContent = tags.join(' / ');
+  document.getElementById('speedPanel').style.display = state.ai ? 'flex' : 'none';
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = 1;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity = 0; }, 700);
+}
+
+function rectsOverlapCircle(cx,cy,cr, rx,ry,rw,rh){
+  const closestX = Math.max(rx, Math.min(cx, rx+rw));
+  const closestY = Math.max(ry, Math.min(cy, ry+rh));
+  const dx = cx-closestX, dy = cy-closestY;
+  return (dx*dx+dy*dy) < cr*cr;
+}
+
+function destroyBrick(b, ball, chain){
+  if (!b.alive) return;
+  b.alive = false;
+  state.score += 10;
+  spawnParticles(b.x+b.w/2, b.y+b.h/2, TYPES[b.type].color);
+  playBreakSound();
+  applyBrickEffect(b, ball);
+  if (b.type==='BOMB'){
+    const cx = b.x+b.w/2, cy = b.y+b.h/2;
+    state.bricks.forEach(other=>{
+      if (other===b || !other.alive) return;
+      const ocx = other.x+other.w/2, ocy = other.y+other.h/2;
+      const dist = Math.hypot(ocx-cx, ocy-cy);
+      if (dist < BRICK_W*1.6){
+        destroyBrick(other, null, true);
+      }
+    });
+  }
+}
+
+function applyBrickEffect(b, hitBall){
+  switch(b.type){
+    case 'MULTI': {
+      const extra = [];
+      state.balls.forEach(ball=>{
+        if (ball.stuck) return;
+        for (let i=0;i<1;i++){
+          const ang = Math.atan2(ball.vy, ball.vx) + (Math.random()*1.0-0.5);
+          extra.push({...ball, vx: Math.cos(ang)*ball.speed, vy: Math.sin(ang)*ball.speed});
+        }
+      });
+      state.balls.push(...extra);
+      toast('ボール増殖！');
+      break;
+    }
+    case 'FAST':
+      state.balls.forEach(ball=>{
+        ball.speed = Math.min(ball.speed*1.35, 14);
+        const m = Math.hypot(ball.vx,ball.vy)||1;
+        ball.vx = ball.vx/m*ball.speed; ball.vy = ball.vy/m*ball.speed;
+      });
+      toast('スピードアップ！');
+      break;
+    case 'SLOW':
+      state.balls.forEach(ball=>{
+        ball.speed = Math.max(ball.speed*0.7, 2.5);
+        const m = Math.hypot(ball.vx,ball.vy)||1;
+        ball.vx = ball.vx/m*ball.speed; ball.vy = ball.vy/m*ball.speed;
+      });
+      toast('スローダウン');
+      break;
+    case 'PIERCE':
+      state.balls.forEach(ball=> ball.pierce = true);
+      state.effectTimers.pierce = 360;
+      toast('貫通モード！');
+      break;
+    case 'WIDEN':
+      if (state.oni || state.soukai){
+        toast('パドル固定中');
+      } else {
+        state.paddle.w = Math.min(state.paddle.w + 30, Math.max(220, state.paddle.baseW));
+        toast('パドル拡大！');
+      }
+      break;
+    case 'SHRINK':
+      if (state.oni || state.soukai){
+        toast('パドル固定中');
+      } else {
+        state.paddle.w = Math.max(state.paddle.w - 25, 50);
+        toast('パドル縮小…');
+      }
+      break;
+    case 'LIFE':
+      state.life += 1;
+      toast('ライフ+1！');
+      break;
+    case 'STICKY': {
+      const target = (hitBall && !hitBall.stuck) ? hitBall : state.balls.find(bl=>!bl.stuck);
+      if (target) target.stuck = true;
+      toast('吸著！');
+      break;
+    }
+    case 'BOMB':
+      toast('爆発！');
+      break;
+  }
+}
+
+function spawnParticles(x,y,color){
+  for (let i=0;i<10;i++){
+    const ang = Math.random()*Math.PI*2;
+    const sp = Math.random()*3+1;
+    state.particles.push({x,y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:24,color});
+  }
+}
+
+function predictCatchX(ball){
+  let x = ball.x, y = ball.y, vx = ball.vx, vy = ball.vy;
+  const targetY = state.paddle.y - ball.r - 1;
+  const maxSteps = 1200;
+  for (let steps=0; steps<maxSteps; steps++){
+    x += vx; y += vy;
+    if (x - ball.r < 0){ x = ball.r; vx = -vx; }
+    if (x + ball.r > W){ x = W-ball.r; vx = -vx; }
+    if (y - ball.r < 0){ y = ball.r; vy = -vy; }
+    if (vy > 0 && y >= targetY){
+      return { x: Math.max(ball.r, Math.min(W-ball.r, x)), steps };
+    }
+  }
+  return null;
+}
+
+const AI_TYPE_WEIGHT = { BOMB:55, MULTI:40, PIERCE:28, LIFE:25, WIDEN:15, STICKY:8, FAST:5, SLOW:5, NORMAL:10, HARD:-8, SHRINK:-20 };
+function chooseTargetBrick(catchX){
+  let best=null, bestScore=-Infinity;
+  for (const b of state.bricks){
+    if (!b.alive) continue;
+    const cx = b.x+b.w/2, cy = b.y+b.h/2;
+    const dist = Math.hypot(cx-catchX, cy-state.paddle.y);
+    const score = (AI_TYPE_WEIGHT[b.type]||0) - dist*0.04;
+    if (score > bestScore){ bestScore = score; best = b; }
+  }
+  return best;
+}
+
+function computeDesiredHitPos(catchX, target){
+  if (!target) return 0;
+  const tx = target.x+target.w/2, ty = target.y+target.h/2;
+  const dx = tx - catchX, dy = ty - state.paddle.y;
+  const angle = Math.atan2(dy, dx);
+  let hitPos = angle + Math.PI/2;
+  return Math.max(-1, Math.min(1, hitPos));
+}
+
+function aiControl(){
+  if (state.balls.some(b=>b.stuck)) launchBalls();
+
+  let best=null, bestSteps=Infinity;
+  for (const ball of state.balls){
+    if (ball.stuck) continue;
+    const pred = predictCatchX(ball);
+    if (pred && pred.steps < bestSteps){ bestSteps = pred.steps; best = pred; }
+  }
+
+  let desiredX;
+  if (!best){
+    desiredX = W/2 - state.paddle.w/2;
+  } else {
+    const target = chooseTargetBrick(best.x);
+    const hitPos = computeDesiredHitPos(best.x, target);
+    const desiredCenter = best.x - hitPos*(state.paddle.w/2);
+    desiredX = desiredCenter - state.paddle.w/2;
+  }
+  desiredX = Math.max(0, Math.min(W-state.paddle.w, desiredX));
+
+  state.paddle.x = desiredX;
+}
+
+function update(){
+  if (!state.running) return;
+  updateHUD();
+
+  if (state.ai){
+    aiControl();
+  } else {
+    const speed = 8;
+    if (state.keys.left) state.paddle.x -= speed;
+    if (state.keys.right) state.paddle.x += speed;
+  }
+  state.paddle.x = Math.max(0, Math.min(W-state.paddle.w, state.paddle.x));
+
+  if (state.effectTimers.pierce > 0){
+    state.effectTimers.pierce--;
+    if (state.effectTimers.pierce===0) state.balls.forEach(b=>b.pierce=false);
+  }
+
+  for (let i=state.balls.length-1;i>=0;i--){
+    const ball = state.balls[i];
+    if (ball.stuck){
+      ball.x = state.paddle.x + state.paddle.w/2;
+      ball.y = state.paddle.y - ball.r - 2;
+      continue;
+    }
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    if (ball.x - ball.r < 0){ ball.x = ball.r; ball.vx *= -1; playBounceSound(); }
+    if (ball.x + ball.r > W){ ball.x = W-ball.r; ball.vx *= -1; playBounceSound(); }
+    if (ball.y - ball.r < 0){ ball.y = ball.r; ball.vy *= -1; playBounceSound(); }
+
+    const p = state.paddle;
+    if (ball.vy > 0 && rectsOverlapCircle(ball.x,ball.y,ball.r, p.x,p.y,p.w,p.h)){
+      playBounceSound();
+      const hitPos = (ball.x - (p.x+p.w/2)) / (p.w/2);
+      const angle = -Math.PI/2 + hitPos*1.0;
+      ball.vx = Math.cos(angle)*ball.speed;
+      ball.vy = Math.sin(angle)*ball.speed;
+      ball.y = p.y - ball.r - 1;
+    } else if (state.ai && ball.vy > 0 && ball.y + ball.r >= p.y){
+      playBounceSound();
+      const hitPos = Math.max(-1, Math.min(1, (ball.x - (p.x+p.w/2)) / (p.w/2)));
+      const angle = -Math.PI/2 + hitPos*1.0;
+      ball.vx = Math.cos(angle)*ball.speed;
+      ball.vy = Math.sin(angle)*ball.speed;
+      ball.y = p.y - ball.r - 1;
+    }
+
+    for (const b of state.bricks){
+      if (!b.alive) continue;
+      if (rectsOverlapCircle(ball.x,ball.y,ball.r, b.x,b.y,b.w,b.h)){
+        if (ball.pierce){
+          if (b.type==='HARD' || b.type==='TURBO'){
+            b.hp -= 1; b.flash=6;
+            if (b.type==='TURBO') applyTurboBoost(ball);
+            if (b.hp<=0) destroyBrick(b, ball);
+          } else {
+            destroyBrick(b, ball);
+          }
+          continue;
+        }
+        bounceOffRect(ball,b);
+        if (b.type==='HARD' || b.type==='TURBO'){
+          b.hp -= 1; b.flash = 6;
+          if (b.type==='TURBO') applyTurboBoost(ball);
+          if (b.hp<=0) destroyBrick(b, ball);
+        } else {
+          destroyBrick(b, ball);
+        }
+        break;
+      }
+    }
+
+    if (ball.y - ball.r > H){
+      state.balls.splice(i,1);
+    }
+  }
+
+  if (state.balls.length===0){
+    state.life -= 1;
+    updateHUD();
+    if (state.life <= 0){
+      gameOver();
+      return;
+    }
+    resetBallsOnPaddle();
+  }
+
+  for (let i=state.particles.length-1;i>=0;i--){
+    const pt = state.particles[i];
+    pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.15; pt.life--;
+    if (pt.life<=0) state.particles.splice(i,1);
+  }
+
+  state.bricks.forEach(b=>{ if (b.flash>0) b.flash--; });
+
+  const remaining = state.bricks.some(b=>b.alive);
+  if (!remaining){
+    nextStage();
+  }
+}
+
+function bounceOffRect(ball,b){
+  const ocx = ball.x, ocy = ball.y;
+  const closestX = Math.max(b.x, Math.min(ocx, b.x+b.w));
+  const closestY = Math.max(b.y, Math.min(ocy, b.y+b.h));
+  const dx = ocx-closestX, dy = ocy-closestY;
+  if (Math.abs(dx) > Math.abs(dy)){
+    ball.vx *= -1;
+  } else {
+    ball.vy *= -1;
+  }
+  playBounceSound();
+}
+
+function applyTurboBoost(ball){
+  ball.speed = Math.min(ball.speed*1.1, 14);
+  const m = Math.hypot(ball.vx,ball.vy)||1;
+  ball.vx = ball.vx/m*ball.speed; ball.vy = ball.vy/m*ball.speed;
+}
+
+function nextStage(){
+  state.stage += 1;
+  state.score += 100;
+  state.bricks = generateStage(state.stage, state.soukai);
+  state.paddle.w = state.paddle.baseW;
+  resetBallsOnPaddle();
+  toast('STAGE ' + state.stage + '！');
+  updateHUD();
+}
+
+function gameOver(){
+  state.running = false;
+  const isNewBest = updateBestScore();
+  const ov = document.getElementById('overlay');
+  ov.style.display='flex';
+  ov.querySelector('h1').textContent = isNewBest ? '🎉 最高記録更新！' : 'ゲームオーバー';
+  ov.querySelector('p').textContent = 'スコア: ' + state.score + ' / ステージ: ' + state.stage + ' / 最高記録: ' + bestScore;
+  document.getElementById('startBtn').textContent = 'もう一度プレイ';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  ctx.fillStyle = '#11142a';
+  ctx.fillRect(0,0,W,H);
+
+  state.bricks.forEach(b=>{
+    if (!b.alive) return;
+    const t = TYPES[b.type];
+    ctx.save();
+    if (b.flash>0){
+      ctx.fillStyle = '#ffffff';
+    } else {
+      ctx.fillStyle = t.color;
+    }
+    roundRect(ctx, b.x, b.y, b.w, b.h, 4);
+    ctx.fill();
+    if (b.type==='HARD' || b.type==='TURBO'){
+      ctx.fillStyle='rgba(0,0,0,0.55)';
+      ctx.font='10px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(b.hp, b.x+b.w/2, b.y+b.h/2+3);
+    }
+    ctx.restore();
+  });
+
+  const p = state.paddle;
+  const grad = ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
+  grad.addColorStop(0,'#9fb0ff');
+  grad.addColorStop(1,'#4d5fd6');
+  ctx.fillStyle = grad;
+  roundRect(ctx, p.x, p.y, p.w, p.h, 6);
+  ctx.fill();
+
+  state.balls.forEach(ball=>{
+    ctx.beginPath();
+    ctx.fillStyle = ball.pierce ? '#7dff7d' : '#ffffff';
+    ctx.shadowColor = ball.pierce ? '#7dff7d' : '#9fc8ff';
+    ctx.shadowBlur = 10;
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  state.particles.forEach(pt=>{
+    ctx.globalAlpha = Math.max(pt.life/24,0);
+    ctx.fillStyle = pt.color;
+    ctx.fillRect(pt.x-2, pt.y-2, 4,4);
+    ctx.globalAlpha = 1;
+  });
+
+  if (state.running && state.balls.some(b=>b.stuck)){
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    ctx.font='14px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('クリック / スパースで発射', W/2, H-50);
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function loop(){
+  if (state){
+    const n = state.ai ? (state.speedMultiplier||1) : 1;
+    for (let i=0; i<n; i++){
+      update();
+      if (!state.running) break;
+    }
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+document.getElementById('speedSlider').addEventListener('input', e=>{
+  const v = parseInt(e.target.value) || 1;
+  document.getElementById('speedValueLabel').textContent = v + 'x';
+  if (state) state.speedMultiplier = v;
+});
+document.getElementById('stuckBtn').addEventListener('click', ()=>{
+  if (!state || !state.running) return;
+  state.balls = [];
+  toast('詳みを宣言…ライフを失いました');
+});
+
+(function buildLegend(){
+  const legend = document.getElementById('legend');
+  Object.values(TYPES).forEach(t=>{
+    const div = document.createElement('div');
+    div.className='lg';
+    div.innerHTML = `<span class="sw" style="background:${t.color}"></span>${t.label}: ${t.desc}`;
+    legend.appendChild(div);
+  });
+})();
+</script>
+</body>
+</html>
