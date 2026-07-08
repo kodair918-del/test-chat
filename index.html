@@ -302,6 +302,10 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
       <button class="btn bd" onclick="G.deleteGameFromSettings()">&#128465; 削除</button>
     </div>
     <p id="gs-viewer-note" style="display:none;font-size:13px;opacity:.5;margin-top:8px">閲覧のみ（作成者のみ編集可）</p>
+    <div id="gs-sync-wrap" style="display:none;margin-top:4px">
+      <button id="gs-sync-reg-btn" class="btn bn" onclick="G.registerGameFile(window._gsGid)">📁 ファイル同期登録</button>
+      <button id="gs-sync-now-btn" class="btn" style="display:none;background:#4a4a4a" onclick="G.syncGameFile(window._gsGid)">↻ 今すぐ同期チェック</button>
+    </div>
   </div>
 </div>
 </div>
@@ -376,6 +380,66 @@ const draw=(el,url,name,dm=false)=>{
   el.innerHTML=url?`<img src="${url}" alt="">`:(name?name[0].toUpperCase():'?');
 };
 const kdots='<span class="kdots"><i></i><i></i><i></i></span>';
+// ---- ファイル同期 (File System Access API) ----
+const _fsa='showOpenFilePicker' in window;
+const _fsDB=(()=>{let _p;return()=>_p||(_p=new Promise((res,rej)=>{const r=indexedDB.open('ck-filesync',1);r.onupgradeneeded=e=>e.target.result.createObjectStore('h');r.onsuccess=e=>res(e.target.result);r.onerror=rej;}));})();
+const _fhGet=async gid=>{const db=await _fsDB();return new Promise((res,rej)=>{const r=db.transaction('h','readonly').objectStore('h').get(gid);r.onsuccess=e=>res(e.target.result);r.onerror=rej;});};
+const _fhSet=async(gid,h)=>{const db=await _fsDB();return new Promise((res,rej)=>{const t=db.transaction('h','readwrite');t.objectStore('h').put(h,gid);t.oncomplete=res;t.onerror=rej;});};
+const _fhAll=async()=>{const db=await _fsDB();return new Promise((res,rej)=>{const map={};const req=db.transaction('h','readonly').objectStore('h').openCursor();req.onsuccess=e=>{const c=e.target.result;if(c){map[c.key]=c.value;c.continue();}else res(map);};req.onerror=rej;});};
+const _hashHtml=async s=>{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');};
+
+G.registerGameFile=async gid=>{
+  if(!_fsa)return alert('このブラウザはファイル同期未対応です（Chrome/Edgeを推奨）');
+  try{
+    const[h]=await window.showOpenFilePicker({types:[{description:'HTMLゲームファイル',accept:{'text/html':['.html']}}]});
+    const html=await(await h.getFile()).text();
+    const hash=await _hashHtml(html);
+    await _fhSet(gid,h);
+    await update(ref(db,`v20_games/${gid}`),{html,hash});
+    alert('登録＆アップロード完了！\nログイン時に自動で変更チェックします。');
+    loadGames();
+  }catch(e){if(e.name!=='AbortError')alert('エラー: '+e.message);}
+};
+G.syncGameFile=async(gid,silent=false)=>{
+  const h=await _fhGet(gid);
+  if(!h){if(!silent)alert('ファイル未登録。ゲーム設定(⋮)から「ファイル同期登録」を行ってください。');return false;}
+  try{
+    let perm=await h.queryPermission({mode:'read'});
+    if(perm!=='granted'){if(silent)return false;perm=await h.requestPermission({mode:'read'});}
+    if(perm!=='granted'){if(!silent)alert('アクセス許可が必要です。');return false;}
+    const html=await(await h.getFile()).text();
+    const localHash=await _hashHtml(html);
+    const snap=await get(ref(db,`v20_games/${gid}`));
+    if(!snap.exists())return false;
+    if(localHash===(snap.val().hash||'')){if(!silent)alert('変更なし。アップロード不要です。');return false;}
+    await update(ref(db,`v20_games/${gid}`),{html,hash:localHash});
+    if(!silent)alert('変更を検出！アップロード完了。');
+    return true;
+  }catch(e){if(!silent)alert('エラー: '+e.message);return false;}
+};
+const autoSyncGames=async()=>{
+  if(!_fsa||!myId)return;
+  try{
+    const handles=await _fhAll();
+    const gids=Object.keys(handles);
+    if(!gids.length)return;
+    let n=0;
+    for(const gid of gids){
+      try{
+        const snap=await get(ref(db,`v20_games/${gid}`));
+        if(!snap.exists()||snap.val().uid!==myId)continue;
+        if(await G.syncGameFile(gid,true))n++;
+      }catch{}
+    }
+    if(n){
+      const t=document.createElement('div');
+      t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .8s';
+      t.textContent=`↻ ${n}件のゲームを自動アップロードしました`;
+      document.body.appendChild(t);
+      setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),900);},2500);
+    }
+  }catch{}
+};
 
 const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
 const goAuth=()=>{
@@ -396,6 +460,7 @@ const sess=(id,nm)=>{
   myId=id;myName=nm;
   $('auth-overlay').classList.remove('active');
   presence();G.home();
+  autoSyncGames();
 };
 
 window.G={};
@@ -520,6 +585,8 @@ G.openGameSettings=async gid=>{
     $('gs-owner-area').style.display=isOwner?'block':'none';
     $('gs-owner-btns').style.display=isOwner?'block':'none';
     $('gs-viewer-note').style.display=isOwner?'none':'block';
+    $('gs-sync-wrap').style.display=isOwner&&_fsa?'block':'none';
+    if(isOwner&&_fsa){const hasFh=!!(await _fhGet(gid));$('gs-sync-reg-btn').style.display=hasFh?'none':'flex';$('gs-sync-now-btn').style.display=hasFh?'flex':'none';}
     $('game-set-modal').classList.add('active');
   }catch(e){alert('エラー: '+e.message);}
 };
@@ -561,19 +628,27 @@ G.deleteGameFromSettings=async()=>{
   }catch(e){alert('削除失敗: '+e.message);}
 };
 
-const loadGames=()=>{
+const loadGames=async()=>{
   const el=$('game-center-list');if(!el)return;
+  let syncedGids=new Set();
+  if(_fsa){try{const h=await _fhAll();syncedGids=new Set(Object.keys(h));}catch{}}
   const builtin=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:36px;margin-bottom:6px">&#129521;</div><div style="font-weight:600;font-size:14px;margin-bottom:8px">ブロック崩し</div><button class="btn-sm" style="width:100%" onclick="G.openGame()">▶ プレイ</button></div>`;
-  get(ref(db,'v20_games')).then(snap=>{
+  try{
+    const snap=await get(ref(db,'v20_games'));
     let html=builtin;
     if(snap.exists())Object.entries(snap.val()).forEach(([gid,g])=>{
+      const isOwner=g.uid===myId;
+      const hasSF=syncedGids.has(gid);
       const iconHtml=g.icon
         ?`<img src="${g.icon}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin:0 auto 6px;display:block">`
         :`<div style="font-size:36px;margin-bottom:6px">&#127918;</div>`;
-      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;width:32px;height:40px;background:rgba(120,120,128,.15);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1">${kdots}</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><div style="display:flex;gap:4px"><button class="btn-sm" style="flex:1" onclick="G._playGameId('${gid}')">&#9654;</button><button class="btn-sm" style="flex:1;background:var(--green)" onclick="G.openRoomCreate('${gid}')">&#9876;</button></div></div>`;
+      const sfBtn=isOwner&&_fsa&&hasSF
+        ?`<button class="btn-sm" style="flex:0;padding:0 10px;background:#3a3a3c" onclick="G.syncGameFile('${gid}')" title="変更チェック&amp;アップロード">↻</button>`
+        :'';
+      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;width:32px;height:40px;background:rgba(120,120,128,.15);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1">${kdots}</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><div style="display:flex;gap:4px"><button class="btn-sm" style="flex:1" onclick="G._playGameId('${gid}')">&#9654;</button><button class="btn-sm" style="flex:1;background:var(--green)" onclick="G.openRoomCreate('${gid}')">&#9876;</button>${sfBtn}</div></div>`;
     });
     el.innerHTML=html;
-  }).catch(()=>{el.innerHTML=builtin;});
+  }catch{el.innerHTML=builtin;}
 };
 
 // ── Room system ──
@@ -644,7 +719,7 @@ G._startGame=async(code,gid,room)=>{
     if(!snap.exists())return alert('ゲームデータが見つかりません');
     const html=snap.val().html;
     const players=Object.entries(room.players||{}).map(([uid,p])=>JSON.stringify({id:uid,name:p.name})).join(',');
-    const bridge=`<script>window.MP=(function(){var ls={},st={};return{myId:'${myId.replace(/'/g,"\\'")}',myName:'${myName.replace(/'/g,"\\'")}',isRoomHost:${myId===room.host},players:[${players}],setState:function(p){window.parent.postMessage({t:'MPS',p:p},'*');},getState:function(){return st;},on:function(k,cb){(ls[k]=ls[k]||[]).push(cb);return this;},_u:function(s){st=s;Object.keys(ls).forEach(function(k){if(s[k]!==undefined)ls[k].forEach(function(cb){cb(s[k]);});});}};})();window.addEventListener('message',function(e){if(e.data&&e.data.t==='MPU')MP._u(e.data.s);if(e.data&&e.data.t==='MPP')MP.players=e.data.p;});<\/script>`;
+    const bridge=`<script>window.MP=(function(){var ls={},st={};return{myId:'${myId.replace(/'/g,"\\'")  }',myName:'${myName.replace(/'/g,"\\'")  }',isRoomHost:${myId===room.host},players:[${players}],setState:function(p){window.parent.postMessage({t:'MPS',p:p},'*');},getState:function(){return st;},on:function(k,cb){(ls[k]=ls[k]||[]).push(cb);return this;},_u:function(s){st=s;Object.keys(ls).forEach(function(k){if(s[k]!==undefined)ls[k].forEach(function(cb){cb(s[k]);});});}};})();window.addEventListener('message',function(e){if(e.data&&e.data.t==='MPU')MP._u(e.data.s);if(e.data&&e.data.t==='MPP')MP.players=e.data.p;});<\/script>`;
     let injected=html;
     if(/<head[^>]*>/i.test(html))injected=html.replace(/<head[^>]*>/i,m=>m+bridge);
     else if(/<html[^>]*>/i.test(html))injected=html.replace(/<html[^>]*>/i,m=>m+bridge);
@@ -739,7 +814,7 @@ const loadGroups=async()=>{
       if(pinned)$('pin-list').appendChild(item);
       else list.appendChild(item);
     }
-  }catch{};
+  }catch{}
 };
 
 const loadDMs=async()=>{
@@ -757,14 +832,14 @@ const loadDMs=async()=>{
       if(pinned)$('pin-list').appendChild(item);
       else list.appendChild(item);
     }
-  }catch{};
+  }catch{}
 };
 
 const mkItem=(name,sub,isDm,pinned,unread,fn,online=false)=>{
   const d=document.createElement('div');
   d.className='chat-item';
   d.innerHTML=`
-    <div class="ci-icon${isDm?' dm':''}">${esc(name[0]||'?')}${online?'<div class="odot"></div>':''}</div>
+    <div class="ci-icon${isDm?' dm':''}"> ${esc(name[0]||'?')}${online?'<div class="odot"></div>':''}</div>
     <div class="ci-info"><div class="ci-name">${esc(name)}</div>${isDm?`<div class="ci-sub" style="color:var(--dm)">ダイレクトメッセージ</div>`:''}</div>
     ${pinned?'<span class="pini">&#128204;</span>':''}
     ${unread>0?`<span class="badge">&#128308; ${unread}</span>`:'<span style="opacity:.3;font-size:18px">&rsaquo;</span>'}
@@ -1166,7 +1241,7 @@ window.addEventListener('load',async()=>{
   G.toggleDark(localStorage.getItem('dark')==='true');
   const showAuth=await check();
   if(showAuth)goAuth();
-  else{presence();G.home();}
+  else{presence();G.home();autoSyncGames();}
 });
 </script>
 </body>
