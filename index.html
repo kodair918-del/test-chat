@@ -129,6 +129,8 @@ input:checked+.slider:before{transform:translateX(20px)}
 body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
 #game-modal .mhdr{padding:16px 16px 8px;margin-bottom:0}
 #game-frame{flex:1;width:100%;border:none;background:#0d0f1a;display:block}
+.kdots{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;pointer-events:none}
+.kdots i{display:block;width:4px;height:4px;border-radius:50%;background:var(--sub);font-style:normal}
 </style>
 </head>
 <body>
@@ -343,6 +345,7 @@ const draw=(el,url,name,dm=false)=>{
   el.style.background=dm?'var(--dm)':'var(--accent)';
   el.innerHTML=url?`<img src="${url}" alt="">`:(name?name[0].toUpperCase():'?');
 };
+const kdots='<span class="kdots"><i></i><i></i><i></i></span>';
 
 // ── Auth ──
 const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
@@ -506,9 +509,9 @@ const loadGames=()=>{
     let html=builtin;
     if(snap.exists())Object.entries(snap.val()).forEach(([gid,g])=>{
       const iconHtml=g.icon
-        ?`<img src="${g.icon}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto">`
+        ?`<img src="${g.icon}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin:0 auto 6px;display:block">`
         :`<div style="font-size:36px;margin-bottom:6px">🎮</div>`;
-      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--sub);padding:4px 6px;line-height:1">⋮</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><button class="btn-sm" style="width:100%" onclick="G._playGameId('${gid}')">▶ プレイ</button></div>`;
+      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;width:32px;height:40px;background:rgba(120,120,128,.15);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1">${kdots}</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><button class="btn-sm" style="width:100%" onclick="G._playGameId('${gid}')">▶ プレイ</button></div>`;
     });
     el.innerHTML=html;
   }).catch(()=>{el.innerHTML=builtin;});
