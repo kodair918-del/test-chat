@@ -131,21 +131,25 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
 #game-frame{flex:1;width:100%;border:none;background:#0d0f1a;display:block}
 .kdots{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;pointer-events:none}
 .kdots i{display:block;width:4px;height:4px;border-radius:50%;background:var(--sub);font-style:normal}
+#mp-bar{background:rgba(0,0,0,.8);padding:6px 12px;display:none;flex-wrap:wrap;gap:6px;align-items:center;flex-shrink:0}
+.mp-chip{background:rgba(255,255,255,.15);color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px}
+.room-player{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--sep)}
+.room-player:last-child{border-bottom:none}
 </style>
 </head>
 <body>
 
 <header>
-  <button onclick="G.home()">🏠</button>
+  <button onclick="G.home()">&#127968;</button>
   <div class="title" id="htitle">ホーム</div>
-  <button id="hset" onclick="G.openSettings()" style="visibility:hidden">⚙️</button>
+  <button id="hset" onclick="G.openSettings()" style="visibility:hidden">&#9881;&#65039;</button>
 </header>
 
 <div id="rt-bar"></div>
 <div id="chat-area"></div>
 
 <div class="footer" id="footer">
-  <button class="att-btn" onclick="document.getElementById('fi').click()">📎</button>
+  <button class="att-btn" onclick="document.getElementById('fi').click()">&#128206;</button>
   <input type="file" id="fi" style="display:none" onchange="G.sendFile(this)">
   <textarea id="msg-input" placeholder="メッセージ..." rows="1"></textarea>
   <button id="send-btn" onclick="G.send()">↑</button>
@@ -157,27 +161,30 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
   <div class="pcard" onclick="G.openProfile()">
     <div class="iw"><div id="home-icon" class="picon"></div></div>
     <div style="flex:1"><div style="font-weight:700;font-size:17px" id="uname">-</div><div style="font-size:13px;opacity:.5" id="uid">@-</div></div>
-    <span style="opacity:.35;font-size:20px">›</span>
+    <span style="opacity:.35;font-size:20px">&rsaquo;</span>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 8px">
-    <span style="font-size:13px;font-weight:600;color:var(--sub)">🎮 ゲームセンター</span>
-    <button class="btn-sm" onclick="document.getElementById('game-file-in').click()">＋ 追加</button>
+    <span style="font-size:13px;font-weight:600;color:var(--sub)">&#127918; ゲームセンター</span>
+    <div style="display:flex;gap:6px">
+      <button class="btn-sm" style="background:var(--green)" onclick="G.openRoomJoin()">⚔ 参加</button>
+      <button class="btn-sm" onclick="document.getElementById('game-file-in').click()">＋ 追加</button>
+    </div>
     <input type="file" id="game-file-in" accept=".html" style="display:none" onchange="G.addGame(this)">
   </div>
   <div id="game-center-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
   <div id="online-sec" style="display:none">
-    <div class="slbl">🟢 オンライン中</div>
+    <div class="slbl">&#128994; オンライン中</div>
     <div class="oscroll" id="online-list"></div>
   </div>
   <div id="freq-sec" style="display:none">
-    <div class="slbl">👤 フレンド申請</div>
+    <div class="slbl">&#128100; フレンド申請</div>
     <div class="card" id="freq-list"></div>
   </div>
   <div id="pin-sec" style="display:none">
-    <div class="slbl">📌 ピン止め</div>
+    <div class="slbl">&#128204; ピン止め</div>
     <div id="pin-list"></div>
   </div>
-  <div class="slbl">💬 グループ</div>
+  <div class="slbl">&#128172; グループ</div>
   <div id="grp-list"></div>
   <button class="btn bs" onclick="G.showForm('create')">＋ 新規グループ作成</button>
   <button class="btn bn" onclick="G.showForm('join')">ID で参加</button>
@@ -187,7 +194,7 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
     <input type="password" id="g-pw" class="std-input" placeholder="パスワード">
     <button class="btn bp" onclick="G.execGroup()">実行</button>
   </div>
-  <div class="slbl" style="margin-top:20px">💜 ダイレクトメッセージ</div>
+  <div class="slbl" style="margin-top:20px">&#128156; ダイレクトメッセージ</div>
   <div id="dm-list"></div>
   <button class="btn bdm" onclick="G.showDmForm()">＋ フレンド申請を送る</button>
   <div id="dm-form" class="iform">
@@ -209,7 +216,7 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
   <div class="mhdr"><h2 id="set-title">設定</h2><button class="cbtn" onclick="G.closeSettings()">✕</button></div>
   <div class="card">
     <div class="trow" style="border-top:none;padding-top:0">
-      <span style="font-weight:500">📌 ピン止め</span>
+      <span style="font-weight:500">&#128204; ピン止め</span>
       <label class="switch"><input type="checkbox" id="pin-tog" onchange="G.togglePin(this.checked)"><span class="slider"></span></label>
     </div>
   </div>
@@ -223,14 +230,14 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
       <p id="t-note" style="font-size:12px;opacity:.5;margin-bottom:12px"></p>
       <button id="t-save" class="btn bp" onclick="G.saveTeam()" style="display:none">保存</button>
     </div>
-    <button class="btn bd" onclick="G.leaveGroup()">🚪 グループを退会する</button>
+    <button class="btn bd" onclick="G.leaveGroup()">&#128682; グループを退会する</button>
     <div id="host-panel" style="display:none" class="card">
-      <div class="clbl">👑 参加申請</div>
+      <div class="clbl">&#128081; 参加申請</div>
       <div id="req-list"></div>
     </div>
   </div>
   <div id="dm-set" style="display:none">
-    <button class="btn bd" onclick="G.deleteDM()">🗑 このDMを削除する</button>
+    <button class="btn bd" onclick="G.deleteDM()">&#128465; このDMを削除する</button>
   </div>
 </div>
 </div>
@@ -241,14 +248,14 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
   <div class="mhdr"><h2>プロフィール</h2><button class="cbtn" onclick="G.closeModal('prof-modal')">✕</button></div>
   <div class="card" style="text-align:center">
     <div id="prof-icon" class="picon" style="width:80px;height:80px;margin:0 auto 16px;font-size:32px"></div>
-    <button class="btn bn" onclick="document.getElementById('icon-in').click()">📷 写真を変更</button>
+    <button class="btn bn" onclick="document.getElementById('icon-in').click()">&#128247; 写真を変更</button>
     <input type="file" id="icon-in" accept="image/*" style="display:none" onchange="G.previewIcon(this)">
     <label style="font-size:12px;opacity:.6;display:block;margin:12px 0 4px;text-align:left">表示名</label>
     <input type="text" id="e-name" class="std-input">
     <label style="font-size:12px;opacity:.6;display:block;margin:8px 0 4px;text-align:left">パスワード変更（任意）</label>
     <input type="password" id="e-pw" class="std-input">
     <div class="trow">
-      <span style="font-weight:500">🌙 ダークモード</span>
+      <span style="font-weight:500">&#127769; ダークモード</span>
       <label class="switch"><input type="checkbox" id="dark-tog" onchange="G.toggleDark(this.checked)"><span class="slider"></span></label>
     </div>
     <button class="btn bp" onclick="G.saveProfile()" style="margin-top:16px">設定を保存</button>
@@ -269,7 +276,11 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
 <!-- GAME -->
 <div id="game-modal" class="modal">
   <div style="display:flex;flex-direction:column;height:100%">
-    <div class="mhdr"><h2 style="font-size:18px">🎮 ゲームセンター</h2><button class="cbtn" onclick="G.closeGame()">✕</button></div>
+    <div class="mhdr"><h2 id="game-title" style="font-size:18px">&#127918; ゲームセンター</h2><button class="cbtn" onclick="G.closeGame()">✕</button></div>
+    <div id="mp-bar">
+      <span style="font-size:11px;color:rgba(255,255,255,.5);flex-shrink:0">⚔ プレイヤー:</span>
+      <div id="mp-players" style="display:flex;flex-wrap:wrap;gap:4px;flex:1"></div>
+    </div>
     <iframe id="game-frame" src=""></iframe>
   </div>
 </div>
@@ -282,16 +293,36 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
     <div id="gs-icon-wrap" style="font-size:56px;margin-bottom:10px;min-height:72px;display:flex;align-items:center;justify-content:center"></div>
     <input type="file" id="gs-icon-in" accept="image/*" style="display:none" onchange="G.previewGameIcon(this)">
     <div id="gs-owner-area" style="display:none">
-      <button class="btn bn" onclick="document.getElementById('gs-icon-in').click()">📷 アイコンを変更</button>
+      <button class="btn bn" onclick="document.getElementById('gs-icon-in').click()">&#128247; アイコンを変更</button>
     </div>
     <label style="font-size:12px;opacity:.6;display:block;margin:12px 0 4px;text-align:left">ゲーム名</label>
     <input type="text" id="gs-name" class="std-input">
     <div id="gs-owner-btns" style="display:none">
       <button class="btn bp" onclick="G.saveGameSettings()">保存</button>
-      <button class="btn bd" onclick="G.deleteGameFromSettings()">🗑 削除</button>
+      <button class="btn bd" onclick="G.deleteGameFromSettings()">&#128465; 削除</button>
     </div>
     <p id="gs-viewer-note" style="display:none;font-size:13px;opacity:.5;margin-top:8px">閲覧のみ（作成者のみ編集可）</p>
   </div>
+</div>
+</div>
+
+<!-- ROOM -->
+<div id="room-modal" class="modal">
+<div class="mi">
+  <div class="mhdr"><h2>⚔ ゲームルーム</h2><button class="cbtn" onclick="G.leaveRoom()">✕</button></div>
+  <div class="card">
+    <div id="room-game-info" style="text-align:center;padding-bottom:14px;margin-bottom:14px;border-bottom:.5px solid var(--sep)"></div>
+    <div style="background:rgba(120,120,128,.1);border-radius:12px;padding:14px;text-align:center;margin-bottom:16px">
+      <div style="font-size:11px;opacity:.5;margin-bottom:6px">ルームコード（友達に教えて！）</div>
+      <div id="room-code" style="font-size:30px;font-weight:800;letter-spacing:5px;font-family:monospace;color:var(--accent)"></div>
+      <button class="btn-sm" style="margin-top:10px;background:rgba(120,120,128,.2);color:var(--text)" onclick="G.copyRoomCode()">&#128203; コピー</button>
+    </div>
+    <div class="clbl">参加中のプレイヤー</div>
+    <div id="room-players"></div>
+  </div>
+  <button id="room-start-btn" class="btn bp" onclick="G.startRoom()" style="display:none">▶ ゲームを開始</button>
+  <p id="room-wait-msg" style="text-align:center;font-size:13px;opacity:.5;margin-bottom:16px;display:none">ホストがゲームを開始するまでお待ちください...</p>
+  <button class="btn bn" onclick="G.leaveRoom()">退出する</button>
 </div>
 </div>
 
@@ -312,7 +343,7 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
 <!-- VIEWER -->
 <div id="viewer">
   <div class="vtb">
-    <button class="vbtn" onclick="G.dlFromViewer()">📥</button>
+    <button class="vbtn" onclick="G.dlFromViewer()">&#128229;</button>
     <button class="vbtn" onclick="document.getElementById('viewer').style.display='none'">✕</button>
   </div>
   <img id="viewer-img" src="" alt="">
@@ -325,7 +356,6 @@ import{getDatabase,ref,set,get,push,onValue,update,remove,serverTimestamp,onDisc
 const app=initializeApp({apiKey:"AIzaSyC0LabfY8QcZgSFySBrF5Jj6xnKMbPXbZo",databaseURL:"https://my-chat-1d626-default-rtdb.firebaseio.com",projectId:"my-chat-1d626"});
 const db=getDatabase(app);
 
-// ── State ──
 let myId=null,myName=null,myIcon="";
 let curId=null,curType=null,curOther=null;
 let lastSeen=JSON.parse(localStorage.getItem('ls')||'{}');
@@ -334,8 +364,8 @@ let curLsn=null,rtLsn=null,freqLsn=null;
 let presSubs={},onlineMap={};
 let sending=false,lastSig="",lastSigAt=0;
 let grpMembers={};
+let curRoomId=null,roomLsn=null,roomStateLsn=null,roomPlayersLsn=null,mpThrottle=null;
 
-// ── Helpers ──
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmt=ts=>{if(!ts)return'';const d=new Date(ts);return`${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`};
@@ -347,7 +377,6 @@ const draw=(el,url,name,dm=false)=>{
 };
 const kdots='<span class="kdots"><i></i><i></i><i></i></span>';
 
-// ── Auth ──
 const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
 const goAuth=()=>{
   document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
@@ -391,7 +420,6 @@ G.login=async()=>{
 };
 document.addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
 
-// ── Presence ──
 const presence=()=>{
   if(!myId)return;
   const pr=ref(db,`v20_presence/${myId}`);
@@ -403,12 +431,21 @@ const presence=()=>{
   });
 };
 
-// ── Theme ──
 G.toggleDark=on=>{document.body.classList.toggle('dark',on);localStorage.setItem('dark',on);};
 G.closeModal=id=>$(id).classList.remove('active');
 
+// ── MP message relay ──
+window.addEventListener('message',e=>{
+  if(e.data&&e.data.t==='MPS'&&curRoomId){
+    if(mpThrottle)clearTimeout(mpThrottle);
+    mpThrottle=setTimeout(()=>{
+      update(ref(db,`v20_rooms/${curRoomId}/state`),e.data.p).catch(()=>{});
+    },50);
+  }
+});
+
 // ── Game ──
-G.openGame=(html)=>{
+G.openGame=(html,roomId)=>{
   document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
   const frame=$('game-frame');
   if(html){
@@ -420,12 +457,36 @@ G.openGame=(html)=>{
     window._gameBlobUrl=null;
     frame.src='blockbreaker.html';
   }
+  if(roomId){
+    curRoomId=roomId;
+    $('mp-bar').style.display='flex';
+    if(roomStateLsn){roomStateLsn();roomStateLsn=null;}
+    if(roomPlayersLsn){roomPlayersLsn();roomPlayersLsn=null;}
+    roomStateLsn=onValue(ref(db,`v20_rooms/${roomId}/state`),snap=>{
+      const s=snap.exists()?snap.val():{};
+      try{frame.contentWindow.postMessage({t:'MPU',s},'*');}catch{}
+    });
+    roomPlayersLsn=onValue(ref(db,`v20_rooms/${roomId}/players`),snap=>{
+      const ps=snap.exists()?Object.values(snap.val()):[];
+      try{frame.contentWindow.postMessage({t:'MPP',p:ps.map(x=>({name:x.name}))},'*');}catch{}
+      $('mp-players').innerHTML=ps.map(p=>`<span class="mp-chip">${esc(p.name)}</span>`).join('');
+    });
+  }else{
+    $('mp-bar').style.display='none';
+  }
   $('game-modal').classList.add('active');
 };
 G.closeGame=()=>{
   $('game-modal').classList.remove('active');
   $('game-frame').src='';
   if(window._gameBlobUrl){URL.revokeObjectURL(window._gameBlobUrl);window._gameBlobUrl=null;}
+  if(roomStateLsn){roomStateLsn();roomStateLsn=null;}
+  if(roomPlayersLsn){roomPlayersLsn();roomPlayersLsn=null;}
+  if(curRoomId){
+    remove(ref(db,`v20_rooms/${curRoomId}/players/${myId}`)).catch(()=>{});
+    curRoomId=null;
+  }
+  $('mp-bar').style.display='none';
 };
 G.addGame=async inp=>{
   const f=inp.files[0];if(!f)return;inp.value='';
@@ -452,13 +513,10 @@ G.openGameSettings=async gid=>{
     const s=await get(ref(db,`v20_games/${gid}`));
     if(!s.exists())return alert('ゲームが見つかりません');
     const g=s.val(),isOwner=g.uid===myId;
-    window._gsOwner=isOwner;
     $('gs-name').value=g.name||'';
     $('gs-name').readOnly=!isOwner;
     const wrap=$('gs-icon-wrap');
-    wrap.innerHTML=g.icon
-      ?`<img src="${g.icon}" style="width:72px;height:72px;border-radius:14px;object-fit:cover">`
-      :'🎮';
+    wrap.innerHTML=g.icon?`<img src="${g.icon}" style="width:72px;height:72px;border-radius:14px;object-fit:cover">`:'&#127918;';
     $('gs-owner-area').style.display=isOwner?'block':'none';
     $('gs-owner-btns').style.display=isOwner?'block':'none';
     $('gs-viewer-note').style.display=isOwner?'none':'block';
@@ -502,19 +560,114 @@ G.deleteGameFromSettings=async()=>{
     G.closeModal('game-set-modal');loadGames();
   }catch(e){alert('削除失敗: '+e.message);}
 };
+
 const loadGames=()=>{
   const el=$('game-center-list');if(!el)return;
-  const builtin=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:36px;margin-bottom:6px">🧱</div><div style="font-weight:600;font-size:14px;margin-bottom:8px">ブロック崩し</div><button class="btn-sm" style="width:100%" onclick="G.openGame()">▶ プレイ</button></div>`;
+  const builtin=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:36px;margin-bottom:6px">&#129521;</div><div style="font-weight:600;font-size:14px;margin-bottom:8px">ブロック崩し</div><button class="btn-sm" style="width:100%" onclick="G.openGame()">▶ プレイ</button></div>`;
   get(ref(db,'v20_games')).then(snap=>{
     let html=builtin;
     if(snap.exists())Object.entries(snap.val()).forEach(([gid,g])=>{
       const iconHtml=g.icon
         ?`<img src="${g.icon}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin:0 auto 6px;display:block">`
-        :`<div style="font-size:36px;margin-bottom:6px">🎮</div>`;
-      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;width:32px;height:40px;background:rgba(120,120,128,.15);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1">${kdots}</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><button class="btn-sm" style="width:100%" onclick="G._playGameId('${gid}')">▶ プレイ</button></div>`;
+        :`<div style="font-size:36px;margin-bottom:6px">&#127918;</div>`;
+      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;width:32px;height:40px;background:rgba(120,120,128,.15);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1">${kdots}</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><div style="display:flex;gap:4px"><button class="btn-sm" style="flex:1" onclick="G._playGameId('${gid}')">&#9654;</button><button class="btn-sm" style="flex:1;background:var(--green)" onclick="G.openRoomCreate('${gid}')">&#9876;</button></div></div>`;
     });
     el.innerHTML=html;
   }).catch(()=>{el.innerHTML=builtin;});
+};
+
+// ── Room system ──
+G.openRoomCreate=async gid=>{
+  try{
+    const s=await get(ref(db,`v20_games/${gid}`));
+    if(!s.exists())return alert('ゲームが見つかりません');
+    const g=s.val();
+    const code=Math.random().toString(36).substr(2,6).toUpperCase();
+    await set(ref(db,`v20_rooms/${code}`),{
+      gameId:gid,gameName:g.name,gameIcon:g.icon||'',
+      host:myId,hostName:myName,
+      created:Date.now(),started:false,
+      players:{[myId]:{name:myName,joined:Date.now()}}
+    });
+    G._showRoomModal(code,gid,g,true);
+  }catch(e){alert('ルーム作成失敗: '+e.message);}
+};
+G.openRoomJoin=async()=>{
+  const code=prompt('ルームコードを入力:');
+  if(!code)return;
+  const rc=code.trim().toUpperCase();
+  try{
+    const s=await get(ref(db,`v20_rooms/${rc}`));
+    if(!s.exists())return alert('ルームが見つかりません');
+    const room=s.val();
+    if(room.started)return alert('このルームはすでにゲームが始まっています');
+    await update(ref(db,`v20_rooms/${rc}/players/${myId}`),{name:myName,joined:Date.now()});
+    const gs=await get(ref(db,`v20_games/${room.gameId}`)).catch(()=>null);
+    G._showRoomModal(rc,room.gameId,gs?gs.val():{name:room.gameName,icon:room.gameIcon},room.host===myId);
+  }catch(e){alert('エラー: '+e.message);}
+};
+G._showRoomModal=(code,gid,g,isHost)=>{
+  window._roomGid=gid;
+  window._roomStarted=false;
+  $('room-code').textContent=code;
+  const iconHtml=g&&g.icon?`<img src="${g.icon}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;margin-bottom:8px">`:'<div style="font-size:40px;margin-bottom:8px">&#127918;</div>';
+  $('room-game-info').innerHTML=iconHtml+`<div style="font-weight:700;font-size:16px">${esc(g?g.name:'')}</div>`;
+  $('room-start-btn').style.display=isHost?'flex':'none';
+  $('room-wait-msg').style.display=isHost?'none':'block';
+  if(roomLsn){roomLsn();roomLsn=null;}
+  curRoomId=code;
+  roomLsn=onValue(ref(db,`v20_rooms/${code}`),snap=>{
+    if(!snap.exists()){G.closeModal('room-modal');curRoomId=null;return;}
+    const room=snap.val();
+    const ps=room.players||{};
+    $('room-players').innerHTML=Object.entries(ps).map(([uid,p])=>{
+      const isH=uid===room.host;
+      return `<div class="room-player"><div class="ci-icon${isH?' bp':''}" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${esc((p.name||'?')[0].toUpperCase())}</div><div style="flex:1;font-weight:600">${esc(p.name)}${isH?' &#128081;':''}</div></div>`;
+    }).join('');
+    if(room.started&&!window._roomStarted){
+      window._roomStarted=true;
+      G._startGame(code,gid,room);
+    }
+  });
+  $('room-modal').classList.add('active');
+};
+G.startRoom=async()=>{
+  if(!curRoomId)return;
+  try{
+    await update(ref(db,`v20_rooms/${curRoomId}`),{started:true,startedAt:Date.now()});
+  }catch(e){alert('エラー: '+e.message);}
+};
+G._startGame=async(code,gid,room)=>{
+  G.closeModal('room-modal');
+  try{
+    const snap=await get(ref(db,`v20_games/${gid}`));
+    if(!snap.exists())return alert('ゲームデータが見つかりません');
+    const html=snap.val().html;
+    const players=Object.values(room.players||{}).map(p=>JSON.stringify({name:p.name})).join(',');
+    const bridge=`<script>window.MP=(function(){var ls={},st={};return{myId:'${myId.replace(/'/g,"\\\'")  }',myName:'${myName.replace(/'/g,"\\\'")  }',players:[${players}],setState:function(p){window.parent.postMessage({t:'MPS',p:p},'*');},getState:function(){return st;},on:function(k,cb){(ls[k]=ls[k]||[]).push(cb);return this;},_u:function(s){st=s;Object.keys(ls).forEach(function(k){if(s[k]!==undefined)ls[k].forEach(function(cb){cb(s[k]);});});}};})();window.addEventListener('message',function(e){if(e.data&&e.data.t==='MPU')MP._u(e.data.s);if(e.data&&e.data.t==='MPP')MP.players=e.data.p;});<\/script>`;
+    let injected=html;
+    if(/<head[^>]*>/i.test(html))injected=html.replace(/<head[^>]*>/i,m=>m+bridge);
+    else if(/<html[^>]*>/i.test(html))injected=html.replace(/<html[^>]*>/i,m=>m+bridge);
+    else injected=bridge+html;
+    $('game-title').textContent='&#9876; '+esc(snap.val().name||'ゲーム');
+    G.openGame(injected,code);
+  }catch(e){alert('ゲーム読み込み失敗: '+e.message);}
+};
+G.leaveRoom=async()=>{
+  if(roomLsn){roomLsn();roomLsn=null;}
+  if(curRoomId){
+    await remove(ref(db,`v20_rooms/${curRoomId}/players/${myId}`)).catch(()=>{});
+    const s=await get(ref(db,`v20_rooms/${curRoomId}/players`)).catch(()=>null);
+    if(!s||!s.exists())await remove(ref(db,`v20_rooms/${curRoomId}`)).catch(()=>{});
+    curRoomId=null;
+  }
+  window._roomStarted=false;
+  G.closeModal('room-modal');
+};
+G.copyRoomCode=()=>{
+  const code=$('room-code').textContent;
+  if(navigator.clipboard)navigator.clipboard.writeText(code).then(()=>alert('コードをコピーしました: '+code)).catch(()=>alert('コード: '+code));
+  else alert('コード: '+code);
 };
 
 // ── Online users ──
@@ -546,7 +699,6 @@ const subOnline=async()=>{
   });
 };
 
-// ── Home ──
 G.home=async()=>{
   if(curLsn){curLsn();curLsn=null;}
   if(rtLsn){rtLsn();rtLsn=null;}
@@ -559,26 +711,22 @@ G.home=async()=>{
   $('rt-bar').classList.remove('on');
   $('rt-bar').innerHTML='';
   $('chat-area').classList.remove('bar');
-
   try{const u=await get(ref(db,`v20_users/${myId}`));if(u.exists()){myName=u.val().name;myIcon=u.val().icon||'';}}catch{}
   $('uname').textContent=myName;
   $('uid').textContent='@'+myId;
   draw($('home-icon'),myIcon,myName);
-
   try{const ps=await get(ref(db,`v20_users/${myId}/pinnedChats`));pins=ps.exists()?ps.val():{};}catch{}
-
   $('pin-list').innerHTML='';
   await loadGroups();
   await loadDMs();
   $('pin-sec').style.display=$('pin-list').children.length?'block':'none';
-
   loadFreq();
   subOnline();
   loadGames();
 };
 
 const loadGroups=async()=>{
-  const list=$('grp-list'); list.innerHTML='';
+  const list=$('grp-list');list.innerHTML='';
   try{
     const snap=await get(ref(db,`v20_users/${myId}/myGroups`));
     if(!snap.exists())return;
@@ -595,13 +743,13 @@ const loadGroups=async()=>{
 };
 
 const loadDMs=async()=>{
-  const list=$('dm-list'); list.innerHTML='';
+  const list=$('dm-list');list.innerHTML='';
   try{
     const snap=await get(ref(db,`v20_users/${myId}/myDMs`));
     if(!snap.exists())return;
     for(const[dmId,otherUid]of Object.entries(snap.val())){
-      let oname=otherUid,oicon='';
-      try{const u=await get(ref(db,`v20_users/${otherUid}`));if(u.exists()){oname=u.val().name;oicon=u.val().icon||'';}}catch{}
+      let oname=otherUid;
+      try{const u=await get(ref(db,`v20_users/${otherUid}`));if(u.exists())oname=u.val().name;}catch{}
       const unread=await calcUnread(`v20_dms/${dmId}/messages`,dmId);
       const pinned=!!pins[dmId];
       const online=!!onlineMap[otherUid];
@@ -617,12 +765,9 @@ const mkItem=(name,sub,isDm,pinned,unread,fn,online=false)=>{
   d.className='chat-item';
   d.innerHTML=`
     <div class="ci-icon${isDm?' dm':''}">${esc(name[0]||'?')}${online?'<div class="odot"></div>':''}</div>
-    <div class="ci-info">
-      <div class="ci-name">${esc(name)}</div>
-      ${isDm?`<div class="ci-sub" style="color:var(--dm)">ダイレクトメッセージ</div>`:''}
-    </div>
-    ${pinned?'<span class="pini">📌</span>':''}
-    ${unread>0?`<span class="badge">🔴 ${unread}</span>`:'<span style="opacity:.3;font-size:18px">›</span>'}
+    <div class="ci-info"><div class="ci-name">${esc(name)}</div>${isDm?`<div class="ci-sub" style="color:var(--dm)">ダイレクトメッセージ</div>`:''}</div>
+    ${pinned?'<span class="pini">&#128204;</span>':''}
+    ${unread>0?`<span class="badge">&#128308; ${unread}</span>`:'<span style="opacity:.3;font-size:18px">&rsaquo;</span>'}
   `;
   d.onclick=fn;
   return d;
@@ -637,7 +782,6 @@ const calcUnread=async(path,chatId)=>{
   }catch{return 0;}
 };
 
-// ── Friend requests ──
 const loadFreq=()=>{
   if(freqLsn)return;
   freqLsn=onValue(ref(db,`v20_users/${myId}/friendRequests`),snap=>{
@@ -651,10 +795,9 @@ const loadFreq=()=>{
         <div class="ci-icon dm" style="width:40px;height:40px;font-size:16px;flex-shrink:0">${esc((req.name||'?')[0])}</div>
         <div style="flex:1"><b>${esc(req.name||fuid)}</b><br><small style="opacity:.5">@${esc(fuid)}</small></div>
         <div style="display:flex;gap:8px">
-          <button class="btn-sm s" onclick="G.acceptFreq('${fuid}','${esc(req.name||fuid)}')">承認</button>
-          <button class="btn-sm d" onclick="G.rejectFreq('${fuid}')">拒否</button>
-        </div>
-      `;
+          <button class="btn-sm s" onclick="G.acceptFreq('${fuid}','${esc(req.name||fuid)}')">&#10003; 承認</button>
+          <button class="btn-sm d" onclick="G.rejectFreq('${fuid}')">&#10005;</button>
+        </div>`;
       list.appendChild(d);
     });
   });
@@ -667,57 +810,29 @@ G.showDmForm=async()=>{
   $('dm-search').value='';
   const el=$('dm-suggest');
   el.innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">読み込み中...</div>';
-
   grpMembers={};
   try{
     const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
-    if(!gs.exists()){
-      el.innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">グループに参加していません</div>';
-      return;
-    }
+    if(!gs.exists()){el.innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">グループに参加していません</div>';return;}
     for(const gid of Object.keys(gs.val())){
       try{
         const ms=await get(ref(db,`v20_groups/${gid}/members`));
         if(!ms.exists())continue;
         for(const uid of Object.keys(ms.val())){
           if(uid===myId||grpMembers[uid])continue;
-          try{
-            const u=await get(ref(db,`v20_users/${uid}`));
-            if(u.exists())grpMembers[uid]={name:u.val().name||uid};
-          }catch{}
+          try{const u=await get(ref(db,`v20_users/${uid}`));if(u.exists())grpMembers[uid]={name:u.val().name||uid};}catch{}
         }
       }catch{}
     }
-  }catch(e){
-    el.innerHTML=`<div style="color:var(--danger);font-size:13px;padding:10px">エラー: ${esc(e.message)}</div>`;
-    return;
-  }
+  }catch(e){el.innerHTML=`<div style="color:var(--danger);font-size:13px;padding:10px">エラー: ${esc(e.message)}</div>`;return;}
   G.filterMembers('');
 };
 
 G.filterMembers=q=>{
-  const el=$('dm-suggest');
-  const lower=q.toLowerCase();
-  const hits=Object.entries(grpMembers).filter(([uid,i])=>{
-    const nm=i.name||uid;
-    return !q||nm.toLowerCase().includes(lower)||uid.toLowerCase().includes(lower);
-  });
-  if(!hits.length){
-    el.innerHTML=`<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">${q?'一致するメンバーが見つかりません':'同じグループのメンバーはいません'}</div>`;
-    return;
-  }
-  el.innerHTML=hits.map(([uid,i])=>{
-    const nm=i.name||uid;
-    return `
-    <div class="mem-item" onclick="G.sendFriendReqTo('${uid}','${esc(nm)}')">
-      <div class="ci-icon dm" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${esc(nm[0])}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:15px">${esc(nm)}</div>
-        <div style="font-size:12px;opacity:.5">@${esc(uid)}</div>
-      </div>
-      <span style="font-size:12px;color:var(--dm);font-weight:600">申請 ›</span>
-    </div>`;
-  }).join('');
+  const el=$('dm-suggest'),lower=q.toLowerCase();
+  const hits=Object.entries(grpMembers).filter(([uid,i])=>!q||(i.name||uid).toLowerCase().includes(lower)||uid.toLowerCase().includes(lower));
+  if(!hits.length){el.innerHTML=`<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">${q?'一致するメンバーが見つかりません':'同じグループのメンバーはいません'}</div>`;return;}
+  el.innerHTML=hits.map(([uid,i])=>`<div class="mem-item" onclick="G.sendFriendReqTo('${uid}','${esc(i.name||uid)}')"><div class="ci-icon dm" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${esc((i.name||uid)[0])}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">${esc(i.name||uid)}</div><div style="font-size:12px;opacity:.5">@${esc(uid)}</div></div><span style="font-size:12px;color:var(--dm);font-weight:600">申請 &rsaquo;</span></div>`).join('');
 };
 
 G.sendFriendReqTo=async(uid,name)=>{
@@ -726,11 +841,9 @@ G.sendFriendReqTo=async(uid,name)=>{
     const did=mkDmId(myId,uid);
     if((await get(ref(db,`v20_dms/${did}`))).exists())return alert('すでにDMが存在します');
     await update(ref(db,`v20_users/${uid}/friendRequests/${myId}`),{name:myName});
-    alert('申請を送りました！');
-    $('dm-form').classList.remove('on');
+    alert('申請を送りました！');$('dm-form').classList.remove('on');
   }catch(e){alert('エラー: '+e.message);}
 };
-
 G.sendFriendReqById=async()=>{
   const tid=$('dm-search').value.trim();
   if(!tid)return alert('ユーザーIDを入力してください');
@@ -741,18 +854,15 @@ G.sendFriendReqById=async()=>{
     await G.sendFriendReqTo(tid,s.val().name||tid);
   }catch(e){alert('エラー: '+e.message);}
 };
-
 G.sendFriendReqByName=async()=>{
   const q=$('dm-search').value.trim();
   if(!q)return alert('名前を入力してください');
   const lower=q.toLowerCase();
   const matches=Object.entries(grpMembers).filter(([uid,i])=>(i.name||uid).toLowerCase().includes(lower));
-  if(matches.length===0)return alert(`「${q}」という名前のメンバーが同じグループにいません`);
-  if(matches.length>1){alert(`「${q}」に一致するユーザーが${matches.length}人います。リストから選んでください。`);G.filterMembers(q);return;}
-  const [uid,i]=matches[0];
-  await G.sendFriendReqTo(uid,i.name||uid);
+  if(!matches.length)return alert(`「${q}」という名前のメンバーが同じグループにいません`);
+  if(matches.length>1){alert(`「${q}」に一致するユーザーが${matches.length}人います。`);G.filterMembers(q);return;}
+  await G.sendFriendReqTo(matches[0][0],matches[0][1].name||matches[0][0]);
 };
-
 G.acceptFreq=async(fuid,fname)=>{
   try{
     const did=mkDmId(myId,fuid);
@@ -760,8 +870,7 @@ G.acceptFreq=async(fuid,fname)=>{
     await update(ref(db,`v20_users/${myId}/myDMs`),{[did]:fuid});
     await update(ref(db,`v20_users/${fuid}/myDMs`),{[did]:myId});
     await remove(ref(db,`v20_users/${myId}/friendRequests/${fuid}`));
-    alert(`${fname}さんとのDMを開始しました！`);
-    G.home();
+    alert(`${fname}さんとのDMを開始しました！`);G.home();
   }catch(e){alert('エラー: '+e.message);}
 };
 G.rejectFreq=async fuid=>{
@@ -769,7 +878,6 @@ G.rejectFreq=async fuid=>{
   await remove(ref(db,`v20_users/${myId}/friendRequests/${fuid}`)).catch(()=>{});
 };
 
-// ── Enter chat ──
 G.enter=async(chatId,type,otherUid)=>{
   if(curLsn){curLsn();curLsn=null;}
   if(rtLsn){rtLsn();rtLsn=null;}
@@ -780,13 +888,11 @@ G.enter=async(chatId,type,otherUid)=>{
   lastSeen[chatId]=Date.now();
   localStorage.setItem('ls',JSON.stringify(lastSeen));
   $('rt-bar').innerHTML='';
-
   if(type==='group'){
     try{
       const gs=await get(ref(db,`v20_groups/${chatId}`));
       if(gs.exists()){
-        const g=gs.val();
-        $('htitle').textContent=g.name||chatId.split('_')[0];
+        $('htitle').textContent=gs.val().name||chatId.split('_')[0];
         await update(ref(db,`v20_groups/${chatId}/members`),{[myId]:true}).catch(()=>{});
       }
     }catch{}
@@ -825,13 +931,11 @@ const renderMsgs=(snap,chatId,type)=>{
     let html='';
     if(m.type==='file'){
       const img=/\.(jpg|jpeg|png|gif|webp)$/i.test(m.fileName||'');
-      html=img?`<img src="${m.data}" class="img-pre" onclick="G._view('${key}')">`
-               :`<div class="bubble" onclick="G._dl('${key}')">📄 ${esc(m.fileName)}</div>`;
+      html=img?`<img src="${m.data}" class="img-pre" onclick="G._view('${key}')">`:`<div class="bubble" onclick="G._dl('${key}')">&#128196; ${esc(m.fileName)}</div>`;
     }else{
       html=`<div class="bubble" onclick="G.readStatus('${key}')">${esc(m.text||'')}</div>`;
     }
-    const rh=rc>0?`<span class="rbadge" onclick="G.readStatus('${key}')">既読 ${rc}</span>`
-                  :`<span style="opacity:.3">未読</span>`;
+    const rh=rc>0?`<span class="rbadge" onclick="G.readStatus('${key}')">&#10003; ${rc}</span>`:`<span style="opacity:.3">未読</span>`;
     const row=document.createElement('div');
     row.className=`msg-row${isMe?' me':''}`;
     row.dataset.key=key;
@@ -851,7 +955,6 @@ const renderMsgs=(snap,chatId,type)=>{
 G._view=key=>{const r=document.querySelector(`[data-key="${key}"]`);if(r&&r._fd)G.openViewer(r._fd.data,r._fd.fileName);};
 G._dl=key=>{const r=document.querySelector(`[data-key="${key}"]`);if(r&&r._fd)G.dl(r._fd.data,r._fd.fileName);};
 
-// ── Send ──
 G.send=async()=>{
   const inp=$('msg-input');if(!inp||!curId)return;
   const text=inp.value.trim();if(!text)return;
@@ -879,13 +982,11 @@ G.sendFile=inp=>{
   const r=new FileReader();
   r.onload=e=>{
     const path=curType==='group'?`v20_groups/${curId}/messages`:`v20_dms/${curId}/messages`;
-    push(ref(db,path),{uid:myId,name:myName,type:'file',data:e.target.result,fileName:f.name,time:serverTimestamp()})
-      .catch(err=>alert('ファイル送信失敗: '+err.message));
+    push(ref(db,path),{uid:myId,name:myName,type:'file',data:e.target.result,fileName:f.name,time:serverTimestamp()}).catch(err=>alert('ファイル送信失敗: '+err.message));
   };
   r.readAsDataURL(f);inp.value='';
 };
 
-// ── Read status ──
 G.readStatus=async msgId=>{
   if(!curId)return;
   const path=curType==='group'?`v20_groups/${curId}/messages/${msgId}/readBy`:`v20_dms/${curId}/messages/${msgId}/readBy`;
@@ -893,16 +994,14 @@ G.readStatus=async msgId=>{
   const el=$('read-list');el.innerHTML='';
   if(s&&s.exists()){
     Object.values(s.val()).forEach(r=>{
-      const t=fmt(r.time);
       const d=document.createElement('div');d.className='ritem';
-      d.innerHTML=`<div class="u-icon">${esc((r.name||'?')[0])}</div><div><b>${esc(r.name||'')}</b><br><small style="opacity:.5">${t}</small></div>`;
+      d.innerHTML=`<div class="u-icon">${esc((r.name||'?')[0])}</div><div><b>${esc(r.name||'')}</b><br><small style="opacity:.5">${fmt(r.time)}</small></div>`;
       el.appendChild(d);
     });
   }else{el.innerHTML='<div style="padding:20px;text-align:center;opacity:.5">まだ誰も読んでいません</div>';}
   $('read-modal').classList.add('active');
 };
 
-// ── Group actions ──
 G.showForm=mode=>{
   window._gmode=mode;
   $('gform-title').textContent=mode==='create'?'新規グループ作成':'グループに参加';
@@ -945,7 +1044,6 @@ G.deleteDM=async()=>{
   }catch(e){alert('エラー: '+e.message);}
 };
 
-// ── Pin ──
 G.togglePin=async on=>{
   if(!curId)return;
   try{
@@ -954,7 +1052,6 @@ G.togglePin=async on=>{
   }catch(e){alert('エラー: '+e.message);}
 };
 
-// ── Settings ──
 G.openSettings=async()=>{
   if(!curId)return;
   const pin=await get(ref(db,`v20_users/${myId}/pinnedChats/${curId}`)).catch(()=>null);
@@ -999,7 +1096,7 @@ const watchReqs=gid=>{
     if(s.exists()){
       Object.entries(s.val()).forEach(([uid,req])=>{
         const d=document.createElement('div');d.className='req-item';
-        d.innerHTML=`<div><b>${esc(req.name)}</b> <small style="opacity:.5">@${esc(uid)}</small></div><button class="btn-sm" onclick="G.acceptUser('${uid}','${esc(req.name)}')">許可</button>`;
+        d.innerHTML=`<div><b>${esc(req.name)}</b> <small style="opacity:.5">@${esc(uid)}</small></div><button class="btn-sm" onclick="G.acceptUser('${uid}','${esc(req.name)}')">&#10003; 許可</button>`;
         el.appendChild(d);
       });
     }else{el.innerHTML='<p style="opacity:.5;font-size:13px;text-align:center;padding:12px 0">申請はありません</p>';}
@@ -1015,7 +1112,6 @@ G.acceptUser=async(uid,name)=>{
   }catch(e){alert('エラー: '+e.message);}
 };
 
-// ── Profile ──
 G.openProfile=()=>{
   $('prof-modal').classList.add('active');
   $('e-name').value=myName;$('e-pw').value='';
@@ -1059,16 +1155,13 @@ G.deleteAccount=async()=>{
   }catch(e){alert('エラー: '+e.message);}
 };
 
-// ── Viewer ──
 G.openViewer=(url,name)=>{$('viewer-img').src=url;window._vf={url,name};$('viewer').style.display='flex';};
 G.dlFromViewer=()=>{const a=document.createElement('a');a.href=window._vf.url;a.download=window._vf.name;a.click();};
 G.dl=(data,name)=>{const a=document.createElement('a');a.href=data;a.download=name;a.click();};
 
-// ── Input ──
 $('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G.send();}});
 $('msg-input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
 
-// ── Init ──
 window.addEventListener('load',async()=>{
   G.toggleDark(localStorage.getItem('dark')==='true');
   const showAuth=await check();
