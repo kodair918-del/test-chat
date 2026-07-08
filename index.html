@@ -157,7 +157,12 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
     <div style="flex:1"><div style="font-weight:700;font-size:17px" id="uname">-</div><div style="font-size:13px;opacity:.5" id="uid">@-</div></div>
     <span style="opacity:.35;font-size:20px">›</span>
   </div>
-  <button class="btn" style="background:linear-gradient(135deg,#5d6dff,#3344c9);color:#fff" onclick="G.openGame()">🎮 ブロック崩しで遊ぶ</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 8px">
+    <span style="font-size:13px;font-weight:600;color:var(--sub)">🎮 ゲームセンター</span>
+    <button class="btn-sm" onclick="document.getElementById('game-file-in').click()">＋ 追加</button>
+    <input type="file" id="game-file-in" accept=".html" style="display:none" onchange="G.addGame(this)">
+  </div>
+  <div id="game-center-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
   <div id="online-sec" style="display:none">
     <div class="slbl">🟢 オンライン中</div>
     <div class="oscroll" id="online-list"></div>
@@ -262,7 +267,7 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
 <!-- GAME -->
 <div id="game-modal" class="modal">
   <div style="display:flex;flex-direction:column;height:100%">
-    <div class="mhdr"><h2 style="font-size:18px">🎮 ブロック崩し</h2><button class="cbtn" onclick="G.closeGame()">✕</button></div>
+    <div class="mhdr"><h2 style="font-size:18px">🎮 ゲームセンター</h2><button class="cbtn" onclick="G.closeGame()">✕</button></div>
     <iframe id="game-frame" src=""></iframe>
   </div>
 </div>
@@ -379,14 +384,60 @@ G.toggleDark=on=>{document.body.classList.toggle('dark',on);localStorage.setItem
 G.closeModal=id=>$(id).classList.remove('active');
 
 // ── Game ──
-G.openGame=()=>{
+G.openGame=(html)=>{
   document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
-  $('game-frame').src='blockbreaker.html';
+  const frame=$('game-frame');
+  if(html){
+    if(window._gameBlobUrl)URL.revokeObjectURL(window._gameBlobUrl);
+    const blob=new Blob([html],{type:'text/html'});
+    window._gameBlobUrl=URL.createObjectURL(blob);
+    frame.src=window._gameBlobUrl;
+  }else{
+    window._gameBlobUrl=null;
+    frame.src='blockbreaker.html';
+  }
   $('game-modal').classList.add('active');
 };
 G.closeGame=()=>{
   $('game-modal').classList.remove('active');
   $('game-frame').src='';
+  if(window._gameBlobUrl){URL.revokeObjectURL(window._gameBlobUrl);window._gameBlobUrl=null;}
+};
+G.addGame=async inp=>{
+  const f=inp.files[0];if(!f)return;inp.value='';
+  const name=prompt('ゲーム名を入力してください:',f.name.replace(/\.html$/i,''));
+  if(!name)return;
+  const html=await f.text();
+  if(html.length>8000000){alert('ファイルが大きすぎます（8MB以内）');return;}
+  const gid='g_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  try{
+    await set(ref(db,`v20_games/${gid}`),{name,html,uid:myId,addedBy:myName,time:Date.now()});
+    alert(`「${name}」を追加しました！`);loadGames();
+  }catch(e){alert('追加失敗: '+e.message);}
+};
+G.deleteGame=async(gid,gname)=>{
+  if(!confirm(`「${gname}」を削除しますか？`))return;
+  await remove(ref(db,`v20_games/${gid}`)).catch(e=>alert('削除失敗: '+e.message));
+  loadGames();
+};
+G._playGameId=async gid=>{
+  try{
+    const s=await get(ref(db,`v20_games/${gid}`));
+    if(!s.exists())return alert('ゲームが見つかりません');
+    G.openGame(s.val().html);
+  }catch(e){alert('読み込み失敗: '+e.message);}
+};
+const loadGames=()=>{
+  const el=$('game-center-list');if(!el)return;
+  const builtin=`<div style="background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:28px;margin-bottom:6px">🧱</div><div style="font-weight:600;font-size:14px;margin-bottom:8px">ブロック崩し</div><button class="btn-sm" style="width:100%" onclick="G.openGame()">▶ プレイ</button></div>`;
+  get(ref(db,'v20_games')).then(snap=>{
+    let html=builtin;
+    if(snap.exists())Object.entries(snap.val()).forEach(([gid,g])=>{
+      const own=g.uid===myId;
+      html+=`<div style="background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:28px;margin-bottom:6px">🎮</div><div style="font-weight:600;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.name)}</div><div style="font-size:11px;opacity:.4;margin-bottom:8px">${esc(g.addedBy||'')}</div><button class="btn-sm" style="width:100%;margin-bottom:4px" onclick="G._playGameId('${gid}')">▶ プレイ</button>${own?`<button class="btn-sm d" style="width:100%;font-size:11px;margin-top:4px" onclick="G.deleteGame('${gid}','${esc(g.name)}')">削除</button>`:''}</div>`;
+    });
+    el.innerHTML=html;
+  }).catch(()=>{el.innerHTML=builtin;});
 };
 
 // ── Online users ──
@@ -446,6 +497,7 @@ G.home=async()=>{
 
   loadFreq();
   subOnline();
+  loadGames();
 };
 
 const loadGroups=async()=>{
