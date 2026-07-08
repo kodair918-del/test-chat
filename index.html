@@ -272,6 +272,27 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
   </div>
 </div>
 
+<!-- GAME SETTINGS -->
+<div id="game-set-modal" class="modal">
+<div class="mi">
+  <div class="mhdr"><h2>ゲーム設定</h2><button class="cbtn" onclick="G.closeModal('game-set-modal')">✕</button></div>
+  <div class="card" style="text-align:center">
+    <div id="gs-icon-wrap" style="font-size:56px;margin-bottom:10px;min-height:72px;display:flex;align-items:center;justify-content:center"></div>
+    <input type="file" id="gs-icon-in" accept="image/*" style="display:none" onchange="G.previewGameIcon(this)">
+    <div id="gs-owner-area" style="display:none">
+      <button class="btn bn" onclick="document.getElementById('gs-icon-in').click()">📷 アイコンを変更</button>
+    </div>
+    <label style="font-size:12px;opacity:.6;display:block;margin:12px 0 4px;text-align:left">ゲーム名</label>
+    <input type="text" id="gs-name" class="std-input">
+    <div id="gs-owner-btns" style="display:none">
+      <button class="btn bp" onclick="G.saveGameSettings()">保存</button>
+      <button class="btn bd" onclick="G.deleteGameFromSettings()">🗑 削除</button>
+    </div>
+    <p id="gs-viewer-note" style="display:none;font-size:13px;opacity:.5;margin-top:8px">閲覧のみ（作成者のみ編集可）</p>
+  </div>
+</div>
+</div>
+
 <!-- AUTH -->
 <div id="auth-overlay">
   <div class="acard">
@@ -415,11 +436,6 @@ G.addGame=async inp=>{
     alert(`「${name}」を追加しました！`);loadGames();
   }catch(e){alert('追加失敗: '+e.message);}
 };
-G.deleteGame=async(gid,gname)=>{
-  if(!confirm(`「${gname}」を削除しますか？`))return;
-  await remove(ref(db,`v20_games/${gid}`)).catch(e=>alert('削除失敗: '+e.message));
-  loadGames();
-};
 G._playGameId=async gid=>{
   try{
     const s=await get(ref(db,`v20_games/${gid}`));
@@ -427,14 +443,72 @@ G._playGameId=async gid=>{
     G.openGame(s.val().html);
   }catch(e){alert('読み込み失敗: '+e.message);}
 };
+G.openGameSettings=async gid=>{
+  window._gsGid=gid;window._gsNewIcon=null;
+  try{
+    const s=await get(ref(db,`v20_games/${gid}`));
+    if(!s.exists())return alert('ゲームが見つかりません');
+    const g=s.val(),isOwner=g.uid===myId;
+    window._gsOwner=isOwner;
+    $('gs-name').value=g.name||'';
+    $('gs-name').readOnly=!isOwner;
+    const wrap=$('gs-icon-wrap');
+    wrap.innerHTML=g.icon
+      ?`<img src="${g.icon}" style="width:72px;height:72px;border-radius:14px;object-fit:cover">`
+      :'🎮';
+    $('gs-owner-area').style.display=isOwner?'block':'none';
+    $('gs-owner-btns').style.display=isOwner?'block':'none';
+    $('gs-viewer-note').style.display=isOwner?'none':'block';
+    $('game-set-modal').classList.add('active');
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.previewGameIcon=inp=>{
+  const f=inp.files[0];if(!f)return;inp.value='';
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas'),max=128;
+      let w=img.width,h=img.height;
+      if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}}
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      window._gsNewIcon=c.toDataURL('image/jpeg',0.85);
+      $('gs-icon-wrap').innerHTML=`<img src="${window._gsNewIcon}" style="width:72px;height:72px;border-radius:14px;object-fit:cover">`;
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(f);
+};
+G.saveGameSettings=async()=>{
+  const gid=window._gsGid;if(!gid)return;
+  const name=$('gs-name').value.trim();
+  if(!name)return alert('ゲーム名を入力してください');
+  const up={name};
+  if(window._gsNewIcon)up.icon=window._gsNewIcon;
+  try{
+    await update(ref(db,`v20_games/${gid}`),up);
+    alert('保存しました！');G.closeModal('game-set-modal');loadGames();
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.deleteGameFromSettings=async()=>{
+  const gid=window._gsGid,name=$('gs-name').value;
+  if(!confirm(`「${name}」を削除しますか？`))return;
+  try{
+    await remove(ref(db,`v20_games/${gid}`));
+    G.closeModal('game-set-modal');loadGames();
+  }catch(e){alert('削除失敗: '+e.message);}
+};
 const loadGames=()=>{
   const el=$('game-center-list');if(!el)return;
-  const builtin=`<div style="background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:28px;margin-bottom:6px">🧱</div><div style="font-weight:600;font-size:14px;margin-bottom:8px">ブロック崩し</div><button class="btn-sm" style="width:100%" onclick="G.openGame()">▶ プレイ</button></div>`;
+  const builtin=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:36px;margin-bottom:6px">🧱</div><div style="font-weight:600;font-size:14px;margin-bottom:8px">ブロック崩し</div><button class="btn-sm" style="width:100%" onclick="G.openGame()">▶ プレイ</button></div>`;
   get(ref(db,'v20_games')).then(snap=>{
     let html=builtin;
     if(snap.exists())Object.entries(snap.val()).forEach(([gid,g])=>{
-      const own=g.uid===myId;
-      html+=`<div style="background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:28px;margin-bottom:6px">🎮</div><div style="font-weight:600;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.name)}</div><div style="font-size:11px;opacity:.4;margin-bottom:8px">${esc(g.addedBy||'')}</div><button class="btn-sm" style="width:100%;margin-bottom:4px" onclick="G._playGameId('${gid}')">▶ プレイ</button>${own?`<button class="btn-sm d" style="width:100%;font-size:11px;margin-top:4px" onclick="G.deleteGame('${gid}','${esc(g.name)}')">削除</button>`:''}</div>`;
+      const iconHtml=g.icon
+        ?`<img src="${g.icon}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto">`
+        :`<div style="font-size:36px;margin-bottom:6px">🎮</div>`;
+      html+=`<div style="position:relative;background:var(--card);border-radius:14px;padding:12px;text-align:center;width:calc(50% - 4px);box-shadow:0 2px 8px rgba(0,0,0,.06)"><button onclick="event.stopPropagation();G.openGameSettings('${gid}')" style="position:absolute;top:4px;right:4px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--sub);padding:4px 6px;line-height:1">⋮</button>${iconHtml}<div style="font-weight:600;font-size:14px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 22px">${esc(g.name)}</div><button class="btn-sm" style="width:100%" onclick="G._playGameId('${gid}')">▶ プレイ</button></div>`;
     });
     el.innerHTML=html;
   }).catch(()=>{el.innerHTML=builtin;});
@@ -591,7 +665,6 @@ G.showDmForm=async()=>{
   const el=$('dm-suggest');
   el.innerHTML='<div style="opacity:.5;font-size:13px;text-align:center;padding:10px">読み込み中...</div>';
 
-  // 入参する全グループの全メンバーを直接列挙（フィルターなし）
   grpMembers={};
   try{
     const gs=await get(ref(db,`v20_users/${myId}/myGroups`));
@@ -670,7 +743,6 @@ G.sendFriendReqByName=async()=>{
   const q=$('dm-search').value.trim();
   if(!q)return alert('名前を入力してください');
   const lower=q.toLowerCase();
-  // 部分一致で検索
   const matches=Object.entries(grpMembers).filter(([uid,i])=>(i.name||uid).toLowerCase().includes(lower));
   if(matches.length===0)return alert(`「${q}」という名前のメンバーが同じグループにいません`);
   if(matches.length>1){alert(`「${q}」に一致するユーザーが${matches.length}人います。リストから選んでください。`);G.filterMembers(q);return;}
