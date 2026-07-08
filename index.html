@@ -467,8 +467,8 @@ G.openGame=(html,roomId)=>{
       try{frame.contentWindow.postMessage({t:'MPU',s},'*');}catch{}
     });
     roomPlayersLsn=onValue(ref(db,`v20_rooms/${roomId}/players`),snap=>{
-      const ps=snap.exists()?Object.values(snap.val()):[];
-      try{frame.contentWindow.postMessage({t:'MPP',p:ps.map(x=>({name:x.name}))},'*');}catch{}
+      const ps=snap.exists()?Object.entries(snap.val()).map(([uid,p])=>({id:uid,name:p.name})):[];
+      try{frame.contentWindow.postMessage({t:'MPP',p:ps},'*');}catch{}
       $('mp-players').innerHTML=ps.map(p=>`<span class="mp-chip">${esc(p.name)}</span>`).join('');
     });
   }else{
@@ -643,8 +643,8 @@ G._startGame=async(code,gid,room)=>{
     const snap=await get(ref(db,`v20_games/${gid}`));
     if(!snap.exists())return alert('ゲームデータが見つかりません');
     const html=snap.val().html;
-    const players=Object.values(room.players||{}).map(p=>JSON.stringify({name:p.name})).join(',');
-    const bridge=`<script>window.MP=(function(){var ls={},st={};return{myId:'${myId.replace(/'/g,"\\\'")  }',myName:'${myName.replace(/'/g,"\\\'")  }',players:[${players}],setState:function(p){window.parent.postMessage({t:'MPS',p:p},'*');},getState:function(){return st;},on:function(k,cb){(ls[k]=ls[k]||[]).push(cb);return this;},_u:function(s){st=s;Object.keys(ls).forEach(function(k){if(s[k]!==undefined)ls[k].forEach(function(cb){cb(s[k]);});});}};})();window.addEventListener('message',function(e){if(e.data&&e.data.t==='MPU')MP._u(e.data.s);if(e.data&&e.data.t==='MPP')MP.players=e.data.p;});<\/script>`;
+    const players=Object.entries(room.players||{}).map(([uid,p])=>JSON.stringify({id:uid,name:p.name})).join(',');
+    const bridge=`<script>window.MP=(function(){var ls={},st={};return{myId:'${myId.replace(/'/g,"\\'")}',myName:'${myName.replace(/'/g,"\\'")}',isRoomHost:${myId===room.host},players:[${players}],setState:function(p){window.parent.postMessage({t:'MPS',p:p},'*');},getState:function(){return st;},on:function(k,cb){(ls[k]=ls[k]||[]).push(cb);return this;},_u:function(s){st=s;Object.keys(ls).forEach(function(k){if(s[k]!==undefined)ls[k].forEach(function(cb){cb(s[k]);});});}};})();window.addEventListener('message',function(e){if(e.data&&e.data.t==='MPU')MP._u(e.data.s);if(e.data&&e.data.t==='MPP')MP.players=e.data.p;});<\/script>`;
     let injected=html;
     if(/<head[^>]*>/i.test(html))injected=html.replace(/<head[^>]*>/i,m=>m+bridge);
     else if(/<html[^>]*>/i.test(html))injected=html.replace(/<html[^>]*>/i,m=>m+bridge);
@@ -739,7 +739,7 @@ const loadGroups=async()=>{
       if(pinned)$('pin-list').appendChild(item);
       else list.appendChild(item);
     }
-  }catch{}
+  }catch{};
 };
 
 const loadDMs=async()=>{
@@ -757,7 +757,7 @@ const loadDMs=async()=>{
       if(pinned)$('pin-list').appendChild(item);
       else list.appendChild(item);
     }
-  }catch{}
+  }catch{};
 };
 
 const mkItem=(name,sub,isDm,pinned,unread,fn,online=false)=>{
