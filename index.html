@@ -368,7 +368,8 @@ let curLsn=null,rtLsn=null,freqLsn=null;
 let presSubs={},onlineMap={};
 let sending=false,lastSig="",lastSigAt=0;
 let grpMembers={};
-let curRoomId=null,roomLsn=null,roomStateLsn=null,roomPlayersLsn=null,mpThrottle=null;
+let curRoomId=null,roomLsn=null,roomStateLsn=null,roomPlayersLsn=null;
+let mpPending=null,mpFlushTimer=null,mpLastFlush=0;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -499,13 +500,17 @@ const presence=()=>{
 G.toggleDark=on=>{document.body.classList.toggle('dark',on);localStorage.setItem('dark',on);};
 G.closeModal=id=>$(id).classList.remove('active');
 
-// ── MP message relay ──
+// ── MP message relay (throttle: flushes at least every 50ms even under continuous updates) ──
+const mpFlush=()=>{
+  mpFlushTimer=null;mpLastFlush=Date.now();
+  if(mpPending&&curRoomId){update(ref(db,`v20_rooms/${curRoomId}/state`),mpPending).catch(()=>{});mpPending=null;}
+};
 window.addEventListener('message',e=>{
   if(e.data&&e.data.t==='MPS'&&curRoomId){
-    if(mpThrottle)clearTimeout(mpThrottle);
-    mpThrottle=setTimeout(()=>{
-      update(ref(db,`v20_rooms/${curRoomId}/state`),e.data.p).catch(()=>{});
-    },50);
+    mpPending=e.data.p;
+    const wait=50-(Date.now()-mpLastFlush);
+    if(wait<=0)mpFlush();
+    else if(!mpFlushTimer)mpFlushTimer=setTimeout(mpFlush,wait);
   }
 });
 
@@ -839,7 +844,7 @@ const mkItem=(name,sub,isDm,pinned,unread,fn,online=false)=>{
   const d=document.createElement('div');
   d.className='chat-item';
   d.innerHTML=`
-    <div class="ci-icon${isDm?' dm':''}"> ${esc(name[0]||'?')}${online?'<div class="odot"></div>':''}</div>
+    <div class="ci-icon${isDm?' dm':''}">${esc(name[0]||'?')}${online?'<div class="odot"></div>':''}</div>
     <div class="ci-info"><div class="ci-name">${esc(name)}</div>${isDm?`<div class="ci-sub" style="color:var(--dm)">ダイレクトメッセージ</div>`:''}</div>
     ${pinned?'<span class="pini">&#128204;</span>':''}
     ${unread>0?`<span class="badge">&#128308; ${unread}</span>`:'<span style="opacity:.3;font-size:18px">&rsaquo;</span>'}
