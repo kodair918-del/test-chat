@@ -380,7 +380,7 @@ const draw=(el,url,name,dm=false)=>{
   el.innerHTML=url?`<img src="${url}" alt="">`:(name?name[0].toUpperCase():'?');
 };
 const kdots='<span class="kdots"><i></i><i></i><i></i></span>';
-// ---- ファイル同期 (File System Access API) ----
+// ---- ファイル同期 ヘルパー (File System Access API) ----
 const _fsa='showOpenFilePicker' in window;
 const _fsDB=(()=>{let _p;return()=>_p||(_p=new Promise((res,rej)=>{const r=indexedDB.open('ck-filesync',1);r.onupgradeneeded=e=>e.target.result.createObjectStore('h');r.onsuccess=e=>res(e.target.result);r.onerror=rej;}));})();
 const _fhGet=async gid=>{const db=await _fsDB();return new Promise((res,rej)=>{const r=db.transaction('h','readonly').objectStore('h').get(gid);r.onsuccess=e=>res(e.target.result);r.onerror=rej;});};
@@ -388,6 +388,29 @@ const _fhSet=async(gid,h)=>{const db=await _fsDB();return new Promise((res,rej)=
 const _fhAll=async()=>{const db=await _fsDB();return new Promise((res,rej)=>{const map={};const req=db.transaction('h','readonly').objectStore('h').openCursor();req.onsuccess=e=>{const c=e.target.result;if(c){map[c.key]=c.value;c.continue();}else res(map);};req.onerror=rej;});};
 const _hashHtml=async s=>{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');};
 
+const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
+const goAuth=()=>{
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  $('auth-overlay').classList.add('active');
+  $('footer').style.display='none';
+  $('hset').style.visibility='hidden';
+  $('htitle').textContent='Chat-K';
+};
+const check=async()=>{
+  const id=localStorage.getItem('chat_uid'),nm=localStorage.getItem('chat_name');
+  if(!id||!nm)return true;
+  try{const s=await get(ref(db,`v20_users/${id}`));if(!s.exists()){clear();return true;}}catch{return true;}
+  myId=id;myName=nm;return false;
+};
+const sess=(id,nm)=>{
+  localStorage.setItem('chat_uid',id);localStorage.setItem('chat_name',nm);
+  myId=id;myName=nm;
+  $('auth-overlay').classList.remove('active');
+  presence();G.home();
+  autoSyncGames();
+};
+
+window.G={};
 G.registerGameFile=async gid=>{
   if(!_fsa)return alert('このブラウザはファイル同期未対応です（Chrome/Edgeを推奨）');
   try{
@@ -441,29 +464,6 @@ const autoSyncGames=async()=>{
   }catch{}
 };
 
-const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
-const goAuth=()=>{
-  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
-  $('auth-overlay').classList.add('active');
-  $('footer').style.display='none';
-  $('hset').style.visibility='hidden';
-  $('htitle').textContent='Chat-K';
-};
-const check=async()=>{
-  const id=localStorage.getItem('chat_uid'),nm=localStorage.getItem('chat_name');
-  if(!id||!nm)return true;
-  try{const s=await get(ref(db,`v20_users/${id}`));if(!s.exists()){clear();return true;}}catch{return true;}
-  myId=id;myName=nm;return false;
-};
-const sess=(id,nm)=>{
-  localStorage.setItem('chat_uid',id);localStorage.setItem('chat_name',nm);
-  myId=id;myName=nm;
-  $('auth-overlay').classList.remove('active');
-  presence();G.home();
-  autoSyncGames();
-};
-
-window.G={};
 G.register=async()=>{
   const id=$('a-id').value.trim(),pw=$('a-pw').value;
   if(!id||!pw)return alert('IDとパスワードを入力してください');
