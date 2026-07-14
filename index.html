@@ -103,6 +103,8 @@ header button{background:none;border:none;font-size:22px;color:inherit;padding:8
 .ifhdr h4{font-size:16px;font-weight:600}
 #auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;justify-content:center;align-items:center;padding:20px}
 #auth-overlay.active{display:flex}
+#realname-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+#realname-overlay.active{display:flex}
 .acard{width:100%;max-width:380px;background:var(--card);border-radius:24px;padding:36px 24px;box-shadow:0 8px 32px rgba(0,0,0,.1)}
 .alogo{font-size:40px;font-weight:800;letter-spacing:-1.5px;text-align:center;margin-bottom:6px}
 .asub{font-size:12px;opacity:.4;text-align:center;margin-bottom:28px}
@@ -337,10 +339,22 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
     <div class="asub">※ Enterキーは無効、ボタン操作のみ</div>
     <input type="text" id="a-id" class="std-input" placeholder="ユーザーID（世界に一つ）">
     <input type="password" id="a-pw" class="std-input" placeholder="パスワード">
+    <input type="text" id="a-realname" class="std-input" placeholder="本名（新規登録時のみ必須・非公開）">
     <div class="agrid">
       <button class="btn bs" onclick="G.register()">新規登録</button>
       <button class="btn bp" onclick="G.login()">ログイン</button>
     </div>
+  </div>
+</div>
+
+<!-- REALNAME GATE -->
+<div id="realname-overlay">
+  <div class="acard">
+    <div class="alogo">本名確認</div>
+    <div class="asub">安全のため、本名のご入力をお願いします（他のユーザーには公開されません）</div>
+    <input type="text" id="rn-input" class="std-input" placeholder="本名">
+    <button class="btn bp" onclick="G.submitRealName()">送信して続ける</button>
+    <button class="btn bn" onclick="G.logout()">ログアウト</button>
   </div>
 </div>
 
@@ -392,6 +406,7 @@ const _hashHtml=async s=>{const b=await crypto.subtle.digest('SHA-256',new TextE
 const clear=()=>{['chat_uid','chat_name','ls'].forEach(k=>localStorage.removeItem(k));myId=myName=null;};
 const goAuth=()=>{
   document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  $('realname-overlay').classList.remove('active');
   $('auth-overlay').classList.add('active');
   $('footer').style.display='none';
   $('hset').style.visibility='hidden';
@@ -403,12 +418,15 @@ const check=async()=>{
   try{const s=await get(ref(db,`v20_users/${id}`));if(!s.exists()){clear();return true;}}catch{return true;}
   myId=id;myName=nm;return false;
 };
+const afterAuth=async()=>{
+  const ok=await G.ensureRealName();
+  if(ok){presence();G.home();autoSyncGames();}
+};
 const sess=(id,nm)=>{
   localStorage.setItem('chat_uid',id);localStorage.setItem('chat_name',nm);
   myId=id;myName=nm;
   $('auth-overlay').classList.remove('active');
-  presence();G.home();
-  autoSyncGames();
+  afterAuth();
 };
 
 window.G={};
@@ -466,11 +484,12 @@ const autoSyncGames=async()=>{
 };
 
 G.register=async()=>{
-  const id=$('a-id').value.trim(),pw=$('a-pw').value;
+  const id=$('a-id').value.trim(),pw=$('a-pw').value,realName=$('a-realname').value.trim();
   if(!id||!pw)return alert('IDとパスワードを入力してください');
+  if(!realName)return alert('本名を入力してください（安全のため、公開はされません）');
   try{
     if((await get(ref(db,`v20_users/${id}`))).exists())return alert('そのIDはすでに使われています。');
-    await set(ref(db,`v20_users/${id}`),{name:id,pw,icon:''});
+    await set(ref(db,`v20_users/${id}`),{name:id,pw,icon:'',realName});
     sess(id,id);
   }catch(e){alert('エラー: '+e.message);}
 };
@@ -482,6 +501,27 @@ G.login=async()=>{
     if(!s.exists())return alert('IDが見つかりません。');
     if(s.val().pw!==pw)return alert('パスワードが違います。');
     sess(id,s.val().name);
+  }catch(e){alert('エラー: '+e.message);}
+};
+G.ensureRealName=async()=>{
+  try{
+    const s=await get(ref(db,`v20_users/${myId}`));
+    const rn=s.exists()?(s.val().realName||''):'';
+    if(rn){$('realname-overlay').classList.remove('active');return true;}
+  }catch{return true;}
+  document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
+  $('auth-overlay').classList.remove('active');
+  $('rn-input').value='';
+  $('realname-overlay').classList.add('active');
+  return false;
+};
+G.submitRealName=async()=>{
+  const rn=$('rn-input').value.trim();
+  if(!rn)return alert('本名を入力してください');
+  try{
+    await update(ref(db,`v20_users/${myId}`),{realName:rn});
+    $('realname-overlay').classList.remove('active');
+    presence();G.home();autoSyncGames();
   }catch(e){alert('エラー: '+e.message);}
 };
 document.addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
@@ -1246,7 +1286,7 @@ window.addEventListener('load',async()=>{
   G.toggleDark(localStorage.getItem('dark')==='true');
   const showAuth=await check();
   if(showAuth)goAuth();
-  else{presence();G.home();autoSyncGames();}
+  else{afterAuth();}
 });
 </script>
 </body>
